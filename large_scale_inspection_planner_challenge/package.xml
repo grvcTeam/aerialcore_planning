@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<package>
+  <name>large_scale_inspection_planner_challenge</name>
+  <version>0.0.0</version>
+  <description>The large_scale_inspection_planner_challenge package for the Enel challenge (and AerialCore project).</description>
+
+  <maintainer email="amontesromero@us.es">Ángel Manuel Montes Romero</maintainer>
+
+
+  <license>MIT</license>
+
+
+  <author email="amontesromero@us.es">Ángel Manuel Montes Romero</author>
+
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>roslib</build_depend>
+  <build_depend>tf</build_depend>
+  <build_depend>mission_lib</build_depend>
+  <build_depend>aerialcore_msgs</build_depend>
+  <run_depend>geometry_msgs</run_depend>
+  <run_depend>roscpp</run_depend>
+  <run_depend>rospy</run_depend>
+  <run_depend>roslib</run_depend>
+  <run_depend>tf</run_depend>
+  <run_depend>mission_lib</run_depend>
+  <run_depend>aerialcore_msgs</run_depend>
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+  </export>
+
+</package>

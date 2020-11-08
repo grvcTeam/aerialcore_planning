@@ -1,0 +1,6 @@
+#request
+uint8[] uav_id  # If empty start all UAVs.
+---
+#response
+bool success
+string message

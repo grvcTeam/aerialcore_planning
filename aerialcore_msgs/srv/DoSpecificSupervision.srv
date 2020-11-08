@@ -1,0 +1,6 @@
+#request
+GraphNode[] specific_subgraph
+---
+#response
+bool success
+string message
