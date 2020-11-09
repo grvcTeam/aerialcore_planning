@@ -62,41 +62,25 @@ private:
 
   void translateFlightPlanIntoUAVMission(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plan);
 
-  // Landing stations:
-  struct LandingStation {
-    geometry_msgs::Point point; // Position of the landing station.
-    int id;                     // Identifier of the landing station.
-    int index;                  // Index where you can find this node in the current graph.
-    bool recharge = false;      // True if it's a recharge landing station.
-    bool busy = false;          // True if a UAV is landed here.
-  };
-  std::vector<LandingStation> landing_stations_;
-
   // UAVs:
-  enum struct AutopilotType {PX4, APM, DJI, UNKNOWN};
-  enum struct AirframeType {FIXED_WING, MULTICOPTER, VTOL, OTHER, UNKNOWN};
   struct UAV {
-    grvc::mission_ns::Mission mission;  // For simulation!!! In the real flights of november there will be no VTOL nor fixed wing, only DJI multicopters.
+    grvc::mission_ns::Mission * mission;        // For simulation!!! In the real flights of november there will be no VTOL nor fixed wing, only DJI multicopters.
 
     geometry_msgs::PoseStamped pose_stamped;  // Updated continuously. Can be found at "mission".
     float battery_percentage;                 // Updated continuously. Can be found at "mission".
 
     int time_max_flying;  // Used for battery drop estimation, this is the estimated maximum flying time (in seconds) of this specific UAV before the drone runs out of battery.
 
-    int speed_xy;         // MPC_XY_VEL_MAX    [min, default, max] : [ 0.0 , 12 , 20.0 ]  Maximum horizontal velocity (m/s) of this specific UAV (in AUTO mode, if higher speeds are commanded in a mission they will be capped to this velocity).
-    int speed_z_down;     // MPC_Z_VEL_MAX_DN  [min, default, max] : [ 0.5 ,  1 ,  4.0 ]  Maximum vertical descent velocity (m/s) of this specific UAV (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)).
-    int speed_z_up;       // MPC_Z_VEL_MAX_UP  [min, default, max] : [ 0.5 ,  3 ,  8.0 ]  Maximum vertical ascent velocity (m/s) of this specific UAV (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)).
+    int speed_xy;         // Maximum horizontal velocity (m/s) of this specific UAV (in AUTO mode, if higher speeds are commanded in a mission they will be capped to this velocity).
+    int speed_z_down;     // Maximum vertical descent velocity (m/s) of this specific UAV (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)).
+    int speed_z_up;       // Maximum vertical ascent velocity (m/s) of this specific UAV (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)).
 
-    int id;               // Can be found at "mission".
-
-    AutopilotType autopilot_type = AutopilotType::UNKNOWN;  // Can be found at "mission".
-    AirframeType airframe_type = AirframeType::UNKNOWN;     // Can be found at "mission".
+    int id;
 
     bool recharging = false;
     bool enabled_to_supervise = false;
   };
-  std::vector<UAV> UAVs_; // Can't make a map instead of vector because mission_lib. See the following line:
-  // std::map<int, grvc::mission_ns::Mission> mission_by_uav_;  // Doesn't work because the inner working of map needs Mission to have a copy constructor, and that's more work than the alternatives. Left here for reference.
+  std::vector<UAV> UAVs_;
 
   std::thread spin_thread_;
 

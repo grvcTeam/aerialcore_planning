@@ -14,15 +14,41 @@ namespace aerialcore {
 MissionController::MissionController() {
     pnh_ = ros::NodeHandle("~");
 
-//   // Read parameters
-//   pnh_.getParam("drones", drones_id_);   // drones [id_1,...,id_N]
-//   pnh_.param<std::string>("get_ready_event", get_ready_event_, "GET_READY");
+    // Read parameters of the UAVs:
+    std::vector<int>   drones_id;
+    std::vector<int>   drones_time_max_flying;
+    std::vector<float> drones_speed_xy;
+    std::vector<float> drones_speed_z_down;
+    std::vector<float> drones_speed_z_up;
+    pnh_.getParam("drones_id", drones_id);
+    pnh_.getParam("drones_time_max_flying", drones_time_max_flying);
+    pnh_.getParam("drones_speed_xy", drones_speed_xy);
+    pnh_.getParam("drones_speed_z_down", drones_speed_z_down);
+    pnh_.getParam("drones_speed_z_up", drones_speed_z_up);
+    if ( (drones_id.size() + drones_time_max_flying.size() + drones_speed_xy.size() + drones_speed_z_down.size() + drones_speed_z_up.size())/5!=drones_id.size() ) {
+        ROS_ERROR("Mission Controller: error in the description of the UAVs (launch file), all parameters should have the same size.");
+        exit(EXIT_FAILURE);
+    } else if (drones_id.size() == 0) {
+        ROS_ERROR("Mission Controller: error in the description of the UAVs (launch file), no drones found.");
+        exit(EXIT_FAILURE);
+    }
+    for (int i=0; i<drones_id.size(); i++) {
+        UAV new_uav;
+        new_uav.mission = new grvc::mission_ns::Mission(drones_id[i]);
+        new_uav.id = drones_id[i];
+        new_uav.time_max_flying = drones_time_max_flying[i];
+        new_uav.speed_xy = drones_speed_xy[i];
+        new_uav.speed_z_down = drones_speed_z_down[i];
+        new_uav.speed_z_up = drones_speed_z_up[i];
+        UAVs_.push_back(new_uav);
+    }
 
-//   // Read parameters from yaml
-// double focal_length;
-// if(!nhPrivate.getParam("/focal_length", focal_length)){
-//     focal_length = FOCAL_LENGTH_DEFAULT;
-// }
+    // Read parameters from yaml:
+    // pnh_.param<std::string>("get_ready_event", get_ready_event_, "GET_READY");
+    // double focal_length;
+    // if(!nhPrivate.getParam("/focal_length", focal_length)){
+    //     focal_length = FOCAL_LENGTH_DEFAULT;
+    // }
 
     // Advertised services
     start_supervising_srv_ = n_.advertiseService("mission_controller/start_supervising", &MissionController::startSupervisingServiceCallback, this);
@@ -33,13 +59,13 @@ MissionController::MissionController() {
     // Timer Callback
     timer_ = n_.createTimer(ros::Duration(1), &MissionController::timerCallback, this); // 1 Hz
 
-    ROS_INFO("Mission Controller running!");
-
     // Make communications spin!
     spin_thread_ = std::thread([this]() {
         ros::MultiThreadedSpinner spinner(2); // Use 2 threads
         spinner.spin();
     });
+
+    ROS_INFO("Mission Controller running!");
 
 } // end MissionController constructor
 
@@ -52,8 +78,8 @@ MissionController::~MissionController() {
 
 void MissionController::timerCallback(const ros::TimerEvent&) {
     for (int i=0; i<UAVs_.size(); i++) {
-        UAVs_[i].pose_stamped = UAVs_[i].mission.pose();
-        UAVs_[i].battery_percentage = UAVs_[i].mission.battery();
+        UAVs_[i].pose_stamped = UAVs_[i].mission->pose();
+        UAVs_[i].battery_percentage = UAVs_[i].mission->battery();
     }
 } // end timerCallback
 
@@ -72,7 +98,7 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
             exit(EXIT_FAILURE);
         }
 
-        UAVs_[current_uav_index].mission.clear();
+        UAVs_[current_uav_index].mission->clear();
 
         bool first_iteration = true;
         bool flying_or_landed; // True if flying at the time after the wp is inserted, false if landed. Useful to track takeoffs vs landings, both with negative nodes.
@@ -86,25 +112,25 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
 
             if (current_graph_[current_node].type != aerialcore_msgs::GraphNode::TYPE_ELECTRIC_PILAR) {
                 if (pass_poses.size()>0) {
-                    UAVs_[current_uav_index].mission.addPassWpList(pass_poses);
+                    UAVs_[current_uav_index].mission->addPassWpList(pass_poses);
                 }
                 if (first_iteration) {
-                    UAVs_[current_uav_index].mission.addTakeOffWp(current_pose_stamped);
+                    UAVs_[current_uav_index].mission->addTakeOffWp(current_pose_stamped);
                     flying_or_landed = true;
                     first_iteration=false;
                 } else {
                     if (flying_or_landed) {
-                        if (UAVs_[current_uav_index].airframe_type == AirframeType::FIXED_WING) {
+                        if (UAVs_[current_uav_index].mission->airframeType() == grvc::mission_ns::AirframeType::FIXED_WING) {
                             geometry_msgs::PoseStamped loiter_to_alt_start_landing_pose_pose_stamped;
                             loiter_to_alt_start_landing_pose_pose_stamped.pose.position.x = pass_poses.back().pose.position.x;
                             loiter_to_alt_start_landing_pose_pose_stamped.pose.position.y = pass_poses.back().pose.position.y;
-                            UAVs_[current_uav_index].mission.addLandWp(loiter_to_alt_start_landing_pose_pose_stamped, current_pose_stamped);
+                            UAVs_[current_uav_index].mission->addLandWp(loiter_to_alt_start_landing_pose_pose_stamped, current_pose_stamped);
                         } else {
-                            UAVs_[current_uav_index].mission.addLandWp(current_pose_stamped);
+                            UAVs_[current_uav_index].mission->addLandWp(current_pose_stamped);
                         }
                         flying_or_landed = false;
                     } else {
-                        UAVs_[current_uav_index].mission.addTakeOffWp(current_pose_stamped);
+                        UAVs_[current_uav_index].mission->addTakeOffWp(current_pose_stamped);
                         flying_or_landed = true;
                     }
                 }
@@ -141,11 +167,13 @@ bool MissionController::stopSupervisingServiceCallback(aerialcore_msgs::StopSupe
                 exit(EXIT_FAILURE);
             }
 
-            UAVs_[current_uav_index].mission.stop();
+            UAVs_[current_uav_index].mission->stop();
+            UAVs_[current_uav_index].enabled_to_supervise = false;
         }
     } else {    // If empty stop all UAVs.
         for (UAV &current_UAV : UAVs_) {
-            current_UAV.mission.stop();
+            current_UAV.mission->stop();
+            current_UAV.enabled_to_supervise = false;
         }
     }
     return true;

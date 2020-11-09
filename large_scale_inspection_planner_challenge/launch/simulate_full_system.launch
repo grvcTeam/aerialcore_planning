@@ -1,0 +1,100 @@
+<launch>
+
+    <!-- Launch Gazebo simulation. -->
+	<rosparam param="/use_sim_time">true</rosparam>
+    <node pkg="aerialcore_simulation" type="launch_gzworld.py" name="gazebo_world" output="screen"
+    args="-physics=ode -world=$(find aerialcore_simulation)/worlds/ATLAS_power_lines.world
+		  -add_model_path=$(find aerialcore_simulation)/models
+		  -description_package=robots_description">
+		<rosparam param="sim_origin">[38.138728, -3.173825, 0]</rosparam>  <!-- [lat,lon,alt] -->
+	</node>
+
+    <!-- Load yaml parameters. -->
+    <rosparam file="$(find large_scale_inspection_planner_challenge)/config/graph_setup.yaml" command="load" />
+
+    <!-- Argument mode for launching robots can be:
+        - sitl: for software in the loop simulation
+        - serial: for serial connection to px4
+        - custom: to fully customize fcu and gcs urls
+    -->
+    <arg name="mode" default="sitl"/>
+
+    <arg name="ns_uav_prefix" default="uav_"/>
+
+    <!-- Launch robot id=1 -->
+    <include file="$(find px4_bringup)/launch/spawn_robot.launch" ns="$(arg ns_uav_prefix)1">
+        <arg name="id" value="1"/>
+        <arg name="material" value="Orange"/>
+        <arg name="mode" value="$(arg mode)"/>
+        <arg name="x" value="-4"/>
+        <arg name="y" value="0"/>
+        <arg name="z" value="0"/>
+        <arg name="yaw" value="0"/>
+        <arg name="robot_model" value="mbzirc"/>
+    </include>
+
+    <!-- Launch robot id=2 -->
+    <include file="$(find px4_bringup)/launch/spawn_robot.launch" ns="$(arg ns_uav_prefix)2">
+        <arg name="id" value="2"/>
+        <arg name="material" value="Orange"/>
+        <arg name="mode" value="$(arg mode)"/>
+        <arg name="x" value="-10"/>
+        <arg name="y" value="0"/>
+        <arg name="z" value="0"/>
+        <arg name="yaw" value="0"/>
+        <arg name="robot_model" value="mbzirc"/>
+    </include>
+
+    <!-- Launch robot id=3 -->
+    <include file="$(find px4_bringup)/launch/spawn_robot.launch" ns="$(arg ns_uav_prefix)3">
+        <arg name="id" value="3"/>
+        <arg name="material" value="Orange"/>
+        <arg name="mode" value="$(arg mode)"/>
+        <arg name="x" value="3.5"/>
+        <arg name="y" value="0"/>
+        <arg name="z" value="0"/>
+        <arg name="yaw" value="0"/>
+        <arg name="robot_model" value="plane"/>
+    </include>
+
+    <!-- Launch robot id=4 -->
+    <include file="$(find px4_bringup)/launch/spawn_robot.launch" ns="$(arg ns_uav_prefix)4">
+        <arg name="id" value="4"/>
+        <arg name="material" value="Orange"/>
+        <arg name="mode" value="$(arg mode)"/>
+        <arg name="x" value="0"/>
+        <arg name="y" value="8"/>
+        <arg name="z" value="0"/>
+        <arg name="yaw" value="0"/>
+        <arg name="robot_model" value="standard_vtol"/>
+    </include>
+
+    <!-- Parameters that describe the UAVs, for planning the missions mainly. ALL PARAMETERS HAVE TO BE OF THE SAME SIZE. -->
+	<arg name="drones_id" default="[1, 2, 3, 4]"/>                          <!-- List of UAV ids -->
+    <arg name="drones_time_max_flying" default="[1800, 1800, 5400, 5400]"/> <!-- Used for battery drop estimation, this is the estimated maximum flying time (in seconds) for each UAV before the drone runs out of battery. -->
+    <arg name="drones_speed_xy" default="[5.5, 5.5, 20.0, 20.0]"/>          <!-- Maximum horizontal velocity (m/s) for each UAV (in AUTO mode, if higher speeds are commanded in a mission they will be capped to this velocity). -->
+    <arg name="drones_speed_z_down" default="[1.5, 1.5, 1.5, 1.5]"/>        <!-- Maximum vertical descent velocity (m/s) for each UAV (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)). -->
+    <arg name="drones_speed_z_up" default="[3.0, 3.0, 3.0, 3.0]"/>          <!-- Maximum vertical ascent velocity (m/s) for each UAV (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)). -->
+
+    <!-- Parameters for the mission_lib. -->
+    <arg name="pose_frame_id" default=""/>
+    <arg name="home_pose_parent_frame" default="map"/>
+    <arg name="home_pose" default="[0, 0, 0]"/>
+    <arg name="map_origin_geo" default="[38.138728, -3.173825, 444]"/>
+
+    <!-- Launch the Mission Controller. -->
+	<node pkg="large_scale_inspection_planner_challenge" name="mission_controller" type="mission_controller" output="screen">
+		<rosparam param="drones_id" subst_value="true">$(arg drones_id)</rosparam>
+		<rosparam param="drones_time_max_flying" subst_value="true">$(arg drones_time_max_flying)</rosparam>
+		<rosparam param="drones_speed_xy" subst_value="true">$(arg drones_speed_xy)</rosparam>
+		<rosparam param="drones_speed_z_down" subst_value="true">$(arg drones_speed_z_down)</rosparam>
+		<rosparam param="drones_speed_z_up" subst_value="true">$(arg drones_speed_z_up)</rosparam>
+
+		<rosparam param="pose_frame_id" subst_value="true">$(arg pose_frame_id)</rosparam>
+		<rosparam param="home_pose_parent_frame" subst_value="true">$(arg home_pose_parent_frame)</rosparam>
+		<rosparam param="home_pose" subst_value="true">$(arg home_pose)</rosparam>
+		<rosparam param="map_origin_geo" subst_value="true">$(arg map_origin_geo)</rosparam>
+		<rosparam param="ns_uav_prefix" subst_value="true">$(arg ns_uav_prefix)</rosparam>
+	</node>
+
+</launch>

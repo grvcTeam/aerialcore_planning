@@ -53,9 +53,9 @@ private:
 
     // Drone maximum speed values from PX4, information extracted from here (30-01-2019): https://dev.px4.io/en/advanced/parameter_reference.html
     // Parameters not changed in the px4cmd file right now, so default values assigned:
-    int full_speed_xy_;     // MPC_XY_VEL_MAX    [min, default, max] : [ 0.0 , 12 , 20.0 ]  Maximum horizontal velocity (m/s) of the drone (in AUTO mode, if higher speeds are commanded in a mission they will be capped to this velocity).
-    int full_speed_z_down_; // MPC_Z_VEL_MAX_DN  [min, default, max] : [ 0.5 ,  1 ,  4.0 ]  Maximum vertical descent velocity (m/s) of the drone (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)).
-    int full_speed_z_up_;   // MPC_Z_VEL_MAX_UP  [min, default, max] : [ 0.5 ,  3 ,  8.0 ]  Maximum vertical ascent velocity (m/s) of the drone (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)).
+    int full_speed_xy_;     // Maximum horizontal velocity (m/s) of the drone (in AUTO mode, if higher speeds are commanded in a mission they will be capped to this velocity).
+    int full_speed_z_down_; // Maximum vertical descent velocity (m/s) of the drone (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)).
+    int full_speed_z_up_;   // Maximum vertical ascent velocity (m/s) of the drone (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)).
     // TODO?: the drone could have its default parameters changed in "/grvc-ual/robots_description/models/typhoon_h480/px4cmd" or elsewhere if different drone, but in this case that parameters aren't changed. Take this into account. Maybe parse the px4cmd file?
 
     ////////////// </ Parameters of the planning problem > //////////////
