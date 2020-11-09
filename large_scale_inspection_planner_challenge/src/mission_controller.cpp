@@ -14,7 +14,7 @@ namespace aerialcore {
 MissionController::MissionController() {
     pnh_ = ros::NodeHandle("~");
 
-    // Read parameters of the UAVs:
+    // Read parameters of the UAVs (from the launch):
     std::vector<int>   drones_id;
     std::vector<int>   drones_time_max_flying;
     std::vector<float> drones_speed_xy;
@@ -43,12 +43,76 @@ MissionController::MissionController() {
         UAVs_.push_back(new_uav);
     }
 
-    // Read parameters from yaml:
-    // pnh_.param<std::string>("get_ready_event", get_ready_event_, "GET_READY");
-    // double focal_length;
-    // if(!nhPrivate.getParam("/focal_length", focal_length)){
-    //     focal_length = FOCAL_LENGTH_DEFAULT;
-    // }
+    // Read parameters of the complete graph (from the yaml). Numeric parameters extracted from a string, so some steps are needed:
+    std::string pilars_graph_string;
+    std::string connections_indexes_string;
+    std::string recharge_land_stations_string;
+    std::string regular_land_stations_string;
+    n_.getParam("pilars_graph", pilars_graph_string);
+    n_.getParam("connections_indexes", connections_indexes_string);
+    n_.getParam("recharge_land_stations", recharge_land_stations_string);
+    n_.getParam("regular_land_stations", regular_land_stations_string);
+    // Remove new lines if exist in the strings for all strings and semicolons in all but connection_indexes:
+    pilars_graph_string.erase(std::remove(pilars_graph_string.begin(), pilars_graph_string.end(), '\n'), pilars_graph_string.end());
+    pilars_graph_string.erase(std::remove(pilars_graph_string.begin(), pilars_graph_string.end(), '\r'), pilars_graph_string.end());
+    pilars_graph_string.erase(std::remove(pilars_graph_string.begin(), pilars_graph_string.end(), ';'), pilars_graph_string.end());
+    connections_indexes_string.erase(std::remove(connections_indexes_string.begin(), connections_indexes_string.end(), '\n'), connections_indexes_string.end());
+    connections_indexes_string.erase(std::remove(connections_indexes_string.begin(), connections_indexes_string.end(), '\r'), connections_indexes_string.end());
+    recharge_land_stations_string.erase(std::remove(recharge_land_stations_string.begin(), recharge_land_stations_string.end(), '\n'), recharge_land_stations_string.end());
+    recharge_land_stations_string.erase(std::remove(recharge_land_stations_string.begin(), recharge_land_stations_string.end(), '\r'), recharge_land_stations_string.end());
+    recharge_land_stations_string.erase(std::remove(recharge_land_stations_string.begin(), recharge_land_stations_string.end(), ';'), recharge_land_stations_string.end());
+    regular_land_stations_string.erase(std::remove(regular_land_stations_string.begin(), regular_land_stations_string.end(), '\n'), regular_land_stations_string.end());
+    regular_land_stations_string.erase(std::remove(regular_land_stations_string.begin(), regular_land_stations_string.end(), '\r'), regular_land_stations_string.end());
+    regular_land_stations_string.erase(std::remove(regular_land_stations_string.begin(), regular_land_stations_string.end(), ';'), regular_land_stations_string.end());
+    // For strings with point information, convert the string data, clean and ready, to double (float64 because of point) with stod.
+    // Each time a number is converted (numbers separated by space ' '), the string is overwriten with the rest of the string using substr.
+    // The quantity of numbers have to be multiple of 2.
+    // For connection_indexes do that but separating previously strings by semicolons:
+    std::string::size_type sz;
+    aerialcore_msgs::GraphNode current_graph_node;
+    current_graph_node.type = aerialcore_msgs::GraphNode::TYPE_ELECTRIC_PILAR;
+    while ( pilars_graph_string.size()>0 ) {
+        current_graph_node.x = std::stod (pilars_graph_string,&sz);
+        pilars_graph_string = pilars_graph_string.substr(sz);
+        current_graph_node.y = std::stod (pilars_graph_string,&sz);
+        pilars_graph_string = pilars_graph_string.substr(sz);
+        complete_graph_.push_back(current_graph_node);
+    }
+    for (int i=0; i<complete_graph_.size(); i++) {
+        std::string delimiter = ";";
+        std::string string_until_first_semicolon = connections_indexes_string.substr(0, connections_indexes_string.find(delimiter));
+        int current_connection_index;
+        while ( string_until_first_semicolon.size()>0 ) {
+            current_connection_index = (int) std::stod (string_until_first_semicolon,&sz);
+            string_until_first_semicolon = string_until_first_semicolon.substr(sz);
+            complete_graph_[i].connections_indexes.push_back(current_connection_index);
+        }
+        connections_indexes_string.erase(0, connections_indexes_string.find(delimiter) + delimiter.length());
+    }
+    current_graph_node.type = aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION;
+    while ( recharge_land_stations_string.size()>0 ) {
+        current_graph_node.x = (float) std::stod (recharge_land_stations_string,&sz);
+        recharge_land_stations_string = recharge_land_stations_string.substr(sz);
+        current_graph_node.y = (float) std::stod (recharge_land_stations_string,&sz);
+        recharge_land_stations_string = recharge_land_stations_string.substr(sz);
+        complete_graph_.push_back(current_graph_node);
+    }
+    current_graph_node.type = aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION;
+    while ( regular_land_stations_string.size()>0 ) {
+        current_graph_node.x = (float) std::stod (regular_land_stations_string,&sz);
+        regular_land_stations_string = regular_land_stations_string.substr(sz);
+        current_graph_node.y = (float) std::stod (regular_land_stations_string,&sz);
+        regular_land_stations_string = regular_land_stations_string.substr(sz);
+        complete_graph_.push_back(current_graph_node);
+    }
+    for (int i=0; i<complete_graph_.size(); i++) {      // Print complete_graph_ to check that the yaml file was parsed correctly:
+        std::cout << "graph_node[ " << i << " ].type                     = " << (int) complete_graph_[i].type << std::endl;
+        for (int j=0; j<complete_graph_[i].connections_indexes.size(); j++) {
+            std::cout << "graph_node[ " << i << " ].connections_indexes[ " << j << " ] = " << complete_graph_[i].connections_indexes[j] << std::endl;
+        }
+        std::cout << "graph_node[ " << i << " ].x                        = " << complete_graph_[i].x << std::endl;
+        std::cout << "graph_node[ " << i << " ].y                        = " << complete_graph_[i].y << std::endl;
+    }
 
     // Advertised services
     start_supervising_srv_ = n_.advertiseService("mission_controller/start_supervising", &MissionController::startSupervisingServiceCallback, this);
@@ -73,6 +137,9 @@ MissionController::MissionController() {
 // Brief Destructor
 MissionController::~MissionController() {
     if(spin_thread_.joinable()) spin_thread_.join();
+    for (UAV &uav : UAVs_) {
+        delete uav.mission;
+    }
 } // end ~MissionController destructor
 
 

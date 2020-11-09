@@ -1,5 +1,7 @@
-# This file describes the camera calibration parameters of cgo3 camera:
-#   - Parameters for the configuration of the cgo3 camera used in typhoon_h480 that UAL use
+# This file describes the (x,y) points of the recharge land stations, regular land stations and the electric towers (or pilars) of
+# the complete electric graph, being the columns the (x,y) coordinates and the rows different elements.
+# The vector of vectors "connection_indexes" must be of the same size of "pilars_graph" and represents the wire connections among 
+# electric towers.
 
 recharge_land_stations: "0 0;
 0 10;"
