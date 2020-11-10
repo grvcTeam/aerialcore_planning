@@ -215,6 +215,36 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
 
 
 bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSupervising::Request& _req, aerialcore_msgs::StartSupervising::Response& _res) {
+    if (_req.uav_id.size()>0) {     // There are specific UAVs to start.
+        for (int const &current_uav_id : _req.uav_id) {
+            int current_uav_index = -1;
+            for (int i=0; i<UAVs_.size(); i++) {
+                if (UAVs_[i].id == current_uav_id) {
+                    current_uav_index = i;
+                    break;
+                }
+            }
+            if (current_uav_index == -1) {
+                ROS_ERROR("Mission Controller: UAV id provided in the StartSupervising not found on the Mission Controller.");
+                exit(EXIT_FAILURE);
+            }
+
+            UAVs_[current_uav_index].enabled_to_supervise = true;
+        }
+    } else {    // If empty start all UAVs.
+        for (UAV &current_UAV : UAVs_) {
+            current_UAV.enabled_to_supervise = true;
+        }
+    }
+    // TODO: COMPLETE THIS
+    // flight_plan_ = centralized_planner_.getPlan();
+    // translateFlightPlanIntoUAVMission(flight_plan_);
+    // for (UAV &current_UAV : UAVs_) {
+    //     if( current_UAV.enabled_to_supervise == true) {
+    //         current_UAV.mission->start();
+    //     }
+    // }
+    _res.success=true;
     return true;
 } // end startSupervisingServiceCallback
 
@@ -243,6 +273,7 @@ bool MissionController::stopSupervisingServiceCallback(aerialcore_msgs::StopSupe
             current_UAV.enabled_to_supervise = false;
         }
     }
+    _res.success=true;
     return true;
 } // end stopSupervisingServiceCallback
 
@@ -255,6 +286,7 @@ bool MissionController::doSpecificSupervisionServiceCallback(aerialcore_msgs::Do
     }
     current_graph_.clear();
     current_graph_ = specific_subgraph_;
+    _res.success=true;
     return true;
 } // end doSpecificSupervisionServiceCallback
 
@@ -263,6 +295,7 @@ bool MissionController::doContinuousSupervisionServiceCallback(std_srvs::Trigger
     continuous_or_specific_supervision_ = true;
     current_graph_.clear();
     current_graph_ = complete_graph_;
+    _res.success=true;
     return true;
 } // end doContinuousSupervisionServiceCallback
 

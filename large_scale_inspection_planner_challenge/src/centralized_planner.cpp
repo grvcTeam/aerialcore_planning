@@ -19,7 +19,7 @@ CentralizedPlanner::CentralizedPlanner() : path_planner_() {
 CentralizedPlanner::~CentralizedPlanner() {}
 
 
-std::vector<aerialcore_msgs::FlightPlan> getPlan() {
+std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan() {
 } // end getPlan method
 
 

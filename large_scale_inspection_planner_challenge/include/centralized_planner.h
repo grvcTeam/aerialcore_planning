@@ -29,7 +29,8 @@ public:
     CentralizedPlanner();
     ~CentralizedPlanner();
 
-    // bool setGraph(std::vector<>);
+    // bool setGraph(std::vector<GraphNode>);
+    // bool setUAVs(std::vector< tuple ?? >);
 
     std::vector<aerialcore_msgs::FlightPlan> getPlan();
 

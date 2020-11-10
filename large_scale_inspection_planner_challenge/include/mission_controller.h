@@ -60,6 +60,8 @@ private:
 
   CentralizedPlanner centralized_planner_;  // Planner that assigns nodes to inspect of the electric grid graph for each UAV.
 
+  std::vector<aerialcore_msgs::FlightPlan> flight_plan_;
+
   void translateFlightPlanIntoUAVMission(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plan);
 
   // UAVs:
