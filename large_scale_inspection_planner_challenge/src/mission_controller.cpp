@@ -105,14 +105,14 @@ MissionController::MissionController() {
         regular_land_stations_string = regular_land_stations_string.substr(sz);
         complete_graph_.push_back(current_graph_node);
     }
-    for (int i=0; i<complete_graph_.size(); i++) {      // Print complete_graph_ to check that the yaml file was parsed correctly:
-        std::cout << "graph_node[ " << i << " ].type                     = " << (int) complete_graph_[i].type << std::endl;
-        for (int j=0; j<complete_graph_[i].connections_indexes.size(); j++) {
-            std::cout << "graph_node[ " << i << " ].connections_indexes[ " << j << " ] = " << complete_graph_[i].connections_indexes[j] << std::endl;
-        }
-        std::cout << "graph_node[ " << i << " ].x                        = " << complete_graph_[i].x << std::endl;
-        std::cout << "graph_node[ " << i << " ].y                        = " << complete_graph_[i].y << std::endl;
-    }
+    // for (int i=0; i<complete_graph_.size(); i++) {      // Print complete_graph_ to check that the yaml file was parsed correctly:
+    //     std::cout << "graph_node[ " << i << " ].type                     = " << (int) complete_graph_[i].type << std::endl;
+    //     for (int j=0; j<complete_graph_[i].connections_indexes.size(); j++) {
+    //         std::cout << "graph_node[ " << i << " ].connections_indexes[ " << j << " ] = " << complete_graph_[i].connections_indexes[j] << std::endl;
+    //     }
+    //     std::cout << "graph_node[ " << i << " ].x                        = " << complete_graph_[i].x << std::endl;
+    //     std::cout << "graph_node[ " << i << " ].y                        = " << complete_graph_[i].y << std::endl;
+    // }
 
     // Advertised services
     start_supervising_srv_ = n_.advertiseService("mission_controller/start_supervising", &MissionController::startSupervisingServiceCallback, this);
