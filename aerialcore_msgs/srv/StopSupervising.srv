@@ -1,5 +1,5 @@
 #request
-uint8[] uav_id  # If empty stop all UAVs.
+uint16[] uav_id  # If empty stop all UAVs.
 ---
 #response
 bool success

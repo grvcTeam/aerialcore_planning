@@ -1,4 +1,4 @@
 Header header
 
-uint8[] uav_ids
+uint16[] uav_ids
 uint8 command

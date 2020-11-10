@@ -29,8 +29,29 @@ public:
     CentralizedPlanner();
     ~CentralizedPlanner();
 
+// TODO:
     // bool setGraph(std::vector<GraphNode>);
     // bool setUAVs(std::vector< tuple ?? >);
+// BETTER WITHOUT SETTERS, LIKE MULTIDRONE? JUST ONE GETPLAN THAT RECEIVES ALL:
+// std::map< int, std::vector<multidrone_msgs::DroneAction> > current_getplan_plan = high_level_planner_.getPlan(it->second, initial_state_of_drones, origin_coordinates_geo_, incoming_KML, trigger_time_of_replanning);
+// EXAMPLE OF TUPLES:
+//   // Start conditions of the drones for the High-Level Planner .getPlan()
+//   std::map< int,std::tuple<geometry_msgs::Point32,double,bool> > initial_state_of_drones; // map of tuples. The keys are the drone ids, the values a tuple with three elements each oen. The first in the tuple is the pose of the drone, the second its battery and the third a boolean that is false if the drone is in the ground and true if flying.
+//   for (int current_drone_id : drones_id_) {
+//     if ( drone_status_list[ current_drone_id ].drone_pose_defined == true && drone_status_list[ current_drone_id ].drone_alarmed == false ) {
+//       std::tuple<geometry_msgs::Point32,double,bool> new_tuple;
+//       std::get<0>(new_tuple).x = drone_status_list[ current_drone_id ].pose.position.x;
+//       std::get<0>(new_tuple).y = drone_status_list[ current_drone_id ].pose.position.y;
+//       std::get<0>(new_tuple).z = drone_status_list[ current_drone_id ].pose.position.z;
+//       std::get<1>(new_tuple) = drone_status_list[ current_drone_id ].battery_remaining;
+//       if (drone_status_list[ current_drone_id ].action_status.status != multidrone_msgs::ActionStatus::AS_IDLE && drone_status_list[ current_drone_id ].action_status.status != multidrone_msgs::ActionStatus::AS_WAIT_FOR_SAFE_TO_GO && drone_status_list[ current_drone_id ].action_status.status != multidrone_msgs::ActionStatus::AS_WAIT_FOR_GET_READY) {
+//         std::get<2>(new_tuple) = true;    // If the drone is not idle, or waiting for safe to go or get ready means that the drone is flying, so this is true.
+//       } else {
+//         std::get<2>(new_tuple) = false;
+//       }
+//       initial_state_of_drones[ current_drone_id ] = new_tuple;
+//     }
+//   }
 
     std::vector<aerialcore_msgs::FlightPlan> getPlan();
 

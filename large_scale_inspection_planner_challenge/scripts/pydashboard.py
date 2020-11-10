@@ -38,7 +38,15 @@ def main_menu():
 def start_supervising_menu():
     system("clear")
     print "Start supervising selected."
+    print "To start all UAVs don't input any id. Write wrong id (char or negative integer) to stop the input."
     start_supervising_request = StartSupervisingRequest()
+    while True and not rospy.is_shutdown():
+        uav_id_input = raw_input("Write UAV id >> ")
+        uav_id_input_unicode = unicode(uav_id_input, 'utf-8')
+        if uav_id_input_unicode.isnumeric() and int(uav_id_input)>=0:   # uav_id_input.isalpha() return true if uav_id_input is a leter
+            start_supervising_request.uav_id.append(int(uav_id_input))
+        else:
+            break
     try:
         print start_supervising_client.call(start_supervising_request)
     except rospy.ServiceException, e:
@@ -49,7 +57,15 @@ def start_supervising_menu():
 def stop_supervising_menu():
     system("clear")
     print "Stop supervising selected."
+    print "To stop all UAVs don't input any id. Write wrong id (char or negative integer) to stop the input."
     stop_supervising_request = StopSupervisingRequest()
+    while True and not rospy.is_shutdown():
+        uav_id_input = raw_input("Write UAV id >> ")
+        uav_id_input_unicode = unicode(uav_id_input, 'utf-8')
+        if uav_id_input_unicode.isnumeric() and int(uav_id_input)>=0:   # uav_id_input.isalpha() return true if uav_id_input is a leter
+            stop_supervising_request.uav_id.append(int(uav_id_input))
+        else:
+            break
     try:
         print stop_supervising_client.call(stop_supervising_request)
     except rospy.ServiceException, e:
@@ -60,6 +76,7 @@ def stop_supervising_menu():
 def do_specific_supervision_menu():
     system("clear")
     print "Do specific supervision."
+    # Custom specific subgraph to send:
     do_specific_supervision_request = DoSpecificSupervisionRequest()
     graph_node_struct_1 = GraphNode()
     graph_node_struct_1.type = GraphNode.TYPE_ELECTRIC_PILAR
