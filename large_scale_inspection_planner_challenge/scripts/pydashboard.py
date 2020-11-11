@@ -79,13 +79,13 @@ def do_specific_supervision_menu():
     # Custom specific subgraph to send:
     do_specific_supervision_request = DoSpecificSupervisionRequest()
     graph_node_struct_1 = GraphNode()
-    graph_node_struct_1.type = GraphNode.TYPE_ELECTRIC_PILAR
+    graph_node_struct_1.type = GraphNode.TYPE_PYLON
     graph_node_struct_1.x = 50
     graph_node_struct_1.y = -10
     graph_node_struct_1.connections_indexes.append(1)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct_1)
     graph_node_struct_2 = GraphNode()
-    graph_node_struct_2.type = GraphNode.TYPE_ELECTRIC_PILAR
+    graph_node_struct_2.type = GraphNode.TYPE_PYLON
     graph_node_struct_2.x = -50
     graph_node_struct_2.y = -10
     graph_node_struct_2.connections_indexes.append(0)
