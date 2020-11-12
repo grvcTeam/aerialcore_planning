@@ -44,18 +44,18 @@ MissionController::MissionController() {
     }
 
     // Read parameters of the complete graph (from the yaml). Numeric parameters extracted from a string, so some steps are needed:
-    std::string pylons_graph_string;
+    std::string pylons_position_string;
     std::string connections_indexes_string;
     std::string recharge_land_stations_string;
     std::string regular_land_stations_string;
-    n_.getParam("pylons_graph", pylons_graph_string);
+    n_.getParam("pylons_position", pylons_position_string);
     n_.getParam("connections_indexes", connections_indexes_string);
     n_.getParam("recharge_land_stations", recharge_land_stations_string);
     n_.getParam("regular_land_stations", regular_land_stations_string);
     // Remove new lines if exist in the strings for all strings and semicolons in all but connection_indexes:
-    pylons_graph_string.erase(std::remove(pylons_graph_string.begin(), pylons_graph_string.end(), '\n'), pylons_graph_string.end());
-    pylons_graph_string.erase(std::remove(pylons_graph_string.begin(), pylons_graph_string.end(), '\r'), pylons_graph_string.end());
-    pylons_graph_string.erase(std::remove(pylons_graph_string.begin(), pylons_graph_string.end(), ';'), pylons_graph_string.end());
+    pylons_position_string.erase(std::remove(pylons_position_string.begin(), pylons_position_string.end(), '\n'), pylons_position_string.end());
+    pylons_position_string.erase(std::remove(pylons_position_string.begin(), pylons_position_string.end(), '\r'), pylons_position_string.end());
+    pylons_position_string.erase(std::remove(pylons_position_string.begin(), pylons_position_string.end(), ';'), pylons_position_string.end());
     connections_indexes_string.erase(std::remove(connections_indexes_string.begin(), connections_indexes_string.end(), '\n'), connections_indexes_string.end());
     connections_indexes_string.erase(std::remove(connections_indexes_string.begin(), connections_indexes_string.end(), '\r'), connections_indexes_string.end());
     recharge_land_stations_string.erase(std::remove(recharge_land_stations_string.begin(), recharge_land_stations_string.end(), '\n'), recharge_land_stations_string.end());
@@ -71,11 +71,11 @@ MissionController::MissionController() {
     std::string::size_type sz;
     aerialcore_msgs::GraphNode current_graph_node;
     current_graph_node.type = aerialcore_msgs::GraphNode::TYPE_PYLON;
-    while ( pylons_graph_string.size()>0 ) {
-        current_graph_node.x = std::stod (pylons_graph_string,&sz);
-        pylons_graph_string = pylons_graph_string.substr(sz);
-        current_graph_node.y = std::stod (pylons_graph_string,&sz);
-        pylons_graph_string = pylons_graph_string.substr(sz);
+    while ( pylons_position_string.size()>0 ) {
+        current_graph_node.x = std::stod (pylons_position_string,&sz);
+        pylons_position_string = pylons_position_string.substr(sz);
+        current_graph_node.y = std::stod (pylons_position_string,&sz);
+        pylons_position_string = pylons_position_string.substr(sz);
         complete_graph_.push_back(current_graph_node);
     }
     for (int i=0; i<complete_graph_.size(); i++) {
@@ -85,7 +85,7 @@ MissionController::MissionController() {
         while ( string_until_first_semicolon.size()>0 ) {
             current_connection_index = (int) std::stod (string_until_first_semicolon,&sz);
             string_until_first_semicolon = string_until_first_semicolon.substr(sz);
-            complete_graph_[i].connections_indexes.push_back(current_connection_index);
+            complete_graph_[i].connections_indexes.push_back(current_connection_index-1);
         }
         connections_indexes_string.erase(0, connections_indexes_string.find(delimiter) + delimiter.length());
     }
