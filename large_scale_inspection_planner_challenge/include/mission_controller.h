@@ -68,8 +68,11 @@ private:
   struct UAV {
     grvc::mission_ns::Mission * mission = nullptr;  // For simulation!!! In the real flights of november there will be no VTOL nor fixed wing, only DJI multicopters.
 
-    geometry_msgs::PoseStamped pose_stamped;        // Updated continuously. Can be found at "mission".
-    float battery_percentage;                       // Updated continuously. Can be found at "mission".
+    geometry_msgs::PoseStamped pose_stamped;  // Current pose stsamped of the UAV. Updated continuously.                        // Can be found at "mission".
+    float battery;                            // Current battery in parts per unit (not percentage or %). Updated continuously. // Can be found at "mission".
+
+    float minimum_battery = 0.2;    // Battery in parts per unit (not percentage or %) considered fully discharged. LiPo batteries should never discharge to less than 20% or else the life span (number of charge/discharge cycles) will be dramatically reduced.
+    int time_until_fully_charged;   // Used for battery charge time estimation, time expected to charge completely the batteries in the charging pad from discharge state.
 
     int time_max_flying;  // Used for battery drop estimation, this is the estimated maximum flying time (in seconds) of this specific UAV before the drone runs out of battery.
 

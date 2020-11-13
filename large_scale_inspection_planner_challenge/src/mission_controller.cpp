@@ -20,12 +20,16 @@ MissionController::MissionController() {
     std::vector<float> drones_speed_xy;
     std::vector<float> drones_speed_z_down;
     std::vector<float> drones_speed_z_up;
+    std::vector<float> drones_minimum_battery;
+    std::vector<int>   drones_time_until_fully_charged;
     pnh_.getParam("drones_id", drones_id);
     pnh_.getParam("drones_time_max_flying", drones_time_max_flying);
     pnh_.getParam("drones_speed_xy", drones_speed_xy);
     pnh_.getParam("drones_speed_z_down", drones_speed_z_down);
     pnh_.getParam("drones_speed_z_up", drones_speed_z_up);
-    if ( (drones_id.size() + drones_time_max_flying.size() + drones_speed_xy.size() + drones_speed_z_down.size() + drones_speed_z_up.size())/5!=drones_id.size() ) {
+    pnh_.getParam("drones_minimum_battery", drones_minimum_battery);
+    pnh_.getParam("drones_time_until_fully_charged", drones_time_until_fully_charged);
+    if ( (drones_id.size() + drones_time_max_flying.size() + drones_speed_xy.size() + drones_speed_z_down.size() + drones_speed_z_up.size() + drones_minimum_battery.size() + drones_time_until_fully_charged.size() )/7!=drones_id.size() ) {
         ROS_ERROR("Mission Controller: error in the description of the UAVs (launch file), all parameters should have the same size.");
         exit(EXIT_FAILURE);
     } else if (drones_id.size() == 0) {
@@ -40,6 +44,8 @@ MissionController::MissionController() {
         new_uav.speed_xy = drones_speed_xy[i];
         new_uav.speed_z_down = drones_speed_z_down[i];
         new_uav.speed_z_up = drones_speed_z_up[i];
+        new_uav.minimum_battery = drones_minimum_battery[i];
+        new_uav.time_until_fully_charged = drones_time_until_fully_charged[i];
         UAVs_.push_back(new_uav);
     }
 
@@ -146,9 +152,60 @@ MissionController::~MissionController() {
 void MissionController::timerCallback(const ros::TimerEvent&) {
     for (int i=0; i<UAVs_.size(); i++) {
         UAVs_[i].pose_stamped = UAVs_[i].mission->pose();
-        UAVs_[i].battery_percentage = UAVs_[i].mission->battery();
+        UAVs_[i].battery = UAVs_[i].mission->battery();
     }
 } // end timerCallback
+
+
+bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSupervising::Request& _req, aerialcore_msgs::StartSupervising::Response& _res) {
+    if (_req.uav_id.size()>0) {     // There are specific UAVs to start.
+        for (int const &current_uav_id : _req.uav_id) {
+            int current_uav_index = -1;
+            for (int i=0; i<UAVs_.size(); i++) {
+                if (UAVs_[i].id == current_uav_id) {
+                    current_uav_index = i;
+                    break;
+                }
+            }
+            if (current_uav_index == -1) {
+                ROS_ERROR("Mission Controller: UAV id provided in the StartSupervising not found on the Mission Controller.");
+                exit(EXIT_FAILURE);
+            }
+
+            UAVs_[current_uav_index].enabled_to_supervise = true;
+        }
+    } else {    // If empty start all UAVs.
+        for (UAV &current_uav : UAVs_) {
+            current_uav.enabled_to_supervise = true;
+        }
+    }
+    std::map< int, std::tuple<geometry_msgs::PoseStamped,float, float, int, int, int, int, int, bool, bool> > drone_info;
+    for (const UAV &current_uav : UAVs_) {
+        if (current_uav.enabled_to_supervise == true) {
+            std::tuple<geometry_msgs::PoseStamped,float, float, int, int, int, int, int, bool, bool> new_tuple;
+            std::get<0>(new_tuple) = current_uav.pose_stamped;
+            std::get<1>(new_tuple) = current_uav.battery;
+            std::get<2>(new_tuple) = current_uav.minimum_battery;
+            std::get<3>(new_tuple) = current_uav.time_until_fully_charged;
+            std::get<4>(new_tuple) = current_uav.time_max_flying;
+            std::get<5>(new_tuple) = current_uav.speed_xy;
+            std::get<6>(new_tuple) = current_uav.speed_z_down;
+            std::get<7>(new_tuple) = current_uav.speed_z_up;
+            std::get<8>(new_tuple) = !current_uav.mission->armed();    // TODO: better way to know if flying?
+            std::get<9>(new_tuple) = current_uav.recharging;
+            drone_info[current_uav.id] = new_tuple;
+        }
+    }
+    flight_plan_ = centralized_planner_.getPlan(current_graph_, drone_info);
+    translateFlightPlanIntoUAVMission(flight_plan_);
+    for (UAV &current_uav : UAVs_) {
+        if( current_uav.enabled_to_supervise == true) {
+            current_uav.mission->start();
+        }
+    }
+    _res.success=true;
+    return true;
+} // end startSupervisingServiceCallback
 
 
 void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plan) {
@@ -214,41 +271,6 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
 } // end translateFlightPlanIntoUAVMission
 
 
-bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSupervising::Request& _req, aerialcore_msgs::StartSupervising::Response& _res) {
-    if (_req.uav_id.size()>0) {     // There are specific UAVs to start.
-        for (int const &current_uav_id : _req.uav_id) {
-            int current_uav_index = -1;
-            for (int i=0; i<UAVs_.size(); i++) {
-                if (UAVs_[i].id == current_uav_id) {
-                    current_uav_index = i;
-                    break;
-                }
-            }
-            if (current_uav_index == -1) {
-                ROS_ERROR("Mission Controller: UAV id provided in the StartSupervising not found on the Mission Controller.");
-                exit(EXIT_FAILURE);
-            }
-
-            UAVs_[current_uav_index].enabled_to_supervise = true;
-        }
-    } else {    // If empty start all UAVs.
-        for (UAV &current_UAV : UAVs_) {
-            current_UAV.enabled_to_supervise = true;
-        }
-    }
-    // TODO: COMPLETE THIS
-    // flight_plan_ = centralized_planner_.getPlan();
-    // translateFlightPlanIntoUAVMission(flight_plan_);
-    // for (UAV &current_UAV : UAVs_) {
-    //     if( current_UAV.enabled_to_supervise == true) {
-    //         current_UAV.mission->start();
-    //     }
-    // }
-    _res.success=true;
-    return true;
-} // end startSupervisingServiceCallback
-
-
 bool MissionController::stopSupervisingServiceCallback(aerialcore_msgs::StopSupervising::Request& _req, aerialcore_msgs::StopSupervising::Response& _res) {
     if (_req.uav_id.size()>0) {     // There are specific UAVs to stop.
         for (int const &current_uav_id : _req.uav_id) {
@@ -268,9 +290,9 @@ bool MissionController::stopSupervisingServiceCallback(aerialcore_msgs::StopSupe
             UAVs_[current_uav_index].enabled_to_supervise = false;
         }
     } else {    // If empty stop all UAVs.
-        for (UAV &current_UAV : UAVs_) {
-            current_UAV.mission->stop();
-            current_UAV.enabled_to_supervise = false;
+        for (UAV &current_uav : UAVs_) {
+            current_uav.mission->stop();
+            current_uav.enabled_to_supervise = false;
         }
     }
     _res.success=true;

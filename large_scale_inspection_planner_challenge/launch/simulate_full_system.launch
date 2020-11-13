@@ -75,6 +75,8 @@
     <arg name="drones_speed_xy" default="[5.5, 5.5, 20.0, 20.0]"/>          <!-- Maximum horizontal velocity (m/s) for each UAV (in AUTO mode, if higher speeds are commanded in a mission they will be capped to this velocity). -->
     <arg name="drones_speed_z_down" default="[1.5, 1.5, 1.5, 1.5]"/>        <!-- Maximum vertical descent velocity (m/s) for each UAV (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)). -->
     <arg name="drones_speed_z_up" default="[3.0, 3.0, 3.0, 3.0]"/>          <!-- Maximum vertical ascent velocity (m/s) for each UAV (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)). -->
+    <arg name="drones_minimum_battery" default="[0.2, 0.2, 0.2, 0.2]"/>                 <!-- Battery in parts per unit (not percentage or %) considered fully discharged. LiPo batteries should never discharge to less than 20% or else the life span (number of charge/discharge cycles) will be dramatically reduced. -->
+    <arg name="drones_time_until_fully_charged" default="[1800, 1800, 1800, 1800]"/>    <!-- Used for battery charge time estimation, time expected to charge completely the batteries in the charging pad from discharge state. -->
 
     <!-- Parameters for the mission_lib. -->
     <arg name="pose_frame_id" default=""/>
@@ -89,6 +91,8 @@
 		<rosparam param="drones_speed_xy" subst_value="true">$(arg drones_speed_xy)</rosparam>
 		<rosparam param="drones_speed_z_down" subst_value="true">$(arg drones_speed_z_down)</rosparam>
 		<rosparam param="drones_speed_z_up" subst_value="true">$(arg drones_speed_z_up)</rosparam>
+		<rosparam param="drones_minimum_battery" subst_value="true">$(arg drones_minimum_battery)</rosparam>
+		<rosparam param="drones_time_until_fully_charged" subst_value="true">$(arg drones_time_until_fully_charged)</rosparam>
 
 		<rosparam param="pose_frame_id" subst_value="true">$(arg pose_frame_id)</rosparam>
 		<rosparam param="home_pose_parent_frame" subst_value="true">$(arg home_pose_parent_frame)</rosparam>
