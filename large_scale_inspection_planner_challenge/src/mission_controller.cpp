@@ -196,7 +196,7 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
             std::get<7>(new_tuple) = current_uav.id;
             std::get<8>(new_tuple) = current_uav.mission->armed();  // TODO: better way to know if flying?
             std::get<9>(new_tuple) = current_uav.recharging;
-            drone_info[current_uav.id] = new_tuple;
+            drone_info.push_back(new_tuple);
 
             aerialcore_msgs::GraphNode current_uav_initial_position_graph_node;
             current_uav_initial_position_graph_node.type = aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION;
@@ -208,10 +208,13 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
     }
 
     flight_plan_ = centralized_planner_.getPlan(current_graph_, drone_info);
+    centralized_planner_.printPlan();
 
     translateFlightPlanIntoUAVMission(flight_plan_);
 
     for (const aerialcore_msgs::FlightPlan& flight_plan_for_current_uav : flight_plan_) {
+        UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->print();
+        UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->push();
         UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->start();
     }
 

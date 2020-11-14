@@ -93,19 +93,11 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(const std::
         int index_graph_land_station_from_pylon_last;
         float distance_land_station_from_next_pylon;
 
-        geometry_msgs::PointStamped uav_initial_pose;
-        uav_initial_pose.point.x = graph_[uav_initial_position_graph_index].x;
-        uav_initial_pose.point.y = graph_[uav_initial_position_graph_index].y;
-
         // Calculate closest pylon from the UAV initial pose:
-        nearestGraphNode(true, uav_initial_pose, index_graph_of_next_pylon, distance_of_next_pylon);
-
-        geometry_msgs::PointStamped next_pylon_pose_stamped;
-        next_pylon_pose_stamped.point.x = graph_[index_graph_of_next_pylon].x;
-        next_pylon_pose_stamped.point.y = graph_[index_graph_of_next_pylon].y;
+        nearestGraphNode(true, uav_initial_position_graph_index, index_graph_of_next_pylon, distance_of_next_pylon);
 
         // Calculate closest land station from that closest pylon:
-        nearestGraphNode(false, next_pylon_pose_stamped, index_graph_land_station_from_next_pylon, distance_land_station_from_next_pylon);
+        nearestGraphNode(false, index_graph_of_next_pylon, index_graph_land_station_from_next_pylon, distance_land_station_from_next_pylon);
 
         while (edges_.size()>0 && (battery - batteryDrop( (distance_of_next_pylon+distance_land_station_from_next_pylon)/current_uav.speed_xy , current_uav.time_max_flying) > current_uav.minimum_battery)) {
             // Insert pylon because it can be reached with enough battery to go later to a land station:
@@ -117,16 +109,25 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(const std::
             // Calculate pylon with most benefit from current pylon:
             mostRewardedPylon(current_flight_plan.nodes.back(), index_graph_of_next_pylon, distance_of_next_pylon);
 
+// TODO in process: RIGHT NOW IT'S NOT NAVIGATING WITHOUT WIRES.
+// TODO: RIGHT NOW IT'S TAKEOFF ALTITUDE TOO LOW.
             if (index_graph_of_next_pylon == -1) break; // No next pylon with unserved edges.
+            // if (index_graph_of_next_pylon == -1) {      // No next pylon with unserved edges from this pylon.
+            //     // Calculate closest pylon from the UAV initial pose:
+            //     nearestGraphNode(true, index_graph_of_next_pylon, index_graph_of_next_pylon, distance_of_next_pylon);
 
-            geometry_msgs::PointStamped next_pylon_pose_stamped;
-            next_pylon_pose_stamped.point.x = graph_[index_graph_of_next_pylon].x;
-            next_pylon_pose_stamped.point.y = graph_[index_graph_of_next_pylon].y;
+            //     if (index_graph_of_next_pylon == -1) {  // No next pylon in general with unserved edges.
+            //         break;
+            //     }
 
-            index_graph_land_station_from_pylon_last = distance_land_station_from_next_pylon;
+            //     // Calculate pylon with most benefit from current pylon:
+            //     mostRewardedPylon(current_flight_plan.nodes.back(), index_graph_of_next_pylon, distance_of_next_pylon);
+            // }
+
+            index_graph_land_station_from_pylon_last = index_graph_land_station_from_next_pylon;
 
             // Calculate closest land station from that most rewarded pylon:
-            nearestGraphNode(false, next_pylon_pose_stamped, index_graph_land_station_from_next_pylon, distance_land_station_from_next_pylon);
+            nearestGraphNode(false, index_graph_of_next_pylon, index_graph_land_station_from_next_pylon, distance_land_station_from_next_pylon);
         }
         // Insert closest land station when inserting another pylon would result in low battery:
         current_flight_plan.nodes.push_back(index_graph_land_station_from_pylon_last);
@@ -142,10 +143,14 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(const std::
 
 
 // Brief method that returns the index and distance of the nearest graph node given an inital point. _pylon_or_land_station true returns the nearest pylon, _pylon_or_land_station false returns the nearest land station.
-void CentralizedPlanner::nearestGraphNode(bool _pylon_or_land_station, const geometry_msgs::PointStamped& _from_here, int& _index_graph_node_to_return, float& _distance_to_return) {
+void CentralizedPlanner::nearestGraphNode(bool _pylon_or_land_station, int _from_this_index_graph, int& _index_graph_node_to_return, float& _distance_to_return) {
 
     _index_graph_node_to_return = -1;
     _distance_to_return = std::numeric_limits<float>::max();
+
+    geometry_msgs::PointStamped from_here;
+    from_here.point.x = graph_[_from_this_index_graph].x;
+    from_here.point.y = graph_[_from_this_index_graph].y;
 
     for (int i=0; i<graph_.size(); i++) {
         if ( !_pylon_or_land_station&&(graph_[i].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION || graph_[i].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION) || _pylon_or_land_station&&graph_[i].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
@@ -154,7 +159,7 @@ void CentralizedPlanner::nearestGraphNode(bool _pylon_or_land_station, const geo
             to_here.point.x = graph_[i].x;
             to_here.point.y = graph_[i].y;
 
-            auto path = path_planner_.getPath(_from_here, to_here);
+            auto path = path_planner_.getPath(from_here, to_here);
             if (path.size()==0) continue;       // No path found.
             float distance_xy = path_planner_.getFlatDistance();
             if (distance_xy==0) continue;       // It's the same graph node, ignore and continue.
@@ -213,6 +218,21 @@ void CentralizedPlanner::mostRewardedPylon(int _initial_pylon_index, int& _index
     }
 
 } // end mostRewardedPylon method
+
+
+// Brief method to print the plan in the terminal.
+void CentralizedPlanner::printPlan() {
+    std::cout << std::endl;
+    std::cout << "Printing flight plan from the planner:" << std::endl;
+    std::cout << std::endl;
+    for (int i=0; i<flight_plan_.size(); i++) {
+        std::cout << "flight_plan[ " << i << " ].id = " << flight_plan_[i].uav_id << std::endl;
+        for (int j=0; j<flight_plan_[i].nodes.size(); j++) {
+            std::cout << "flight_plan[ " << i << " ].nodes[ " << j << " ] = " << flight_plan_[i].nodes[j] << std::endl;
+        }
+    }
+    std::cout << std::endl;
+} // end printPlan method
 
 
 } // end namespace aerialcore
