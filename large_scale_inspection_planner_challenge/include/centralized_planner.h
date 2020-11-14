@@ -11,10 +11,8 @@
 #include <string>
 #include <iostream>
 #include <vector>
-#include <map>
 #include <tuple>
 
-#include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/Point32.h>
 #include <geographic_msgs/GeoPoint.h>
@@ -33,7 +31,9 @@ public:
     ~CentralizedPlanner();
 
     std::vector<aerialcore_msgs::FlightPlan> const getPlan() { return flight_plan_; };      // Returns plan already calculated.
-    std::vector<aerialcore_msgs::FlightPlan> getPlan(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::map< int, std::tuple<geometry_msgs::PoseStamped,float, float, int, int, int, int, int, bool, bool> >& _drone_info);    // Returns new plan.
+
+    std::vector<aerialcore_msgs::FlightPlan> getPlan(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info);    // Returns new plan.
+    // _drone_info it's a vector of tuples, each tuple with 10 elements. The first in the tuple is the initial battery, and so on with all the elements in the "UAV" structure defined here below.
 
 private:
 
@@ -43,24 +43,30 @@ private:
 
     // UAVs:
     struct UAV {
-        geometry_msgs::PoseStamped initial_pose;    // Current pose stsamped of the UAV. Updated continuously.
         float initial_battery;                      // Current battery in parts per unit (not percentage or %). Updated continuously.
+
+        float speed_xy;         // Maximum horizontal velocity (m/s) of this specific UAV (in AUTO mode, if higher speeds are commanded in a mission they will be capped to this velocity).
+        float speed_z_down;     // Maximum vertical descent velocity (m/s) of this specific UAV (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)).
+        float speed_z_up;       // Maximum vertical ascent velocity (m/s) of this specific UAV (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)).
 
         float minimum_battery = 0.2;    // Battery in parts per unit (not percentage or %) considered fully discharged. LiPo batteries should never discharge to less than 20% or else the life span (number of charge/discharge cycles) will be dramatically reduced.
         int time_until_fully_charged;   // Used for battery charge time estimation, time expected to charge completely the batteries in the charging pad from discharge state.
 
         int time_max_flying;            // Used for battery drop estimation, this is the estimated maximum flying time (in seconds) of this specific UAV before the drone runs out of battery.
 
-        int speed_xy;         // Maximum horizontal velocity (m/s) of this specific UAV (in AUTO mode, if higher speeds are commanded in a mission they will be capped to this velocity).
-        int speed_z_down;     // Maximum vertical descent velocity (m/s) of this specific UAV (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)).
-        int speed_z_up;       // Maximum vertical ascent velocity (m/s) of this specific UAV (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)).
+        int id;
 
-        bool landed_or_flying_initially = true;     // True if landed initially, false if flying.
+        bool flying_or_landed_initially = false;     // True if flying initially, false if landed.
         bool recharging_initially = false;
     };
-    std::map<int, UAV> UAVs_;
+    std::vector<UAV> UAVs_;
 
     std::vector<aerialcore_msgs::FlightPlan> flight_plan_;  // Output.
+
+    void nearestGraphNode(bool _pylon_or_land_station, const geometry_msgs::PointStamped& _from_here, int& _index_graph_node_to_return, float& _distance_to_return);  // True searches for pylons, false for land stations.
+    void mostRewardedPylon(int _initial_pylon, int& _index_graph_node_to_return, float& _distance_to_return);
+
+    const float batteryDrop(int _flying_time, int _time_max_flying) { return (float)_flying_time/(float)_time_max_flying; }
 
 };  // end CentralizedPlanner class
 

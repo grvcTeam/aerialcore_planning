@@ -143,7 +143,7 @@ MissionController::MissionController() {
 // Brief Destructor
 MissionController::~MissionController() {
     if(spin_thread_.joinable()) spin_thread_.join();
-    for (UAV &uav : UAVs_) {
+    for (UAV& uav : UAVs_) {
         delete uav.mission;
     }
 } // end ~MissionController destructor
@@ -159,68 +159,70 @@ void MissionController::timerCallback(const ros::TimerEvent&) {
 
 bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSupervising::Request& _req, aerialcore_msgs::StartSupervising::Response& _res) {
     if (_req.uav_id.size()>0) {     // There are specific UAVs to start.
-        for (int const &current_uav_id : _req.uav_id) {
-            int current_uav_index = -1;
-            for (int i=0; i<UAVs_.size(); i++) {
-                if (UAVs_[i].id == current_uav_id) {
-                    current_uav_index = i;
-                    break;
-                }
-            }
-            if (current_uav_index == -1) {
-                ROS_ERROR("Mission Controller: UAV id provided in the StartSupervising not found on the Mission Controller.");
-                exit(EXIT_FAILURE);
-            }
-
-            UAVs_[current_uav_index].enabled_to_supervise = true;
+        for (const int& current_uav_id : _req.uav_id) {
+            UAVs_[findUavIndexById(current_uav_id)].enabled_to_supervise = true;
         }
     } else {    // If empty start all UAVs.
-        for (UAV &current_uav : UAVs_) {
+        for (UAV& current_uav : UAVs_) {
             current_uav.enabled_to_supervise = true;
         }
     }
-    std::map< int, std::tuple<geometry_msgs::PoseStamped,float, float, int, int, int, int, int, bool, bool> > drone_info;
-    for (const UAV &current_uav : UAVs_) {
+
+    // Erase the graph nodes corresponding to the initial position of the UAVs (if there are any because of previously started missions).
+    std::vector<int> indexes_to_erase;              // Dont't erase directly the indexes, it's safer erase later with a sorted decreasing vector.
+    for (int i=0; i<current_graph_.size(); i++) {
+        if (current_graph_[i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION) {
+            indexes_to_erase.push_back(i);
+        }
+    }
+    // Reverse order of the vector of indexes to erase (from more to less now):
+    std::reverse(indexes_to_erase.begin(), indexes_to_erase.end());
+    // Erase indexes of the graph:
+    for (int current_index_to_erase: indexes_to_erase) {
+        current_graph_.erase( current_graph_.begin() + current_index_to_erase );
+    }
+
+    std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> > drone_info;
+    for (const UAV& current_uav : UAVs_) {
         if (current_uav.enabled_to_supervise == true) {
-            std::tuple<geometry_msgs::PoseStamped,float, float, int, int, int, int, int, bool, bool> new_tuple;
-            std::get<0>(new_tuple) = current_uav.pose_stamped;
-            std::get<1>(new_tuple) = current_uav.battery;
-            std::get<2>(new_tuple) = current_uav.minimum_battery;
-            std::get<3>(new_tuple) = current_uav.time_until_fully_charged;
-            std::get<4>(new_tuple) = current_uav.time_max_flying;
-            std::get<5>(new_tuple) = current_uav.speed_xy;
-            std::get<6>(new_tuple) = current_uav.speed_z_down;
-            std::get<7>(new_tuple) = current_uav.speed_z_up;
-            std::get<8>(new_tuple) = !current_uav.mission->armed();    // TODO: better way to know if flying?
+            std::tuple<float, float, int, int, int, int, int, int, bool, bool> new_tuple;
+            std::get<0>(new_tuple) = current_uav.battery;
+            std::get<1>(new_tuple) = current_uav.minimum_battery;
+            std::get<2>(new_tuple) = current_uav.time_until_fully_charged;
+            std::get<3>(new_tuple) = current_uav.time_max_flying;
+            std::get<4>(new_tuple) = current_uav.speed_xy;
+            std::get<5>(new_tuple) = current_uav.speed_z_down;
+            std::get<6>(new_tuple) = current_uav.speed_z_up;
+            std::get<7>(new_tuple) = current_uav.id;
+            std::get<8>(new_tuple) = current_uav.mission->armed();  // TODO: better way to know if flying?
             std::get<9>(new_tuple) = current_uav.recharging;
             drone_info[current_uav.id] = new_tuple;
+
+            aerialcore_msgs::GraphNode current_uav_initial_position_graph_node;
+            current_uav_initial_position_graph_node.type = aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION;
+            current_uav_initial_position_graph_node.id = current_uav.id;
+            current_uav_initial_position_graph_node.x = current_uav.mission->pose().pose.position.x;
+            current_uav_initial_position_graph_node.y = current_uav.mission->pose().pose.position.y;
+            current_graph_.push_back(current_uav_initial_position_graph_node);
         }
     }
+
     flight_plan_ = centralized_planner_.getPlan(current_graph_, drone_info);
+
     translateFlightPlanIntoUAVMission(flight_plan_);
-    for (UAV &current_uav : UAVs_) {
-        if( current_uav.enabled_to_supervise == true) {
-            current_uav.mission->start();
-        }
+
+    for (const aerialcore_msgs::FlightPlan& flight_plan_for_current_uav : flight_plan_) {
+        UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->start();
     }
+
     _res.success=true;
     return true;
 } // end startSupervisingServiceCallback
 
 
 void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plan) {
-    for (aerialcore_msgs::FlightPlan const &flight_plan_for_current_uav : _flight_plan) {
-        int current_uav_index = -1;
-        for (int i=0; i<UAVs_.size(); i++) {
-            if (UAVs_[i].id == flight_plan_for_current_uav.uav_id) {
-                current_uav_index = i;
-                break;
-            }
-        }
-        if (current_uav_index == -1) {
-            ROS_ERROR("Mission Controller: UAV id provided in the FlightPlan not found on the Mission Controller.");
-            exit(EXIT_FAILURE);
-        }
+    for (const aerialcore_msgs::FlightPlan& flight_plan_for_current_uav : _flight_plan) {
+        int current_uav_index = findUavIndexById(flight_plan_for_current_uav.uav_id);
 
         UAVs_[current_uav_index].mission->clear();
 
@@ -229,7 +231,7 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
 
         std::vector<geometry_msgs::PoseStamped> pass_poses;
 
-        for (int const &current_node : flight_plan_for_current_uav.nodes) {
+        for (const int& current_node : flight_plan_for_current_uav.nodes) {
             geometry_msgs::PoseStamped current_pose_stamped;
             current_pose_stamped.pose.position.x = current_graph_[current_node].x;
             current_pose_stamped.pose.position.y = current_graph_[current_node].y;
@@ -273,24 +275,14 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
 
 bool MissionController::stopSupervisingServiceCallback(aerialcore_msgs::StopSupervising::Request& _req, aerialcore_msgs::StopSupervising::Response& _res) {
     if (_req.uav_id.size()>0) {     // There are specific UAVs to stop.
-        for (int const &current_uav_id : _req.uav_id) {
-            int current_uav_index = -1;
-            for (int i=0; i<UAVs_.size(); i++) {
-                if (UAVs_[i].id == current_uav_id) {
-                    current_uav_index = i;
-                    break;
-                }
-            }
-            if (current_uav_index == -1) {
-                ROS_ERROR("Mission Controller: UAV id provided in the StopSupervising not found on the Mission Controller.");
-                exit(EXIT_FAILURE);
-            }
+        for (const int& current_uav_id : _req.uav_id) {
+            int current_uav_index = findUavIndexById(current_uav_id);
 
             UAVs_[current_uav_index].mission->stop();
             UAVs_[current_uav_index].enabled_to_supervise = false;
         }
     } else {    // If empty stop all UAVs.
-        for (UAV &current_uav : UAVs_) {
+        for (UAV& current_uav : UAVs_) {
             current_uav.mission->stop();
             current_uav.enabled_to_supervise = false;
         }
@@ -303,7 +295,7 @@ bool MissionController::stopSupervisingServiceCallback(aerialcore_msgs::StopSupe
 bool MissionController::doSpecificSupervisionServiceCallback(aerialcore_msgs::DoSpecificSupervision::Request& _req, aerialcore_msgs::DoSpecificSupervision::Response& _res) {
     continuous_or_specific_supervision_ = false;
     specific_subgraph_.clear();
-    for (aerialcore_msgs::GraphNode const &current_graph_node : _req.specific_subgraph) {
+    for (const aerialcore_msgs::GraphNode& current_graph_node : _req.specific_subgraph) {
         specific_subgraph_.push_back(current_graph_node);
     }
     current_graph_.clear();
@@ -320,6 +312,22 @@ bool MissionController::doContinuousSupervisionServiceCallback(std_srvs::Trigger
     _res.success=true;
     return true;
 } // end doContinuousSupervisionServiceCallback
+
+
+int MissionController::findUavIndexById(int _UAV_id) {
+    int uav_index = -1;
+    for (int i=0; i<UAVs_.size(); i++) {
+        if (UAVs_[i].id == _UAV_id) {
+            uav_index = i;
+            break;
+        }
+    }
+    if (uav_index == -1) {
+        ROS_ERROR("Mission Controller: UAV id provided not found on the Mission Controller.");
+        exit(EXIT_FAILURE);
+    }
+    return uav_index;
+} // end findUavIndexById
 
 
 } // end namespace aerialcore

@@ -379,19 +379,7 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
     //      _movement_pattern:  if 0 (default) the movement of the agent can be in any direction, and if 1 the agent can only move in angles multiple of 45º (faster to compute if the grid is big, doesn't do visibility-loops).
     //      _show_results:      if 0 (default) no results are shown, and if 1 the map of obstacles and the path is plotted (usiing matplotlib-cpp), and also the path is shown in the terminal, with its cost and computation time.
 
-    clock_t t_begin;
-    clock_t t_end;
-    if ( _show_results ) {
-        ////////////////// Testing, calculate time //////////////////
-        t_begin = clock();
-        ////////////////// Testing, calculate time //////////////////
-    }
-
-    std::vector<geometry_msgs::PointStamped> path_cells;             // The path expressed in cells.
     std::vector<geometry_msgs::PointStamped> path;                   // The output of this method.
-
-    path_distance_ = std::numeric_limits<double>::max(); // Distance initialized to "infinity" (maximum value possible for double).
-    path_flat_distance_ = std::numeric_limits<double>::max(); // Distance initialized to "infinity" (maximum value possible for double).
 
     if ( x_cell_width_==-1 && y_cell_width_==-1 ) {  // Simplest case of path planning (constructor without inputs): return the final point, straight line.
         path.push_back( _final_point_stamped );
@@ -399,6 +387,18 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
         path_flat_distance_ = sqrt( pow(_final_point_stamped.point.x-_initial_point_stamped.point.x,2) + pow(_final_point_stamped.point.y-_initial_point_stamped.point.y,2) );
         return path;
     }
+
+    clock_t t_begin;
+    clock_t t_end;
+    if ( _show_results ) {
+        ////////////////// Testing, calculate time //////////////////
+        t_begin = clock();
+        ////////////////// Testing, calculate time //////////////////
+    }
+    std::vector<geometry_msgs::PointStamped> path_cells;             // The path expressed in cells.
+
+    path_distance_ = std::numeric_limits<double>::max(); // Distance initialized to "infinity" (maximum value possible for double).
+    path_flat_distance_ = std::numeric_limits<double>::max(); // Distance initialized to "infinity" (maximum value possible for double).
 
     if ( KML_parser_from_path_planner_.geofence_cartesian_.size()<=1 ) {
 
