@@ -23,6 +23,7 @@ CentralizedPlanner::~CentralizedPlanner() {}
 std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info) {
 
     graph_.clear();
+    edges_.clear();
     UAVs_.clear();
     flight_plan_.clear();
 
@@ -42,6 +43,18 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(const std::
         actual_UAV.flying_or_landed_initially = std::get<8>(current_drone);
         actual_UAV.recharging_initially = std::get<9>(current_drone);
         UAVs_.push_back(actual_UAV);
+    }
+
+    // Construct edges_:
+    for (int i=0; i<graph_.size(); i++) {
+        if (graph_[i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
+            for (int j=0; j<graph_[i].connections_indexes.size(); j++) {
+                if (i < graph_[i].connections_indexes[j]) {
+                    std::pair <int,int> current_edge (i, graph_[i].connections_indexes[j]);
+                    edges_.push_back(current_edge);
+                }
+            }
+        }
     }
 
     for (const UAV& current_uav : UAVs_) {
@@ -77,6 +90,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(const std::
         float distance_of_next_pylon;
 
         int index_graph_land_station_from_next_pylon;
+        int index_graph_land_station_from_pylon_last;
         float distance_land_station_from_next_pylon;
 
         geometry_msgs::PointStamped uav_initial_pose;
@@ -93,7 +107,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(const std::
         // Calculate closest land station from that closest pylon:
         nearestGraphNode(false, next_pylon_pose_stamped, index_graph_land_station_from_next_pylon, distance_land_station_from_next_pylon);
 
-        while (battery - batteryDrop( (distance_of_next_pylon+distance_land_station_from_next_pylon)/current_uav.speed_xy , current_uav.time_max_flying) > current_uav.minimum_battery) {
+        while (edges_.size()>0 && (battery - batteryDrop( (distance_of_next_pylon+distance_land_station_from_next_pylon)/current_uav.speed_xy , current_uav.time_max_flying) > current_uav.minimum_battery)) {
             // Insert pylon because it can be reached with enough battery to go later to a land station:
             current_flight_plan.nodes.push_back(index_graph_of_next_pylon);
 
@@ -103,19 +117,19 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(const std::
             // Calculate pylon with most benefit from current pylon:
             mostRewardedPylon(current_flight_plan.nodes.back(), index_graph_of_next_pylon, distance_of_next_pylon);
 
+            if (index_graph_of_next_pylon == -1) break; // No next pylon with unserved edges.
+
             geometry_msgs::PointStamped next_pylon_pose_stamped;
             next_pylon_pose_stamped.point.x = graph_[index_graph_of_next_pylon].x;
             next_pylon_pose_stamped.point.y = graph_[index_graph_of_next_pylon].y;
+
+            index_graph_land_station_from_pylon_last = distance_land_station_from_next_pylon;
 
             // Calculate closest land station from that most rewarded pylon:
             nearestGraphNode(false, next_pylon_pose_stamped, index_graph_land_station_from_next_pylon, distance_land_station_from_next_pylon);
         }
         // Insert closest land station when inserting another pylon would result in low battery:
-        current_flight_plan.nodes.push_back(index_graph_land_station_from_next_pylon);
-
-// TODO:
-//       - REMOVE ALREADY SERVED INDEXES
-//       - SIMPLIFIED GRAPH IN PYDASHBOARD TO TEST
+        current_flight_plan.nodes.push_back(index_graph_land_station_from_pylon_last);
 
         if (current_flight_plan.nodes.size()>3) {   // Consider the flight plan only if it visits two or more pylons.
             flight_plan_.push_back(current_flight_plan);
@@ -143,6 +157,7 @@ void CentralizedPlanner::nearestGraphNode(bool _pylon_or_land_station, const geo
             auto path = path_planner_.getPath(_from_here, to_here);
             if (path.size()==0) continue;       // No path found.
             float distance_xy = path_planner_.getFlatDistance();
+            if (distance_xy==0) continue;       // It's the same graph node, ignore and continue.
 
             if ( _distance_to_return > distance_xy ) {
                 _index_graph_node_to_return = i;
@@ -159,6 +174,7 @@ void CentralizedPlanner::mostRewardedPylon(int _initial_pylon_index, int& _index
 
     _index_graph_node_to_return = -1;
     _distance_to_return = 0;
+    int index_edge_to_erase;
 
     if (!graph_[_initial_pylon_index].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
         return;
@@ -166,12 +182,34 @@ void CentralizedPlanner::mostRewardedPylon(int _initial_pylon_index, int& _index
 
     for (const int& current_connection_index : graph_[_initial_pylon_index].connections_indexes) {
 
+        // Calculate the current edge between both pylons:
+        std::pair <int,int> current_edge;
+        current_edge.first =  _initial_pylon_index < current_connection_index ? _initial_pylon_index : current_connection_index;
+        current_edge.second = _initial_pylon_index < current_connection_index ? current_connection_index : _initial_pylon_index;
+
+        // If current edge not found means it has already been served, so continue.
+        bool edge_found = false;
+        int i = 0;
+        for (i=0; i<edges_.size(); i++) {
+            if (edges_[i] == current_edge) {
+                edge_found = true;
+                break;
+            }
+        }
+        if (!edge_found) {
+            continue;
+        }
+
         float distance_xy = sqrt( pow(graph_[_initial_pylon_index].x-graph_[current_connection_index].x, 2) + pow(graph_[_initial_pylon_index].y-graph_[current_connection_index].y, 2) );
 
         if ( _distance_to_return < distance_xy ) {
             _index_graph_node_to_return = current_connection_index;
             _distance_to_return = distance_xy;
+            index_edge_to_erase = i;
         }
+    }
+    if (_index_graph_node_to_return != -1) {
+        edges_.erase( edges_.begin() + index_edge_to_erase );
     }
 
 } // end mostRewardedPylon method

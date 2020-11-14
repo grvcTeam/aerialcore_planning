@@ -12,6 +12,7 @@
 #include <iostream>
 #include <vector>
 #include <tuple>
+#include <utility>
 
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/Point32.h>
@@ -60,6 +61,8 @@ private:
         bool recharging_initially = false;
     };
     std::vector<UAV> UAVs_;
+
+    std::vector< std::pair<int,int> > edges_;  // Edges or connections of the graph, being the pair of indexes of the graph nodes connected by wires. Always the first int index lower than the second of the pair.
 
     std::vector<aerialcore_msgs::FlightPlan> flight_plan_;  // Output.
 
