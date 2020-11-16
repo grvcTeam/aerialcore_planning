@@ -84,6 +84,7 @@ def do_specific_supervision_menu():
     graph_node_struct.type = GraphNode.TYPE_PYLON
     graph_node_struct.x = 699.429
     graph_node_struct.y = 219.137
+    graph_node_struct.z = 25
     graph_node_struct.connections_indexes.append(1)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
@@ -92,6 +93,7 @@ def do_specific_supervision_menu():
     graph_node_struct.type = GraphNode.TYPE_PYLON
     graph_node_struct.x = 641.646
     graph_node_struct.y = 169.93
+    graph_node_struct.z = 25
     graph_node_struct.connections_indexes.append(0)
     graph_node_struct.connections_indexes.append(2)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
@@ -101,6 +103,7 @@ def do_specific_supervision_menu():
     graph_node_struct.type = GraphNode.TYPE_PYLON
     graph_node_struct.x = 62.321
     graph_node_struct.y = -28.535
+    graph_node_struct.z = 25
     graph_node_struct.connections_indexes.append(1)
     graph_node_struct.connections_indexes.append(3)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
@@ -110,6 +113,7 @@ def do_specific_supervision_menu():
     graph_node_struct.type = GraphNode.TYPE_PYLON
     graph_node_struct.x = -492.757
     graph_node_struct.y = -240.6
+    graph_node_struct.z = 25
     graph_node_struct.connections_indexes.append(2)
     graph_node_struct.connections_indexes.append(4)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
@@ -119,6 +123,7 @@ def do_specific_supervision_menu():
     graph_node_struct.type = GraphNode.TYPE_PYLON
     graph_node_struct.x = -490.135
     graph_node_struct.y = -216.032
+    graph_node_struct.z = 25
     graph_node_struct.connections_indexes.append(3)
     graph_node_struct.connections_indexes.append(5)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
@@ -128,6 +133,7 @@ def do_specific_supervision_menu():
     graph_node_struct.type = GraphNode.TYPE_PYLON
     graph_node_struct.x = -503.375
     graph_node_struct.y = -157.510
+    graph_node_struct.z = 25
     graph_node_struct.connections_indexes.append(4)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
@@ -136,6 +142,7 @@ def do_specific_supervision_menu():
     graph_node_struct.type = GraphNode.TYPE_PYLON
     graph_node_struct.x = -488.455
     graph_node_struct.y = -298.354
+    graph_node_struct.z = 25
     graph_node_struct.connections_indexes.append(7)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
@@ -144,6 +151,7 @@ def do_specific_supervision_menu():
     graph_node_struct.type = GraphNode.TYPE_PYLON
     graph_node_struct.x = -33.345
     graph_node_struct.y = -276.977
+    graph_node_struct.z = 25
     graph_node_struct.connections_indexes.append(6)
     graph_node_struct.connections_indexes.append(8)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
@@ -153,6 +161,7 @@ def do_specific_supervision_menu():
     graph_node_struct.type = GraphNode.TYPE_PYLON
     graph_node_struct.x = 465.385
     graph_node_struct.y = -626.630
+    graph_node_struct.z = 25
     graph_node_struct.connections_indexes.append(7)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
@@ -160,24 +169,28 @@ def do_specific_supervision_menu():
     graph_node_struct.type = GraphNode.TYPE_RECHARGE_LAND_STATION
     graph_node_struct.x = 5
     graph_node_struct.y = 0
+    graph_node_struct.z = 0
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
     graph_node_struct = GraphNode()
     graph_node_struct.type = GraphNode.TYPE_RECHARGE_LAND_STATION
     graph_node_struct.x = -5
     graph_node_struct.y = 0
+    graph_node_struct.z = 0
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
     graph_node_struct = GraphNode()
     graph_node_struct.type = GraphNode.TYPE_REGULAR_LAND_STATION
     graph_node_struct.x = 0
     graph_node_struct.y = 5
+    graph_node_struct.z = 0
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
     graph_node_struct = GraphNode()
     graph_node_struct.type = GraphNode.TYPE_REGULAR_LAND_STATION
     graph_node_struct.x = 0
     graph_node_struct.y = -5
+    graph_node_struct.z = 0
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
     try:

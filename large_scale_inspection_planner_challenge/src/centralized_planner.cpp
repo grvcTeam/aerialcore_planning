@@ -117,7 +117,6 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(const std::
 
             index_graph_land_station_from_pylon_last = index_graph_land_station_from_next_pylon;
 
-// TODO: RIGHT NOW IT'S TAKEOFF ALTITUDE TOO LOW.
             if (index_graph_of_next_pylon == -1) { // No next pylon connected with unserved edges, search pylons not connected to this one.
                 int index_pylon_connected_with_unserved_edge;
                 float distance_pylon_connected_with_unserved_edge;

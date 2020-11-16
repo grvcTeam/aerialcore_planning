@@ -9,3 +9,4 @@ int32[] connections_indexes # If pylon, indexes of other pylons to which the cur
 int32 id                    # UAV id if TYPE_UAV_INITIAL_POSITION
 float32 x                   # x location of the graph node.
 float32 y                   # y location of the graph node.
+float32 z                   # z location of the graph node.
