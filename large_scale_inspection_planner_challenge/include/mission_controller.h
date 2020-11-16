@@ -41,8 +41,6 @@ private:
 
   bool continuous_or_specific_supervision_ = true; // True if continuous supervision (default), false if specific.
 
-  void timerCallback(const ros::TimerEvent&);
-
   bool startSupervisingServiceCallback(aerialcore_msgs::StartSupervising::Request& _req, aerialcore_msgs::StartSupervising::Response& _res);
   bool stopSupervisingServiceCallback(aerialcore_msgs::StopSupervising::Request& _req, aerialcore_msgs::StopSupervising::Response& _res);
   bool doSpecificSupervisionServiceCallback(aerialcore_msgs::DoSpecificSupervision::Request& _req, aerialcore_msgs::DoSpecificSupervision::Response& _res);
@@ -70,9 +68,6 @@ private:
   struct UAV {
     grvc::mission_ns::Mission * mission = nullptr;  // For simulation!!! In the real flights of november there will be no VTOL nor fixed wing, only DJI multicopters.
 
-    geometry_msgs::PoseStamped pose_stamped;  // Current pose stsamped of the UAV. Updated continuously.                        // Can be found at "mission".
-    float battery;                            // Current battery in parts per unit (not percentage or %). Updated continuously. // Can be found at "mission".
-
     float speed_xy;         // Maximum horizontal velocity (m/s) of this specific UAV (in AUTO mode, if higher speeds are commanded in a mission they will be capped to this velocity).
     float speed_z_down;     // Maximum vertical descent velocity (m/s) of this specific UAV (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)).
     float speed_z_up;       // Maximum vertical ascent velocity (m/s) of this specific UAV (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)).
@@ -90,9 +85,6 @@ private:
   std::vector<UAV> UAVs_;
 
   std::thread spin_thread_;
-
-  // Timer
-  ros::Timer timer_;
 
 }; // MissionController class
 

@@ -126,9 +126,6 @@ MissionController::MissionController() {
     do_specific_supervision_srv_ = n_.advertiseService("mission_controller/do_specific_supervision", &MissionController::doSpecificSupervisionServiceCallback, this);
     do_continuous_supervision_srv_ = n_.advertiseService("mission_controller/do_continuous_supervision", &MissionController::doContinuousSupervisionServiceCallback, this);
 
-    // Timer Callback
-    timer_ = n_.createTimer(ros::Duration(1), &MissionController::timerCallback, this); // 1 Hz
-
     // Make communications spin!
     spin_thread_ = std::thread([this]() {
         ros::MultiThreadedSpinner spinner(2); // Use 2 threads
@@ -147,14 +144,6 @@ MissionController::~MissionController() {
         delete uav.mission;
     }
 } // end ~MissionController destructor
-
-
-void MissionController::timerCallback(const ros::TimerEvent&) {
-    for (int i=0; i<UAVs_.size(); i++) {
-        UAVs_[i].pose_stamped = UAVs_[i].mission->pose();
-        UAVs_[i].battery = UAVs_[i].mission->battery();
-    }
-} // end timerCallback
 
 
 bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSupervising::Request& _req, aerialcore_msgs::StartSupervising::Response& _res) {
@@ -186,7 +175,7 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
     for (const UAV& current_uav : UAVs_) {
         if (current_uav.enabled_to_supervise == true) {
             std::tuple<float, float, int, int, int, int, int, int, bool, bool> new_tuple;
-            std::get<0>(new_tuple) = current_uav.battery;
+            std::get<0>(new_tuple) = current_uav.mission->battery();
             std::get<1>(new_tuple) = current_uav.minimum_battery;
             std::get<2>(new_tuple) = current_uav.time_until_fully_charged;
             std::get<3>(new_tuple) = current_uav.time_max_flying;
