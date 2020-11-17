@@ -60,6 +60,7 @@ add_service_files(
   StartSupervising.srv
   StopSupervising.srv
   DoSpecificSupervision.srv
+  PostString.srv
 )
 
 ## Generate actions in the 'action' folder

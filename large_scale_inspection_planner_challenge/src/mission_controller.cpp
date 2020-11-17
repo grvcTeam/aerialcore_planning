@@ -16,6 +16,8 @@ namespace aerialcore {
 MissionController::MissionController() {
     pnh_ = ros::NodeHandle("~");
 
+    pnh_.getParam("commanding_UAV_with_mission_lib_or_DJI_SDK", commanding_UAV_with_mission_lib_or_DJI_SDK_);
+
     // Read parameters of the UAVs (from the launch):
     std::vector<int>   drones_id;
     std::vector<int>   drones_time_max_flying;
@@ -131,11 +133,14 @@ MissionController::MissionController() {
     }
 #endif
 
-    // Advertised services
+    // Advertised services:
     start_supervising_srv_ = n_.advertiseService("mission_controller/start_supervising", &MissionController::startSupervisingServiceCallback, this);
     stop_supervising_srv_ = n_.advertiseService("mission_controller/stop_supervising", &MissionController::stopSupervisingServiceCallback, this);
     do_specific_supervision_srv_ = n_.advertiseService("mission_controller/do_specific_supervision", &MissionController::doSpecificSupervisionServiceCallback, this);
     do_continuous_supervision_srv_ = n_.advertiseService("mission_controller/do_continuous_supervision", &MissionController::doContinuousSupervisionServiceCallback, this);
+
+    // Clients:
+    post_yaml_client_ = n_.serviceClient<aerialcore_msgs::PostString>("post_yaml");
 
     // Make communications spin!
     spin_thread_ = std::thread([this]() {
@@ -214,17 +219,28 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
     centralized_planner_.printPlan();
 #endif
 
-    translateFlightPlanIntoUAVMission(flight_plan_);
+    if (commanding_UAV_with_mission_lib_or_DJI_SDK_) {
+        translateFlightPlanIntoUAVMission(flight_plan_);
 
-    for (const aerialcore_msgs::FlightPlan& flight_plan_for_current_uav : flight_plan_) {
+        for (const aerialcore_msgs::FlightPlan& flight_plan_for_current_uav : flight_plan_) {
 #ifdef DEBUG
-        UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->print();
+            UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->print();
 #endif
-        UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->push();
-        UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->start();
+            UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->push();
+            UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->start();
+        }
+        _res.success=true;
+    } else {
+        aerialcore_msgs::PostString post_yaml_string;
+        post_yaml_string.request.data = translateFlightPlanIntoDJIyaml(flight_plan_);
+        if (post_yaml_client_.call(post_yaml_string)) {
+            ROS_INFO("Mission Controller: yaml sent to DJI SDK.");
+            _res.success=true;
+        } else {
+            ROS_WARN("Mission Controller: yaml not sent to DJI SDK, service didn't answer.");
+            _res.success=false;
+        }
     }
-
-    _res.success=true;
     return true;
 } // end startSupervisingServiceCallback
 
@@ -284,6 +300,39 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
         }
     }
 } // end translateFlightPlanIntoUAVMission
+
+
+std::string MissionController::translateFlightPlanIntoDJIyaml(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plan) {
+    std::string yaml_to_return = {R"(frame_id: /gps
+
+uav_n: )"};
+    yaml_to_return.append(std::to_string(_flight_plan.size()).c_str());
+    yaml_to_return.append("\n\n");
+    for (const aerialcore_msgs::FlightPlan& flight_plan_for_current_uav : _flight_plan) {
+        yaml_to_return.append("uav_");
+        yaml_to_return.append(std::to_string(flight_plan_for_current_uav.uav_id).c_str());
+        yaml_to_return.append({R"(:
+  wp_n: )"});
+        yaml_to_return.append(std::to_string(flight_plan_for_current_uav.nodes.size()-2 ).c_str());
+        for (int i=1; i<flight_plan_for_current_uav.nodes.size()-1; i++) {
+            yaml_to_return.append({R"(
+  wp_)"});
+            yaml_to_return.append(std::to_string(i-1).c_str());
+            yaml_to_return.append(": [");
+            yaml_to_return.append(std::to_string(current_graph_[flight_plan_for_current_uav.nodes[i]].x).c_str());
+            yaml_to_return.append(", ");
+            yaml_to_return.append(std::to_string(current_graph_[flight_plan_for_current_uav.nodes[i]].y).c_str());
+            yaml_to_return.append(", ");
+            yaml_to_return.append(std::to_string(current_graph_[flight_plan_for_current_uav.nodes[i]].z).c_str());
+            yaml_to_return.append("]");
+        }
+    }
+#ifdef DEBUG
+    std::cout << yaml_to_return << std::endl;
+#endif
+    return yaml_to_return;
+} // end translateFlightPlanIntoDJIyaml
+
 
 
 bool MissionController::stopSupervisingServiceCallback(aerialcore_msgs::StopSupervising::Request& _req, aerialcore_msgs::StopSupervising::Response& _res) {

@@ -22,6 +22,7 @@
 #include <aerialcore_msgs/StopSupervising.h>
 #include <aerialcore_msgs/GraphNode.h>
 #include <aerialcore_msgs/DoSpecificSupervision.h>
+#include <aerialcore_msgs/PostString.h>
 
 #include <centralized_planner.h>
 #include <mission_lib.h>
@@ -52,6 +53,7 @@ private:
   ros::ServiceServer stop_supervising_srv_;
   ros::ServiceServer do_specific_supervision_srv_;
   ros::ServiceServer do_continuous_supervision_srv_;
+  ros::ServiceClient post_yaml_client_;
 
   // Power lines graph:
   std::vector<aerialcore_msgs::GraphNode> current_graph_;
@@ -62,7 +64,10 @@ private:
 
   std::vector<aerialcore_msgs::FlightPlan> flight_plan_;
 
+  bool commanding_UAV_with_mission_lib_or_DJI_SDK_ = true;  // Use mission_lib for commanding UAVs (true) or output a yaml string for using the DJI SDK (false).
+
   void translateFlightPlanIntoUAVMission(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plan);
+  std::string translateFlightPlanIntoDJIyaml(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plan);
 
   // UAVs:
   struct UAV {
