@@ -10,3 +10,6 @@ int32 id                    # UAV id if TYPE_UAV_INITIAL_POSITION
 float32 x                   # x location of the graph node.
 float32 y                   # y location of the graph node.
 float32 z                   # z location of the graph node.
+float32 latitude            # latitude location of the graph node.
+float32 longitude           # longitude location of the graph node.
+float32 altitude            # altitude location of the graph node.

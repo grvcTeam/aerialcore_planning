@@ -85,6 +85,9 @@ def do_specific_supervision_menu():
     graph_node_struct.x = 699.429
     graph_node_struct.y = 219.137
     graph_node_struct.z = 25
+    graph_node_struct.latitude = 38.140705
+    graph_node_struct.longitude = -3.165848
+    graph_node_struct.altitude = 25
     graph_node_struct.connections_indexes.append(1)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
@@ -94,6 +97,9 @@ def do_specific_supervision_menu():
     graph_node_struct.x = 641.646
     graph_node_struct.y = 169.93
     graph_node_struct.z = 25
+    graph_node_struct.latitude = 38.140261
+    graph_node_struct.longitude = -3.166506
+    graph_node_struct.altitude = 25
     graph_node_struct.connections_indexes.append(0)
     graph_node_struct.connections_indexes.append(2)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
@@ -104,6 +110,9 @@ def do_specific_supervision_menu():
     graph_node_struct.x = 62.321
     graph_node_struct.y = -28.535
     graph_node_struct.z = 25
+    graph_node_struct.latitude = 38.138462
+    graph_node_struct.longitude = -3.173113
+    graph_node_struct.altitude = 25
     graph_node_struct.connections_indexes.append(1)
     graph_node_struct.connections_indexes.append(3)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
@@ -114,6 +123,9 @@ def do_specific_supervision_menu():
     graph_node_struct.x = -492.757
     graph_node_struct.y = -240.6
     graph_node_struct.z = 25
+    graph_node_struct.latitude = 38.136542
+    graph_node_struct.longitude = -3.179443
+    graph_node_struct.altitude = 25
     graph_node_struct.connections_indexes.append(2)
     graph_node_struct.connections_indexes.append(4)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
@@ -124,6 +136,9 @@ def do_specific_supervision_menu():
     graph_node_struct.x = -490.135
     graph_node_struct.y = -216.032
     graph_node_struct.z = 25
+    graph_node_struct.latitude = 38.136763
+    graph_node_struct.longitude = -3.179413
+    graph_node_struct.altitude = 25
     graph_node_struct.connections_indexes.append(3)
     graph_node_struct.connections_indexes.append(5)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
@@ -134,6 +149,9 @@ def do_specific_supervision_menu():
     graph_node_struct.x = -503.375
     graph_node_struct.y = -157.510
     graph_node_struct.z = 25
+    graph_node_struct.latitude = 38.137290
+    graph_node_struct.longitude = -3.179566
+    graph_node_struct.altitude = 25
     graph_node_struct.connections_indexes.append(4)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
@@ -143,6 +161,9 @@ def do_specific_supervision_menu():
     graph_node_struct.x = -488.455
     graph_node_struct.y = -298.354
     graph_node_struct.z = 25
+    graph_node_struct.latitude = 38.136031
+    graph_node_struct.longitude = -3.179382
+    graph_node_struct.altitude = 25
     graph_node_struct.connections_indexes.append(7)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
@@ -152,6 +173,9 @@ def do_specific_supervision_menu():
     graph_node_struct.x = -33.345
     graph_node_struct.y = -276.977
     graph_node_struct.z = 25
+    graph_node_struct.latitude = 38.136222
+    graph_node_struct.longitude = -3.174199
+    graph_node_struct.altitude = 25
     graph_node_struct.connections_indexes.append(6)
     graph_node_struct.connections_indexes.append(8)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
@@ -162,6 +186,9 @@ def do_specific_supervision_menu():
     graph_node_struct.x = 465.385
     graph_node_struct.y = -626.630
     graph_node_struct.z = 25
+    graph_node_struct.latitude = 38.133079
+    graph_node_struct.longitude = -3.168501
+    graph_node_struct.altitude = 25
     graph_node_struct.connections_indexes.append(7)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
@@ -170,6 +197,9 @@ def do_specific_supervision_menu():
     graph_node_struct.x = 5
     graph_node_struct.y = 0
     graph_node_struct.z = 0
+    graph_node_struct.latitude = 0
+    graph_node_struct.longitude = 0
+    graph_node_struct.altitude = 0
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
     graph_node_struct = GraphNode()
@@ -177,6 +207,9 @@ def do_specific_supervision_menu():
     graph_node_struct.x = -5
     graph_node_struct.y = 0
     graph_node_struct.z = 0
+    graph_node_struct.latitude = 0
+    graph_node_struct.longitude = 0
+    graph_node_struct.altitude = 0
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
     graph_node_struct = GraphNode()
@@ -184,6 +217,9 @@ def do_specific_supervision_menu():
     graph_node_struct.x = 0
     graph_node_struct.y = 5
     graph_node_struct.z = 0
+    graph_node_struct.latitude = 0
+    graph_node_struct.longitude = 0
+    graph_node_struct.altitude = 0
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
     graph_node_struct = GraphNode()
@@ -191,6 +227,9 @@ def do_specific_supervision_menu():
     graph_node_struct.x = 0
     graph_node_struct.y = -5
     graph_node_struct.z = 0
+    graph_node_struct.latitude = 0
+    graph_node_struct.longitude = 0
+    graph_node_struct.altitude = 0
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
     try:

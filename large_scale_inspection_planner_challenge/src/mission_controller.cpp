@@ -55,10 +55,12 @@ MissionController::MissionController() {
 
     // Read parameters of the complete graph (from the yaml). Numeric parameters extracted from a string, so some steps are needed:
     std::string pylons_position_string;
+    std::string pylons_position_geo_string;
     std::string connections_indexes_string;
     std::string recharge_land_stations_string;
     std::string regular_land_stations_string;
     n_.getParam("pylons_position", pylons_position_string);
+    n_.getParam("pylons_position_geo", pylons_position_geo_string);
     n_.getParam("connections_indexes", connections_indexes_string);
     n_.getParam("recharge_land_stations", recharge_land_stations_string);
     n_.getParam("regular_land_stations", regular_land_stations_string);
@@ -66,6 +68,9 @@ MissionController::MissionController() {
     pylons_position_string.erase(std::remove(pylons_position_string.begin(), pylons_position_string.end(), '\n'), pylons_position_string.end());
     pylons_position_string.erase(std::remove(pylons_position_string.begin(), pylons_position_string.end(), '\r'), pylons_position_string.end());
     pylons_position_string.erase(std::remove(pylons_position_string.begin(), pylons_position_string.end(), ';'), pylons_position_string.end());
+    pylons_position_geo_string.erase(std::remove(pylons_position_geo_string.begin(), pylons_position_geo_string.end(), '\n'), pylons_position_geo_string.end());
+    pylons_position_geo_string.erase(std::remove(pylons_position_geo_string.begin(), pylons_position_geo_string.end(), '\r'), pylons_position_geo_string.end());
+    pylons_position_geo_string.erase(std::remove(pylons_position_geo_string.begin(), pylons_position_geo_string.end(), ';'), pylons_position_geo_string.end());
     connections_indexes_string.erase(std::remove(connections_indexes_string.begin(), connections_indexes_string.end(), '\n'), connections_indexes_string.end());
     connections_indexes_string.erase(std::remove(connections_indexes_string.begin(), connections_indexes_string.end(), '\r'), connections_indexes_string.end());
     recharge_land_stations_string.erase(std::remove(recharge_land_stations_string.begin(), recharge_land_stations_string.end(), '\n'), recharge_land_stations_string.end());
@@ -88,6 +93,12 @@ MissionController::MissionController() {
         pylons_position_string = pylons_position_string.substr(sz);
         current_graph_node.z = std::stod (pylons_position_string,&sz);
         pylons_position_string = pylons_position_string.substr(sz);
+        current_graph_node.latitude = std::stod (pylons_position_geo_string,&sz);
+        pylons_position_geo_string = pylons_position_geo_string.substr(sz);
+        current_graph_node.longitude = std::stod (pylons_position_geo_string,&sz);
+        pylons_position_geo_string = pylons_position_geo_string.substr(sz);
+        current_graph_node.altitude = std::stod (pylons_position_geo_string,&sz);
+        pylons_position_geo_string = pylons_position_geo_string.substr(sz);
         complete_graph_.push_back(current_graph_node);
     }
     for (int i=0; i<complete_graph_.size(); i++) {
@@ -109,6 +120,9 @@ MissionController::MissionController() {
         recharge_land_stations_string = recharge_land_stations_string.substr(sz);
         current_graph_node.z = (float) std::stod (recharge_land_stations_string,&sz);
         recharge_land_stations_string = recharge_land_stations_string.substr(sz);
+        current_graph_node.latitude = 0;
+        current_graph_node.longitude = 0;
+        current_graph_node.altitude = 0;
         complete_graph_.push_back(current_graph_node);
     }
     current_graph_node.type = aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION;
@@ -119,8 +133,12 @@ MissionController::MissionController() {
         regular_land_stations_string = regular_land_stations_string.substr(sz);
         current_graph_node.z = (float) std::stod (regular_land_stations_string,&sz);
         regular_land_stations_string = regular_land_stations_string.substr(sz);
+        current_graph_node.latitude = 0;
+        current_graph_node.longitude = 0;
+        current_graph_node.altitude = 0;
         complete_graph_.push_back(current_graph_node);
     }
+    current_graph_ = complete_graph_;
 #ifdef DEBUG
     for (int i=0; i<complete_graph_.size(); i++) {      // Print complete_graph_ to check that the yaml file was parsed correctly:
         std::cout << "graph_node[ " << i << " ].type                     = " << (int) complete_graph_[i].type << std::endl;
@@ -130,6 +148,9 @@ MissionController::MissionController() {
         std::cout << "graph_node[ " << i << " ].x                        = " << complete_graph_[i].x << std::endl;
         std::cout << "graph_node[ " << i << " ].y                        = " << complete_graph_[i].y << std::endl;
         std::cout << "graph_node[ " << i << " ].z                        = " << complete_graph_[i].z << std::endl;
+        std::cout << "graph_node[ " << i << " ].latitude                 = " << complete_graph_[i].latitude << std::endl;
+        std::cout << "graph_node[ " << i << " ].longitude                = " << complete_graph_[i].longitude << std::endl;
+        std::cout << "graph_node[ " << i << " ].altitude                 = " << complete_graph_[i].altitude << std::endl;
     }
 #endif
 
@@ -191,7 +212,7 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
     for (const UAV& current_uav : UAVs_) {
         if (current_uav.enabled_to_supervise == true) {
             std::tuple<float, float, int, int, int, int, int, int, bool, bool> new_tuple;
-            std::get<0>(new_tuple) = current_uav.mission->battery();
+            std::get<0>(new_tuple) = commanding_UAV_with_mission_lib_or_DJI_SDK_ ? current_uav.mission->battery() : 1.0;
             std::get<1>(new_tuple) = current_uav.minimum_battery;
             std::get<2>(new_tuple) = current_uav.time_until_fully_charged;
             std::get<3>(new_tuple) = current_uav.time_max_flying;
@@ -199,16 +220,23 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
             std::get<5>(new_tuple) = current_uav.speed_z_down;
             std::get<6>(new_tuple) = current_uav.speed_z_up;
             std::get<7>(new_tuple) = current_uav.id;
-            std::get<8>(new_tuple) = current_uav.mission->armed();  // TODO: better way to know if flying?
+            std::get<8>(new_tuple) = commanding_UAV_with_mission_lib_or_DJI_SDK_ ? current_uav.mission->armed() : false;  // TODO: better way to know if flying?
             std::get<9>(new_tuple) = current_uav.recharging;
             drone_info.push_back(new_tuple);
 
             aerialcore_msgs::GraphNode current_uav_initial_position_graph_node;
             current_uav_initial_position_graph_node.type = aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION;
             current_uav_initial_position_graph_node.id = current_uav.id;
-            current_uav_initial_position_graph_node.x = current_uav.mission->pose().pose.position.x;
-            current_uav_initial_position_graph_node.y = current_uav.mission->pose().pose.position.y;
-            current_uav_initial_position_graph_node.z = current_uav.mission->pose().pose.position.z;
+            if (commanding_UAV_with_mission_lib_or_DJI_SDK_) {
+                current_uav_initial_position_graph_node.x = current_uav.mission->pose().pose.position.x;
+                current_uav_initial_position_graph_node.y = current_uav.mission->pose().pose.position.y;
+                current_uav_initial_position_graph_node.z = current_uav.mission->pose().pose.position.z;
+            } else {
+                // HARDCODED POSES FOR NOVEMBER EXPERIMENTS!
+                current_uav_initial_position_graph_node.x = current_uav.id==1 ? -4 : -10;
+                current_uav_initial_position_graph_node.y = current_uav.id==1 ? 0 : 0;
+                current_uav_initial_position_graph_node.z = current_uav.id==1 ? 0 : 0;
+            }
             current_graph_.push_back(current_uav_initial_position_graph_node);
         }
     }
@@ -319,13 +347,14 @@ uav_n: )"};
   wp_)"});
             yaml_to_return.append(std::to_string(i-1).c_str());
             yaml_to_return.append(": [");
-            yaml_to_return.append(std::to_string(current_graph_[flight_plan_for_current_uav.nodes[i]].x).c_str());
+            yaml_to_return.append(std::to_string(current_graph_[flight_plan_for_current_uav.nodes[i]].latitude).c_str());
             yaml_to_return.append(", ");
-            yaml_to_return.append(std::to_string(current_graph_[flight_plan_for_current_uav.nodes[i]].y).c_str());
+            yaml_to_return.append(std::to_string(current_graph_[flight_plan_for_current_uav.nodes[i]].longitude).c_str());
             yaml_to_return.append(", ");
-            yaml_to_return.append(std::to_string(current_graph_[flight_plan_for_current_uav.nodes[i]].z).c_str());
+            yaml_to_return.append(std::to_string(current_graph_[flight_plan_for_current_uav.nodes[i]].altitude).c_str());
             yaml_to_return.append("]");
         }
+        yaml_to_return.append("\n\n");
     }
 #ifdef DEBUG
     std::cout << yaml_to_return << std::endl;
