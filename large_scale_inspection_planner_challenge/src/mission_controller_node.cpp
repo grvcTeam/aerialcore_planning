@@ -8,7 +8,7 @@ int main(int _argc, char** _argv) {
     aerialcore::MissionController mission_controller;
 
     while (ros::ok()) {
-        sleep(1); 
+        sleep(1);
     }
 
     return 0;

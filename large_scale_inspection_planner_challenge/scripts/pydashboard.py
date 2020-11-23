@@ -79,15 +79,116 @@ def do_specific_supervision_menu():
     # Custom specific subgraph to send:
     do_specific_supervision_request = DoSpecificSupervisionRequest()
 
+    # # Pylon 0: Rafa's waypoints (not for planning)
+    # graph_node_struct = GraphNode()
+    # graph_node_struct.type = GraphNode.TYPE_PYLON
+    # graph_node_struct.x = 162.829
+    # graph_node_struct.y = 4.800
+    # graph_node_struct.z = 20
+    # graph_node_struct.latitude = 38.138774
+    # graph_node_struct.longitude = -3.171967
+    # graph_node_struct.altitude = 20
+    # graph_node_struct.connections_indexes.append(1)
+    # graph_node_struct.connections_indexes.append(4)
+    # do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
+
+    # # Pylon 1
+    # graph_node_struct = GraphNode()
+    # graph_node_struct.type = GraphNode.TYPE_PYLON
+    # graph_node_struct.x = -28.600
+    # graph_node_struct.y = -64.189
+    # graph_node_struct.z = 20
+    # graph_node_struct.latitude = 38.138149
+    # graph_node_struct.longitude = -3.174150
+    # graph_node_struct.altitude = 20
+    # graph_node_struct.connections_indexes.append(0)
+    # graph_node_struct.connections_indexes.append(2)
+    # do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
+
+    # # Pylon 2
+    # graph_node_struct = GraphNode()
+    # graph_node_struct.type = GraphNode.TYPE_PYLON
+    # graph_node_struct.x = -122.087
+    # graph_node_struct.y = -101.294
+    # graph_node_struct.z = 20
+    # graph_node_struct.latitude = 38.137813
+    # graph_node_struct.longitude = -3.175216
+    # graph_node_struct.altitude = 20
+    # graph_node_struct.connections_indexes.append(1)
+    # graph_node_struct.connections_indexes.append(3)
+    # do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
+
+    # # Pylon 3
+    # graph_node_struct = GraphNode()
+    # graph_node_struct.type = GraphNode.TYPE_PYLON
+    # graph_node_struct.x = -132.693
+    # graph_node_struct.y = -56.115
+    # graph_node_struct.z = 20
+    # graph_node_struct.latitude = 38.138220
+    # graph_node_struct.longitude = -3.175338
+    # graph_node_struct.altitude = 20
+    # graph_node_struct.connections_indexes.append(2)
+    # do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
+
+    # # Pylon 4
+    # graph_node_struct = GraphNode()
+    # graph_node_struct.type = GraphNode.TYPE_PYLON
+    # graph_node_struct.x = 2103.453
+    # graph_node_struct.y = 665.168
+    # graph_node_struct.z = 20
+    # graph_node_struct.latitude = 38.144756
+    # graph_node_struct.longitude = -3.149834
+    # graph_node_struct.altitude = 20
+    # graph_node_struct.connections_indexes.append(0)
+    # do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
+
+    # # Pylon 5
+    # graph_node_struct = GraphNode()
+    # graph_node_struct.type = GraphNode.TYPE_PYLON
+    # graph_node_struct.x = -137.243
+    # graph_node_struct.y = -52.778
+    # graph_node_struct.z = 20
+    # graph_node_struct.latitude = 38.138250
+    # graph_node_struct.longitude = -3.175390
+    # graph_node_struct.altitude = 20
+    # graph_node_struct.connections_indexes.append(6)
+    # do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
+
+    # # Pylon 6
+    # graph_node_struct = GraphNode()
+    # graph_node_struct.type = GraphNode.TYPE_PYLON
+    # graph_node_struct.x = -126.820
+    # graph_node_struct.y = -101.840
+    # graph_node_struct.z = 20
+    # graph_node_struct.latitude = 38.137808
+    # graph_node_struct.longitude = -3.175270
+    # graph_node_struct.altitude = 20
+    # graph_node_struct.connections_indexes.append(5)
+    # graph_node_struct.connections_indexes.append(7)
+    # do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
+
+    # # Pylon 7
+    # graph_node_struct = GraphNode()
+    # graph_node_struct.type = GraphNode.TYPE_PYLON
+    # graph_node_struct.x = -308.702
+    # graph_node_struct.y = -170.064
+    # graph_node_struct.z = 20
+    # graph_node_struct.latitude = 38.137190
+    # graph_node_struct.longitude = -3.177344
+    # graph_node_struct.altitude = 20
+    # graph_node_struct.connections_indexes.append(6)
+    # do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
+
+
     # Pylon 0
     graph_node_struct = GraphNode()
     graph_node_struct.type = GraphNode.TYPE_PYLON
     graph_node_struct.x = 699.429
     graph_node_struct.y = 219.137
-    graph_node_struct.z = 25
+    graph_node_struct.z = 20
     graph_node_struct.latitude = 38.140705
     graph_node_struct.longitude = -3.165848
-    graph_node_struct.altitude = 25
+    graph_node_struct.altitude = 20
     graph_node_struct.connections_indexes.append(1)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
@@ -96,10 +197,10 @@ def do_specific_supervision_menu():
     graph_node_struct.type = GraphNode.TYPE_PYLON
     graph_node_struct.x = 641.646
     graph_node_struct.y = 169.93
-    graph_node_struct.z = 25
+    graph_node_struct.z = 20
     graph_node_struct.latitude = 38.140261
     graph_node_struct.longitude = -3.166506
-    graph_node_struct.altitude = 25
+    graph_node_struct.altitude = 20
     graph_node_struct.connections_indexes.append(0)
     graph_node_struct.connections_indexes.append(2)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
@@ -107,12 +208,12 @@ def do_specific_supervision_menu():
     # Pylon 2
     graph_node_struct = GraphNode()
     graph_node_struct.type = GraphNode.TYPE_PYLON
-    graph_node_struct.x = 62.321
-    graph_node_struct.y = -28.535
-    graph_node_struct.z = 25
-    graph_node_struct.latitude = 38.138462
-    graph_node_struct.longitude = -3.173113
-    graph_node_struct.altitude = 25
+    graph_node_struct.x = 162.857
+    graph_node_struct.y = 5.807
+    graph_node_struct.z = 20
+    graph_node_struct.latitude = 38.138774
+    graph_node_struct.longitude = -3.171967
+    graph_node_struct.altitude = 20
     graph_node_struct.connections_indexes.append(1)
     graph_node_struct.connections_indexes.append(3)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
@@ -120,12 +221,12 @@ def do_specific_supervision_menu():
     # Pylon 3
     graph_node_struct = GraphNode()
     graph_node_struct.type = GraphNode.TYPE_PYLON
-    graph_node_struct.x = -492.757
-    graph_node_struct.y = -240.6
-    graph_node_struct.z = 25
-    graph_node_struct.latitude = 38.136542
-    graph_node_struct.longitude = -3.179443
-    graph_node_struct.altitude = 25
+    graph_node_struct.x = 62.321
+    graph_node_struct.y = -28.535
+    graph_node_struct.z = 20
+    graph_node_struct.latitude = 38.138462
+    graph_node_struct.longitude = -3.173113
+    graph_node_struct.altitude = 20
     graph_node_struct.connections_indexes.append(2)
     graph_node_struct.connections_indexes.append(4)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
@@ -133,12 +234,12 @@ def do_specific_supervision_menu():
     # Pylon 4
     graph_node_struct = GraphNode()
     graph_node_struct.type = GraphNode.TYPE_PYLON
-    graph_node_struct.x = -490.135
-    graph_node_struct.y = -216.032
-    graph_node_struct.z = 25
-    graph_node_struct.latitude = 38.136763
-    graph_node_struct.longitude = -3.179413
-    graph_node_struct.altitude = 25
+    graph_node_struct.x = -492.757
+    graph_node_struct.y = -240.6
+    graph_node_struct.z = 20
+    graph_node_struct.latitude = 38.136542
+    graph_node_struct.longitude = -3.179443
+    graph_node_struct.altitude = 20
     graph_node_struct.connections_indexes.append(3)
     graph_node_struct.connections_indexes.append(5)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
@@ -146,67 +247,70 @@ def do_specific_supervision_menu():
     # Pylon 5
     graph_node_struct = GraphNode()
     graph_node_struct.type = GraphNode.TYPE_PYLON
-    graph_node_struct.x = -503.375
-    graph_node_struct.y = -157.510
-    graph_node_struct.z = 25
-    graph_node_struct.latitude = 38.137290
-    graph_node_struct.longitude = -3.179566
-    graph_node_struct.altitude = 25
+    graph_node_struct.x = -490.135
+    graph_node_struct.y = -216.032
+    graph_node_struct.z = 20
+    graph_node_struct.latitude = 38.136763
+    graph_node_struct.longitude = -3.179413
+    graph_node_struct.altitude = 20
     graph_node_struct.connections_indexes.append(4)
+    graph_node_struct.connections_indexes.append(6)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
     # Pylon 6
     graph_node_struct = GraphNode()
     graph_node_struct.type = GraphNode.TYPE_PYLON
-    graph_node_struct.x = -488.455
-    graph_node_struct.y = -298.354
-    graph_node_struct.z = 25
-    graph_node_struct.latitude = 38.136031
-    graph_node_struct.longitude = -3.179382
-    graph_node_struct.altitude = 25
-    graph_node_struct.connections_indexes.append(7)
+    graph_node_struct.x = -503.375
+    graph_node_struct.y = -157.510
+    graph_node_struct.z = 20
+    graph_node_struct.latitude = 38.137290
+    graph_node_struct.longitude = -3.179566
+    graph_node_struct.altitude = 20
+    graph_node_struct.connections_indexes.append(5)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
     # Pylon 7
     graph_node_struct = GraphNode()
     graph_node_struct.type = GraphNode.TYPE_PYLON
-    graph_node_struct.x = -33.345
-    graph_node_struct.y = -276.977
-    graph_node_struct.z = 25
-    graph_node_struct.latitude = 38.136222
-    graph_node_struct.longitude = -3.174199
-    graph_node_struct.altitude = 25
-    graph_node_struct.connections_indexes.append(6)
-    graph_node_struct.connections_indexes.append(8)
+    graph_node_struct.x = -488.455
+    graph_node_struct.y = -298.354
+    graph_node_struct.z = 20
+    graph_node_struct.latitude = 38.136031
+    graph_node_struct.longitude = -3.179382
+    graph_node_struct.altitude = 20
+    graph_node_struct.connections_indexes.append(7)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
     # Pylon 8
     graph_node_struct = GraphNode()
     graph_node_struct.type = GraphNode.TYPE_PYLON
+    graph_node_struct.x = -33.345
+    graph_node_struct.y = -276.977
+    graph_node_struct.z = 20
+    graph_node_struct.latitude = 38.136222
+    graph_node_struct.longitude = -3.174199
+    graph_node_struct.altitude = 20
+    graph_node_struct.connections_indexes.append(6)
+    graph_node_struct.connections_indexes.append(8)
+    do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
+
+    # Pylon 9
+    graph_node_struct = GraphNode()
+    graph_node_struct.type = GraphNode.TYPE_PYLON
     graph_node_struct.x = 465.385
     graph_node_struct.y = -626.630
-    graph_node_struct.z = 25
+    graph_node_struct.z = 20
     graph_node_struct.latitude = 38.133079
     graph_node_struct.longitude = -3.168501
-    graph_node_struct.altitude = 25
+    graph_node_struct.altitude = 20
     graph_node_struct.connections_indexes.append(7)
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
     graph_node_struct = GraphNode()
     graph_node_struct.type = GraphNode.TYPE_RECHARGE_LAND_STATION
-    graph_node_struct.x = 5
-    graph_node_struct.y = 0
-    graph_node_struct.z = 0
-    graph_node_struct.latitude = 0
-    graph_node_struct.longitude = 0
-    graph_node_struct.altitude = 0
-    do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
-
-    graph_node_struct = GraphNode()
-    graph_node_struct.type = GraphNode.TYPE_RECHARGE_LAND_STATION
-    graph_node_struct.x = -5
-    graph_node_struct.y = 0
-    graph_node_struct.z = 0
+    graph_node_struct.x = 28
+    graph_node_struct.y = 61
+    graph_node_struct.z = 0.32
     graph_node_struct.latitude = 0
     graph_node_struct.longitude = 0
     graph_node_struct.altitude = 0
@@ -214,23 +318,23 @@ def do_specific_supervision_menu():
 
     graph_node_struct = GraphNode()
     graph_node_struct.type = GraphNode.TYPE_REGULAR_LAND_STATION
-    graph_node_struct.x = 0
-    graph_node_struct.y = 5
+    graph_node_struct.x = 36.119532
+    graph_node_struct.y = 63.737163
     graph_node_struct.z = 0
     graph_node_struct.latitude = 0
     graph_node_struct.longitude = 0
     graph_node_struct.altitude = 0
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
-    graph_node_struct = GraphNode()
-    graph_node_struct.type = GraphNode.TYPE_REGULAR_LAND_STATION
-    graph_node_struct.x = 0
-    graph_node_struct.y = -5
-    graph_node_struct.z = 0
-    graph_node_struct.latitude = 0
-    graph_node_struct.longitude = 0
-    graph_node_struct.altitude = 0
-    do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
+    # graph_node_struct = GraphNode()
+    # graph_node_struct.type = GraphNode.TYPE_REGULAR_LAND_STATION
+    # graph_node_struct.x = 32.5
+    # graph_node_struct.y = 61
+    # graph_node_struct.z = 0
+    # graph_node_struct.latitude = 0
+    # graph_node_struct.longitude = 0
+    # graph_node_struct.altitude = 0
+    # do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
     try:
         print do_specific_supervision_client.call(do_specific_supervision_request)

@@ -1,0 +1,26 @@
+<launch>
+
+    <!-- If launching the 3 UAVs with the same launcher the spawn of the third robot fails. -->
+
+    <!-- Argument mode for launching robots can be:
+        - sitl: for software in the loop simulation
+        - serial: for serial connection to px4
+        - custom: to fully customize fcu and gcs urls
+    -->
+    <arg name="mode" default="sitl"/>
+
+    <arg name="ns_uav_prefix" default="uav_"/>
+
+    <!-- Launch robot id=3 -->
+    <include file="$(find px4_bringup)/launch/spawn_robot.launch" ns="$(arg ns_uav_prefix)3">
+        <arg name="id" value="3"/>
+        <arg name="material" value="Orange"/>
+        <arg name="mode" value="$(arg mode)"/>
+        <arg name="x" value="32.5"/>
+        <arg name="y" value="61"/>
+        <arg name="z" value="0"/>
+        <arg name="yaw" value="1.894898"/>
+        <arg name="robot_model" value="mbzirc"/>
+    </include>
+
+</launch>

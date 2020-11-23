@@ -232,10 +232,10 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
                 current_uav_initial_position_graph_node.y = current_uav.mission->pose().pose.position.y;
                 current_uav_initial_position_graph_node.z = current_uav.mission->pose().pose.position.z;
             } else {
-                // HARDCODED POSES FOR NOVEMBER EXPERIMENTS!
-                current_uav_initial_position_graph_node.x = current_uav.id==1 ? -4 : -10;
-                current_uav_initial_position_graph_node.y = current_uav.id==1 ? 0 : 0;
-                current_uav_initial_position_graph_node.z = current_uav.id==1 ? 0 : 0;
+                // // HARDCODED INITIAL POSES FOR NOVEMBER EXPERIMENTS!
+                // current_uav_initial_position_graph_node.x = current_uav.id==1 ? 28 : 36.119532;
+                // current_uav_initial_position_graph_node.y = current_uav.id==1 ? 61 : 63.737163;
+                // current_uav_initial_position_graph_node.z = current_uav.id==1 ? 0.32 : 0;
             }
             current_graph_.push_back(current_uav_initial_position_graph_node);
         }
@@ -251,6 +251,9 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
         translateFlightPlanIntoUAVMission(flight_plan_);
 
         for (const aerialcore_msgs::FlightPlan& flight_plan_for_current_uav : flight_plan_) {
+            // // HARDCODED WAITS BETWEEN TAKEOFFS FOR NOVEMBER EXPERIMENTS:
+            // if (flight_plan_for_current_uav.uav_id==2) sleep(10);
+            // if (flight_plan_for_current_uav.uav_id==3) sleep(74);
 #ifdef DEBUG
             UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->print();
 #endif
