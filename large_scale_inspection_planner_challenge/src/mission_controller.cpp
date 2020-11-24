@@ -243,6 +243,8 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
 
     flight_plan_ = centralized_planner_.getPlan(current_graph_, drone_info);
 
+    // TODO: update z of waypoints with the altitude of the map_origin_geo and pylons_position_geo.
+
 #ifdef DEBUG
     centralized_planner_.printPlan();
 #endif
