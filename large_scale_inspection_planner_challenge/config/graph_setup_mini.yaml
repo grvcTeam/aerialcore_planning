@@ -1,14 +1,58 @@
 # This file describes the (x,y,z) points of the recharge land stations, regular land stations and the electric towers (or pylons) of
 # the complete electric graph, being the three columns the (x,y,z) coordinates and the rows different elements.
-# "pylons_position_geo" is just as "pylons_position" but in geographic coordinates (latitude, longitude, altitude). Must have the same number of rows.
+# The z is the height of the electric tower or land station from the ground level.
+# "pylons_position_geo" is just as "pylons_position" but in geographic coordinates (latitude, longitude, altitude). Must have the same
+# number of rows as "pylons_position".
+# The altitude is the ground level where the electric tower or land station is.
 # The vector of vectors "connection_indexes" must be of the same size of "pylons_position" and represents the wire connections among 
 # electric towers. ATTENTION: indexes start at 1, so you may want to rest 1 at parsing to start by 0 (C++ or Python).
-# TODO: unify cartesian-geographic coordinates with conversor in order to not repeat in both coordinates? Or Python script for simplifying this?
+# "map_origin_geo" (latitude, longitude and altitude that has x=0m, y=0m and z=0 meters) provided in the ROS launcher of the system.
 
 recharge_land_stations: "28 61 0.32;"
 
-regular_land_stations: "36.119 63.737 0;
+recharge_land_stations_geo: "38.139275 -3.173516 444;"
+
+
+regular_land_stations: "38.8 65 0;
 32.5 61 0;"
+
+regular_land_stations_geo: "38.139309 -3.173386 444;
+38.139272 -3.173451 444;"
+
+
+pylons_position: "-409.120 449.015 25;
+-430.169 276.424 25;
+-450.540 108.275 25;
+-470.078 -41.682 25;
+-490.208 -215.834 25;
+-492.875 -240.864 25;
+-598.496 -281.095 20;
+-633.009 -319.444 20;
+-627.564 -283.028 20;
+-611.221 -232.533 20;
+-756.512 -346.437 20;
+-544.794 -296.507 20;
+-413.182 -301.398 20;
+-244.429 -290.325 30;
+-32.435 -276.509 30;
+119.719 -383.291 30;
+276.420 -493.459 30;
+-391.957 -202.912 20;
+-301.302 -167.188 20;
+-208.036 -131.632 20;
+-118.176 -97.355 20;
+-28.178 -63.028 20;
+65.174 -27.481 20;
+62.631 -21.742 20;
+163.171 6.176 20;
+252.476 37.164 20;
+351.502 70.480 20;
+447.289 103.004 20;
+543.828 136.838 20;
+641.898 170.080 20;
+719.770 208.398 30;
+769.668 108.103 35;
+894.348 293.824 25;"
 
 pylons_position_geo: "38.142767 -3.178503 475;
 38.141211 -3.178739 456;
@@ -44,39 +88,6 @@ pylons_position_geo: "38.142767 -3.178503 475;
 38.139714 -3.165044 454;
 38.141390 -3.163625 451;"
 
-pylons_position: "-409.120 449.015 25;
--430.169 276.424 25;
--450.540 108.275 25;
--470.078 -41.682 25;
--490.208 -215.834 25;
--492.875 -240.864 25;
--598.496 -281.095 20;
--633.009 -319.444 20;
--627.564 -283.028 20;
--611.221 -232.533 20;
--756.512 -346.437 20;
--544.794 -296.507 20;
--413.182 -301.398 20;
--244.429 -290.325 30;
--32.435 -276.509 30;
-119.719 -383.291 30;
-276.420 -493.459 30;
--391.957 -202.912 20;
--301.302 -167.188 20;
--208.036 -131.632 20;
--118.176 -97.355 20;
--28.178 -63.028 20;
-65.174 -27.481 20;
-62.631 -21.742 20;
-163.171 6.176 20;
-252.476 37.164 20;
-351.502 70.480 20;
-447.289 103.004 20;
-543.828 136.838 20;
-641.898 170.080 20;
-719.770 208.398 30;
-769.668 108.103 35;
-894.348 293.824 25;"
 
 connections_indexes: "2;
 1 3;

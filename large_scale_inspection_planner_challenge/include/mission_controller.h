@@ -16,7 +16,6 @@
 
 #include <std_srvs/Trigger.h>
 #include <geographic_msgs/GeoPoint.h>
-#include <geometry_msgs/Point.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <aerialcore_msgs/StartSupervising.h>
 #include <aerialcore_msgs/StopSupervising.h>
@@ -65,6 +64,8 @@ private:
   std::vector<aerialcore_msgs::FlightPlan> flight_plan_;
 
   bool commanding_UAV_with_mission_lib_or_DJI_SDK_ = true;  // Use mission_lib for commanding UAVs (true) or output a yaml string for using the DJI SDK (false).
+
+  geographic_msgs::GeoPoint map_origin_geo_;
 
   void translateFlightPlanIntoUAVMission(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plan);
   std::string translateFlightPlanIntoDJIyaml(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plan);

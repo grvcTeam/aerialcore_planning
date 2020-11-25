@@ -6,8 +6,10 @@
     args="-physics=ode -world=$(find aerialcore_simulation)/worlds/ATLAS_power_lines_mini.world
 		  -add_model_path=$(find aerialcore_simulation)/models
 		  -description_package=robots_description">
-		<rosparam param="sim_origin">[38.138728, -3.173825, 0]</rosparam>  <!-- [lat,lon,alt] -->
+		<rosparam param="sim_origin">[38.138728, -3.173825, 392.3]</rosparam>  <!-- [lat,lon,alt] -->
 	</node>
+    <!-- By default in the simulation the UAVs have an altitude of 51.7 meters according to MAVROS, but they should have 444, so I put the sim_origin at 392.3 -->
+    <!-- Not really needed, but helpful if the UAVs start with a considerable z value (search for "TODO X" in mission_lib) -->
 
     <!-- Load yaml parameters. -->
     <rosparam file="$(find large_scale_inspection_planner_challenge)/config/graph_setup_mini.yaml" command="load" />
@@ -34,7 +36,7 @@
     </include>
 
     <!-- Launch robot id=2 -->
-    <include file="$(find px4_bringup)/launch/spawn_robot.launch" ns="$(arg ns_uav_prefix)2">
+    <!-- <include file="$(find px4_bringup)/launch/spawn_robot.launch" ns="$(arg ns_uav_prefix)2">
         <arg name="id" value="2"/>
         <arg name="material" value="Orange"/>
         <arg name="mode" value="$(arg mode)"/>
@@ -43,6 +45,18 @@
         <arg name="z" value="0"/>
         <arg name="yaw" value="1.894898"/>
         <arg name="robot_model" value="mbzirc"/>
+    </include> -->
+
+    <!-- Launch robot id=2 -->
+    <include file="$(find px4_bringup)/launch/spawn_robot.launch" ns="$(arg ns_uav_prefix)2">
+        <arg name="id" value="2"/>
+        <arg name="material" value="Orange"/>
+        <arg name="mode" value="$(arg mode)"/>
+        <arg name="x" value="38.8"/>
+        <arg name="y" value="65"/>
+        <arg name="z" value="0"/>
+        <arg name="yaw" value="0.3"/>
+        <arg name="robot_model" value="plane"/>
     </include>
 
     <!-- Launch robot id=3 -->
@@ -66,20 +80,8 @@
         <arg name="y" value="61"/>
         <arg name="z" value="0"/>
         <arg name="yaw" value="-1.261576"/>
-        <arg name="robot_model" value="plane"/>
-    </include>
-
-    <!-- Launch robot id=5 -->
-    <!-- <include file="$(find px4_bringup)/launch/spawn_robot.launch" ns="$(arg ns_uav_prefix)5">
-        <arg name="id" value="5"/>
-        <arg name="material" value="Orange"/>
-        <arg name="mode" value="$(arg mode)"/>
-        <arg name="x" value="0"/>
-        <arg name="y" value="8"/>
-        <arg name="z" value="0"/>
-        <arg name="yaw" value="0"/>
         <arg name="robot_model" value="standard_vtol"/>
-    </include> -->
+    </include>
 
     <!-- Parameters that describe the UAVs, for planning the missions mainly. ALL PARAMETERS HAVE TO BE OF THE SAME SIZE. -->
     <!-- <arg name="drones_id" default="[1]"/>
@@ -97,7 +99,7 @@
     <arg name="drones_minimum_battery" default="[0.2, 0.2]"/>
     <arg name="drones_time_until_fully_charged" default="[1800, 1800]"/> -->
     <arg name="drones_id" default="[1, 2, 3]"/>
-    <arg name="drones_time_max_flying" default="[350, 600, 600]"/>
+    <arg name="drones_time_max_flying" default="[300, 600, 600]"/>
     <arg name="drones_speed_xy" default="[5.5, 5.5, 5.5]"/>
     <arg name="drones_speed_z_down" default="[1.5, 1.4, 1.4]"/>
     <arg name="drones_speed_z_up" default="[3.0, 3.0, 3.0]"/>
@@ -115,9 +117,8 @@
     <arg name="commanding_UAV_with_mission_lib_or_DJI_SDK" default="true"/>
 
     <!-- Parameters for the mission_lib. -->
-    <arg name="pose_frame_id" default=""/>
+    <arg name="pose_frame_id" default="map"/>
     <arg name="home_pose_parent_frame" default="map"/>
-    <arg name="home_pose" default="[0, 0, 0]"/>
     <arg name="map_origin_geo" default="[38.138728, -3.173825, 444]"/>
 
     <!-- Launch the Mission Controller. -->
@@ -134,7 +135,6 @@
 
 		<rosparam param="pose_frame_id" subst_value="true">$(arg pose_frame_id)</rosparam>
 		<rosparam param="home_pose_parent_frame" subst_value="true">$(arg home_pose_parent_frame)</rosparam>
-		<rosparam param="home_pose" subst_value="true">$(arg home_pose)</rosparam>
 		<rosparam param="map_origin_geo" subst_value="true">$(arg map_origin_geo)</rosparam>
 		<rosparam param="ns_uav_prefix" subst_value="true">$(arg ns_uav_prefix)</rosparam>
 	</node>

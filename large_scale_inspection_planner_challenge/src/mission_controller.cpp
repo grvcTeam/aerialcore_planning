@@ -18,6 +18,12 @@ MissionController::MissionController() {
 
     pnh_.getParam("commanding_UAV_with_mission_lib_or_DJI_SDK", commanding_UAV_with_mission_lib_or_DJI_SDK_);
 
+    std::vector<double> map_origin_geo_vector;
+    pnh_.getParam("map_origin_geo", map_origin_geo_vector);
+    map_origin_geo_.latitude  = map_origin_geo_vector[0];
+    map_origin_geo_.longitude = map_origin_geo_vector[1];
+    map_origin_geo_.altitude  = map_origin_geo_vector[2];
+
     // Read parameters of the UAVs (from the launch):
     std::vector<int>   drones_id;
     std::vector<int>   drones_time_max_flying;
@@ -58,12 +64,16 @@ MissionController::MissionController() {
     std::string pylons_position_geo_string;
     std::string connections_indexes_string;
     std::string recharge_land_stations_string;
+    std::string recharge_land_stations_geo_string;
     std::string regular_land_stations_string;
+    std::string regular_land_stations_geo_string;
     n_.getParam("pylons_position", pylons_position_string);
     n_.getParam("pylons_position_geo", pylons_position_geo_string);
     n_.getParam("connections_indexes", connections_indexes_string);
     n_.getParam("recharge_land_stations", recharge_land_stations_string);
+    n_.getParam("recharge_land_stations_geo", recharge_land_stations_geo_string);
     n_.getParam("regular_land_stations", regular_land_stations_string);
+    n_.getParam("regular_land_stations_geo", regular_land_stations_geo_string);
     // Remove new lines if exist in the strings for all strings and semicolons in all but connection_indexes:
     pylons_position_string.erase(std::remove(pylons_position_string.begin(), pylons_position_string.end(), '\n'), pylons_position_string.end());
     pylons_position_string.erase(std::remove(pylons_position_string.begin(), pylons_position_string.end(), '\r'), pylons_position_string.end());
@@ -76,9 +86,15 @@ MissionController::MissionController() {
     recharge_land_stations_string.erase(std::remove(recharge_land_stations_string.begin(), recharge_land_stations_string.end(), '\n'), recharge_land_stations_string.end());
     recharge_land_stations_string.erase(std::remove(recharge_land_stations_string.begin(), recharge_land_stations_string.end(), '\r'), recharge_land_stations_string.end());
     recharge_land_stations_string.erase(std::remove(recharge_land_stations_string.begin(), recharge_land_stations_string.end(), ';'), recharge_land_stations_string.end());
+    recharge_land_stations_geo_string.erase(std::remove(recharge_land_stations_geo_string.begin(), recharge_land_stations_geo_string.end(), '\n'), recharge_land_stations_geo_string.end());
+    recharge_land_stations_geo_string.erase(std::remove(recharge_land_stations_geo_string.begin(), recharge_land_stations_geo_string.end(), '\r'), recharge_land_stations_geo_string.end());
+    recharge_land_stations_geo_string.erase(std::remove(recharge_land_stations_geo_string.begin(), recharge_land_stations_geo_string.end(), ';'), recharge_land_stations_geo_string.end());
     regular_land_stations_string.erase(std::remove(regular_land_stations_string.begin(), regular_land_stations_string.end(), '\n'), regular_land_stations_string.end());
     regular_land_stations_string.erase(std::remove(regular_land_stations_string.begin(), regular_land_stations_string.end(), '\r'), regular_land_stations_string.end());
     regular_land_stations_string.erase(std::remove(regular_land_stations_string.begin(), regular_land_stations_string.end(), ';'), regular_land_stations_string.end());
+    regular_land_stations_geo_string.erase(std::remove(regular_land_stations_geo_string.begin(), regular_land_stations_geo_string.end(), '\n'), regular_land_stations_geo_string.end());
+    regular_land_stations_geo_string.erase(std::remove(regular_land_stations_geo_string.begin(), regular_land_stations_geo_string.end(), '\r'), regular_land_stations_geo_string.end());
+    regular_land_stations_geo_string.erase(std::remove(regular_land_stations_geo_string.begin(), regular_land_stations_geo_string.end(), ';'), regular_land_stations_geo_string.end());
     // For strings with point information, convert the string data, clean and ready, to double (float64 because of point) with stod.
     // Each time a number is converted (numbers separated by space ' '), the string is overwriten with the rest of the string using substr.
     // The quantity of numbers have to be multiple of 2.
@@ -87,17 +103,17 @@ MissionController::MissionController() {
     aerialcore_msgs::GraphNode current_graph_node;
     current_graph_node.type = aerialcore_msgs::GraphNode::TYPE_PYLON;
     while ( pylons_position_string.size()>0 ) {
-        current_graph_node.x = std::stod (pylons_position_string,&sz);
+        current_graph_node.x = (float) std::stod (pylons_position_string,&sz);
         pylons_position_string = pylons_position_string.substr(sz);
-        current_graph_node.y = std::stod (pylons_position_string,&sz);
+        current_graph_node.y = (float) std::stod (pylons_position_string,&sz);
         pylons_position_string = pylons_position_string.substr(sz);
-        current_graph_node.z = std::stod (pylons_position_string,&sz);
+        current_graph_node.z = (float) std::stod (pylons_position_string,&sz);
         pylons_position_string = pylons_position_string.substr(sz);
-        current_graph_node.latitude = std::stod (pylons_position_geo_string,&sz);
+        current_graph_node.latitude  = (float) std::stod (pylons_position_geo_string,&sz);
         pylons_position_geo_string = pylons_position_geo_string.substr(sz);
-        current_graph_node.longitude = std::stod (pylons_position_geo_string,&sz);
+        current_graph_node.longitude = (float) std::stod (pylons_position_geo_string,&sz);
         pylons_position_geo_string = pylons_position_geo_string.substr(sz);
-        current_graph_node.altitude = std::stod (pylons_position_geo_string,&sz);
+        current_graph_node.altitude  = (float) std::stod (pylons_position_geo_string,&sz);
         pylons_position_geo_string = pylons_position_geo_string.substr(sz);
         complete_graph_.push_back(current_graph_node);
     }
@@ -120,9 +136,12 @@ MissionController::MissionController() {
         recharge_land_stations_string = recharge_land_stations_string.substr(sz);
         current_graph_node.z = (float) std::stod (recharge_land_stations_string,&sz);
         recharge_land_stations_string = recharge_land_stations_string.substr(sz);
-        current_graph_node.latitude = 0;
-        current_graph_node.longitude = 0;
-        current_graph_node.altitude = 0;
+        current_graph_node.latitude  = (float) std::stod (recharge_land_stations_geo_string,&sz);
+        recharge_land_stations_geo_string = recharge_land_stations_geo_string.substr(sz);
+        current_graph_node.longitude = (float) std::stod (recharge_land_stations_geo_string,&sz);
+        recharge_land_stations_geo_string = recharge_land_stations_geo_string.substr(sz);
+        current_graph_node.altitude  = (float) std::stod (recharge_land_stations_geo_string,&sz);
+        recharge_land_stations_geo_string = recharge_land_stations_geo_string.substr(sz);
         complete_graph_.push_back(current_graph_node);
     }
     current_graph_node.type = aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION;
@@ -133,9 +152,12 @@ MissionController::MissionController() {
         regular_land_stations_string = regular_land_stations_string.substr(sz);
         current_graph_node.z = (float) std::stod (regular_land_stations_string,&sz);
         regular_land_stations_string = regular_land_stations_string.substr(sz);
-        current_graph_node.latitude = 0;
-        current_graph_node.longitude = 0;
-        current_graph_node.altitude = 0;
+        current_graph_node.latitude  = (float) std::stod (regular_land_stations_geo_string,&sz);
+        regular_land_stations_geo_string = regular_land_stations_geo_string.substr(sz);
+        current_graph_node.longitude = (float) std::stod (regular_land_stations_geo_string,&sz);
+        regular_land_stations_geo_string = regular_land_stations_geo_string.substr(sz);
+        current_graph_node.altitude  = (float) std::stod (regular_land_stations_geo_string,&sz);
+        regular_land_stations_geo_string = regular_land_stations_geo_string.substr(sz);
         complete_graph_.push_back(current_graph_node);
     }
     current_graph_ = complete_graph_;
@@ -232,7 +254,7 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
                 current_uav_initial_position_graph_node.y = current_uav.mission->pose().pose.position.y;
                 current_uav_initial_position_graph_node.z = current_uav.mission->pose().pose.position.z;
             } else {
-                // // HARDCODED INITIAL POSES FOR NOVEMBER EXPERIMENTS!
+                // // HARDCODED INITIAL POSES FOR NOVEMBER EXPERIMENTS?
                 // current_uav_initial_position_graph_node.x = current_uav.id==1 ? 28 : 36.119532;
                 // current_uav_initial_position_graph_node.y = current_uav.id==1 ? 61 : 63.737163;
                 // current_uav_initial_position_graph_node.z = current_uav.id==1 ? 0.32 : 0;
@@ -243,7 +265,6 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
 
     flight_plan_ = centralized_planner_.getPlan(current_graph_, drone_info);
 
-    // TODO: update z of waypoints with the altitude of the map_origin_geo and pylons_position_geo. Interpolate height between pylons?
     // TODO: no-fly zones.
 
 #ifdef DEBUG
@@ -294,14 +315,15 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
             geometry_msgs::PoseStamped current_pose_stamped;
             current_pose_stamped.pose.position.x = current_graph_[ flight_plan_for_current_uav.nodes[i] ].x;
             current_pose_stamped.pose.position.y = current_graph_[ flight_plan_for_current_uav.nodes[i] ].y;
-            current_pose_stamped.pose.position.z = current_graph_[ flight_plan_for_current_uav.nodes[i] ].z;
+            current_pose_stamped.pose.position.z = current_graph_[ flight_plan_for_current_uav.nodes[i] ].z + (current_graph_[ flight_plan_for_current_uav.nodes[i] ].altitude - map_origin_geo_.altitude);
 
             if (current_graph_[ flight_plan_for_current_uav.nodes[i] ].type != aerialcore_msgs::GraphNode::TYPE_PYLON) {
+
                 if (pass_poses.size()>0) {
                     UAVs_[current_uav_index].mission->addPassWpList(pass_poses);
                 }
                 if (first_iteration) {
-                    current_pose_stamped.pose.position.z = current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].z;
+                    current_pose_stamped.pose.position.z = current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].z + (current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].altitude - map_origin_geo_.altitude);
                     UAVs_[current_uav_index].mission->addTakeOffWp(current_pose_stamped);
                     flying_or_landed = true;
                     first_iteration=false;
@@ -318,7 +340,7 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
                         }
                         flying_or_landed = false;
                     } else {
-                        current_pose_stamped.pose.position.z = current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].z;
+                        current_pose_stamped.pose.position.z = current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].z + (current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].altitude - map_origin_geo_.altitude);
                         UAVs_[current_uav_index].mission->addTakeOffWp(current_pose_stamped);
                         flying_or_landed = true;
                     }

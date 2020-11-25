@@ -3,7 +3,8 @@
 # "pylons_position_geo" is just as "pylons_position" but in geographic coordinates (latitude, longitude, altitude). Must have the same number of rows.
 # The vector of vectors "connection_indexes" must be of the same size of "pylons_position" and represents the wire connections among 
 # electric towers. ATTENTION: indexes start at 1, so you may want to rest 1 at parsing to start by 0 (C++ or Python).
-# TODO: unify cartesian-geographic coordinates with conversor in order to not repeat in both coordinates? Or Python script for simplifying this?
+# DON'T USE IT BY NOW: HEIGHT AND ALTITUDE OF PYLONS NOT TAKED INTO ACCOUNT. NOT LAND STATIONS GEO.
+# DON'T USE IT BY NOW: USE graph_setup_mini.yaml INSTEAD.
 
 recharge_land_stations: "0 0 0;
 0 10 0;"
