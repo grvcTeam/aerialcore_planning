@@ -44,17 +44,6 @@ MissionController::MissionController() {
         int time_until_fully_charged;   n_.getParam(it->second+"/time_until_fully_charged", time_until_fully_charged);   new_uav.time_until_fully_charged = time_until_fully_charged;
         UAVs_.push_back(new_uav);
     }
-    // for (UAV uav : UAVs_) {
-    //     std::cout << std::endl;
-    //     std::cout << "id = " << uav.id << std::endl;
-    //     std::cout << "time_max_flying = " << uav.time_max_flying << std::endl;
-    //     std::cout << "speed_xy = " << uav.speed_xy << std::endl;
-    //     std::cout << "speed_z_down = " << uav.speed_z_down << std::endl;
-    //     std::cout << "speed_z_up = " << uav.speed_z_up << std::endl;
-    //     std::cout << "minimum_battery = " << uav.minimum_battery << std::endl;
-    //     std::cout << "time_until_fully_charged = " << uav.time_until_fully_charged << std::endl;
-    // }
-    // std::cout << std::endl;
 
     // Read parameters of the complete graph (from the yaml). Numeric parameters extracted from a string, so some steps are needed:
     std::string pylons_position_string;

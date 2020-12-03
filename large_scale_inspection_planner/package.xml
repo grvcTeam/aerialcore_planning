@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>large_scale_inspection_planner_challenge</name>
+  <name>large_scale_inspection_planner</name>
   <version>0.0.0</version>
-  <description>The large_scale_inspection_planner_challenge package for the Enel challenge (and AerialCore project).</description>
+  <description>The large_scale_inspection_planner package for the Enel challenge and AerialCore project.</description>
 
   <maintainer email="amontesromero@us.es">Ángel Manuel Montes Romero</maintainer>
 

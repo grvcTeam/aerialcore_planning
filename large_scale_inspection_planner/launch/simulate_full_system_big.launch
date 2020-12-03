@@ -10,7 +10,7 @@
 	</node>
 
     <!-- Load yaml parameters. -->
-    <rosparam file="$(find large_scale_inspection_planner_challenge)/config/graph_setup.yaml" command="load" />
+    <rosparam file="$(find large_scale_inspection_planner)/config/graph_setup_ATLAS_big.yaml" command="load" />
 
     <!-- Argument mode for launching robots can be:
         - sitl: for software in the loop simulation
@@ -109,7 +109,7 @@
     <arg name="map_origin_geo" default="[38.138728, -3.173825, 444]"/>
 
     <!-- Launch the Mission Controller. -->
-	<node pkg="large_scale_inspection_planner_challenge" name="mission_controller" type="mission_controller" output="screen">
+	<node pkg="large_scale_inspection_planner" name="mission_controller" type="mission_controller" output="screen">
 		<rosparam param="drones_id" subst_value="true">$(arg drones_id)</rosparam>
 		<rosparam param="drones_time_max_flying" subst_value="true">$(arg drones_time_max_flying)</rosparam>
 		<rosparam param="drones_speed_xy" subst_value="true">$(arg drones_speed_xy)</rosparam>

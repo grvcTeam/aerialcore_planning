@@ -1,0 +1,4 @@
+<launch>
+	<node pkg="large_scale_inspection_planner" type="pydashboard.py" name="pydashboard" output="screen">
+	</node>
+</launch>

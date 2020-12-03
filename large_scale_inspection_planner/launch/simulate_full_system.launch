@@ -12,7 +12,7 @@
     <!-- Not really needed, but helpful if the UAVs start with a considerable z value (search for "TODO X" in mission_lib) -->
 
     <!-- Load yaml parameters. -->
-    <rosparam file="$(find large_scale_inspection_planner_challenge)/config/planner_setup_ATLAS.yaml" command="load" />
+    <rosparam file="$(find large_scale_inspection_planner)/config/planner_setup_ATLAS.yaml" command="load" />
 
     <!-- Argument mode for launching robots can be:
         - sitl: for software in the loop simulation
@@ -67,7 +67,7 @@
     <arg name="home_pose_parent_frame" default="map"/>
 
     <!-- Launch the Mission Controller. -->
-	<node pkg="large_scale_inspection_planner_challenge" name="mission_controller" type="mission_controller" output="screen">
+	<node pkg="large_scale_inspection_planner" name="mission_controller" type="mission_controller" output="screen">
 		<rosparam param="commanding_UAV_with_mission_lib_or_DJI_SDK" subst_value="true">$(arg commanding_UAV_with_mission_lib_or_DJI_SDK)</rosparam>
 
 		<rosparam param="pose_frame_id" subst_value="true">$(arg pose_frame_id)</rosparam>

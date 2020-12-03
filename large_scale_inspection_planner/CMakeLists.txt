@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(large_scale_inspection_planner_challenge)
+project(large_scale_inspection_planner)
 
 ## Add support for C++11, supported in ROS Kinetic and newer
 add_definitions(-std=c++11)
