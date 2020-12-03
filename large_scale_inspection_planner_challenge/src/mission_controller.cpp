@@ -18,46 +18,43 @@ MissionController::MissionController() {
 
     pnh_.getParam("commanding_UAV_with_mission_lib_or_DJI_SDK", commanding_UAV_with_mission_lib_or_DJI_SDK_);
 
+    // map_origin_geo is the geographic coordinate origin of the cartesian coordinates. Loaded to the param server in the YAML config file.
     std::vector<double> map_origin_geo_vector;
-    pnh_.getParam("map_origin_geo", map_origin_geo_vector);
+    n_.getParam("map_origin_geo", map_origin_geo_vector);
     map_origin_geo_.latitude  = map_origin_geo_vector[0];
     map_origin_geo_.longitude = map_origin_geo_vector[1];
     map_origin_geo_.altitude  = map_origin_geo_vector[2];
 
-    // Read parameters of the UAVs (from the launch):
-    std::vector<int>   drones_id;
-    std::vector<int>   drones_time_max_flying;
-    std::vector<float> drones_speed_xy;
-    std::vector<float> drones_speed_z_down;
-    std::vector<float> drones_speed_z_up;
-    std::vector<float> drones_minimum_battery;
-    std::vector<int>   drones_time_until_fully_charged;
-    pnh_.getParam("drones_id", drones_id);
-    pnh_.getParam("drones_time_max_flying", drones_time_max_flying);
-    pnh_.getParam("drones_speed_xy", drones_speed_xy);
-    pnh_.getParam("drones_speed_z_down", drones_speed_z_down);
-    pnh_.getParam("drones_speed_z_up", drones_speed_z_up);
-    pnh_.getParam("drones_minimum_battery", drones_minimum_battery);
-    pnh_.getParam("drones_time_until_fully_charged", drones_time_until_fully_charged);
-    if ( (drones_id.size() + drones_time_max_flying.size() + drones_speed_xy.size() + drones_speed_z_down.size() + drones_speed_z_up.size() + drones_minimum_battery.size() + drones_time_until_fully_charged.size() )/7!=drones_id.size() ) {
-        ROS_ERROR("Mission Controller: error in the description of the UAVs (launch file), all parameters should have the same size.");
-        exit(EXIT_FAILURE);
-    } else if (drones_id.size() == 0) {
-        ROS_ERROR("Mission Controller: error in the description of the UAVs (launch file), no drones found.");
+    // Read and construct parameters of the UAVs (from the yaml):
+    std::map<std::string, std::string> drones;
+    n_.getParam("drones", drones);              // Dictionary of the actual drones used in the simulation (key: UAV id, value: airframe type).
+    if (drones.size() == 0) {
+        ROS_ERROR("Mission Controller: error in the description of the UAVs (YAML file), no drones found. Are you sure you loaded to the server parameter the config YAML?");
         exit(EXIT_FAILURE);
     }
-    for (int i=0; i<drones_id.size(); i++) {
+    for (std::map<std::string, std::string>::iterator it = drones.begin(); it != drones.end(); it++) {
         UAV new_uav;
-        new_uav.mission = new grvc::mission_ns::Mission(drones_id[i]);
-        new_uav.id = drones_id[i];
-        new_uav.time_max_flying = drones_time_max_flying[i];
-        new_uav.speed_xy = drones_speed_xy[i];
-        new_uav.speed_z_down = drones_speed_z_down[i];
-        new_uav.speed_z_up = drones_speed_z_up[i];
-        new_uav.minimum_battery = drones_minimum_battery[i];
-        new_uav.time_until_fully_charged = drones_time_until_fully_charged[i];
+        new_uav.id = stoi(it->first);
+        new_uav.mission = new grvc::mission_ns::Mission( new_uav.id );
+        int time_max_flying;            n_.getParam(it->second+"/time_max_flying", time_max_flying);                     new_uav.time_max_flying = time_max_flying;
+        float speed_xy;                 n_.getParam(it->second+"/speed_xy", speed_xy);                                   new_uav.speed_xy = speed_xy;
+        float speed_z_down;             n_.getParam(it->second+"/speed_z_down", speed_z_down);                           new_uav.speed_z_down = speed_z_down;
+        float speed_z_up;               n_.getParam(it->second+"/speed_z_up", speed_z_up);                               new_uav.speed_z_up = speed_z_up;
+        float minimum_battery;          n_.getParam(it->second+"/minimum_battery", minimum_battery);                     new_uav.minimum_battery = minimum_battery;
+        int time_until_fully_charged;   n_.getParam(it->second+"/time_until_fully_charged", time_until_fully_charged);   new_uav.time_until_fully_charged = time_until_fully_charged;
         UAVs_.push_back(new_uav);
     }
+    // for (UAV uav : UAVs_) {
+    //     std::cout << std::endl;
+    //     std::cout << "id = " << uav.id << std::endl;
+    //     std::cout << "time_max_flying = " << uav.time_max_flying << std::endl;
+    //     std::cout << "speed_xy = " << uav.speed_xy << std::endl;
+    //     std::cout << "speed_z_down = " << uav.speed_z_down << std::endl;
+    //     std::cout << "speed_z_up = " << uav.speed_z_up << std::endl;
+    //     std::cout << "minimum_battery = " << uav.minimum_battery << std::endl;
+    //     std::cout << "time_until_fully_charged = " << uav.time_until_fully_charged << std::endl;
+    // }
+    // std::cout << std::endl;
 
     // Read parameters of the complete graph (from the yaml). Numeric parameters extracted from a string, so some steps are needed:
     std::string pylons_position_string;
@@ -67,13 +64,13 @@ MissionController::MissionController() {
     std::string recharge_land_stations_geo_string;
     std::string regular_land_stations_string;
     std::string regular_land_stations_geo_string;
-    n_.getParam("pylons_position", pylons_position_string);
-    n_.getParam("pylons_position_geo", pylons_position_geo_string);
-    n_.getParam("connections_indexes", connections_indexes_string);
-    n_.getParam("recharge_land_stations", recharge_land_stations_string);
-    n_.getParam("recharge_land_stations_geo", recharge_land_stations_geo_string);
-    n_.getParam("regular_land_stations", regular_land_stations_string);
-    n_.getParam("regular_land_stations_geo", regular_land_stations_geo_string);
+    n_.getParam("pylons_position_cartesian", pylons_position_string);
+    n_.getParam("pylons_position_geographic", pylons_position_geo_string);
+    n_.getParam("pylons_connections_indexes", connections_indexes_string);
+    n_.getParam("recharge_land_stations_cartesian", recharge_land_stations_string);
+    n_.getParam("recharge_land_stations_geographic", recharge_land_stations_geo_string);
+    n_.getParam("regular_land_stations_cartesian", regular_land_stations_string);
+    n_.getParam("regular_land_stations_geographic", regular_land_stations_geo_string);
     // Remove new lines if exist in the strings for all strings and semicolons in all but connection_indexes:
     pylons_position_string.erase(std::remove(pylons_position_string.begin(), pylons_position_string.end(), '\n'), pylons_position_string.end());
     pylons_position_string.erase(std::remove(pylons_position_string.begin(), pylons_position_string.end(), '\r'), pylons_position_string.end());

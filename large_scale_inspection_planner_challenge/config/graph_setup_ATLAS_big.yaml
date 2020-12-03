@@ -4,7 +4,7 @@
 # The vector of vectors "connection_indexes" must be of the same size of "pylons_position" and represents the wire connections among 
 # electric towers. ATTENTION: indexes start at 1, so you may want to rest 1 at parsing to start by 0 (C++ or Python).
 # DON'T USE IT BY NOW: HEIGHT AND ALTITUDE OF PYLONS NOT TAKED INTO ACCOUNT. NOT LAND STATIONS GEO.
-# DON'T USE IT BY NOW: USE graph_setup_mini.yaml INSTEAD.
+# DON'T USE IT BY NOW: USE planner_setup_ATLAS.yaml INSTEAD.
 
 recharge_land_stations: "0 0 0;
 0 10 0;"

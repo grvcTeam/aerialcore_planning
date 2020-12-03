@@ -12,6 +12,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <map>
 #include <thread>
 
 #include <std_srvs/Trigger.h>
