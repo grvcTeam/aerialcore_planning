@@ -1,4 +1,7 @@
 <launch>
+	<arg name="plans_folder" default="plans"/>
+
 	<node pkg="large_scale_inspection_planner" type="pydashboard.py" name="pydashboard" output="screen">
+		<param name="plans_path" value="$(find large_scale_inspection_planner)/$(arg plans_folder)/"/>
 	</node>
 </launch>

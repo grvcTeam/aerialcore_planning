@@ -83,12 +83,12 @@ MissionController::MissionController() {
     regular_land_stations_geo_string.erase(std::remove(regular_land_stations_geo_string.begin(), regular_land_stations_geo_string.end(), ';'), regular_land_stations_geo_string.end());
     // For strings with point information, convert the string data, clean and ready, to double (float64 because of point) with stod.
     // Each time a number is converted (numbers separated by space ' '), the string is overwriten with the rest of the string using substr.
-    // The quantity of numbers have to be multiple of 2.
+    // The quantity of numbers have to be multiple of 3.
     // For connection_indexes do that but separating previously strings by semicolons:
     std::string::size_type sz;
     aerialcore_msgs::GraphNode current_graph_node;
     current_graph_node.type = aerialcore_msgs::GraphNode::TYPE_PYLON;
-    while ( pylons_position_string.size()>0 ) {
+    while ( pylons_position_string.size()>1 ) {
         current_graph_node.x = (float) std::stod (pylons_position_string,&sz);
         pylons_position_string = pylons_position_string.substr(sz);
         current_graph_node.y = (float) std::stod (pylons_position_string,&sz);
@@ -107,7 +107,7 @@ MissionController::MissionController() {
         std::string delimiter = ";";
         std::string string_until_first_semicolon = connections_indexes_string.substr(0, connections_indexes_string.find(delimiter));
         int current_connection_index;
-        while ( string_until_first_semicolon.size()>0 ) {
+        while ( string_until_first_semicolon.size()>1 ) {
             current_connection_index = (int) std::stod (string_until_first_semicolon,&sz);
             string_until_first_semicolon = string_until_first_semicolon.substr(sz);
             complete_graph_[i].connections_indexes.push_back(current_connection_index-1);
@@ -115,7 +115,7 @@ MissionController::MissionController() {
         connections_indexes_string.erase(0, connections_indexes_string.find(delimiter) + delimiter.length());
     }
     current_graph_node.type = aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION;
-    while ( recharge_land_stations_string.size()>0 ) {
+    while ( recharge_land_stations_string.size()>1 ) {
         current_graph_node.x = (float) std::stod (recharge_land_stations_string,&sz);
         recharge_land_stations_string = recharge_land_stations_string.substr(sz);
         current_graph_node.y = (float) std::stod (recharge_land_stations_string,&sz);
@@ -131,7 +131,7 @@ MissionController::MissionController() {
         complete_graph_.push_back(current_graph_node);
     }
     current_graph_node.type = aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION;
-    while ( regular_land_stations_string.size()>0 ) {
+    while ( regular_land_stations_string.size()>1 ) {
         current_graph_node.x = (float) std::stod (regular_land_stations_string,&sz);
         regular_land_stations_string = regular_land_stations_string.substr(sz);
         current_graph_node.y = (float) std::stod (regular_land_stations_string,&sz);
@@ -150,6 +150,7 @@ MissionController::MissionController() {
 #ifdef DEBUG
     for (int i=0; i<complete_graph_.size(); i++) {      // Print complete_graph_ to check that the yaml file was parsed correctly:
         std::cout << "graph_node[ " << i << " ].type                     = " << (int) complete_graph_[i].type << std::endl;
+        std::cout << "graph_node[ " << i << " ].id                       = " << complete_graph_[i].id << std::endl;
         for (int j=0; j<complete_graph_[i].connections_indexes.size(); j++) {
             std::cout << "graph_node[ " << i << " ].connections_indexes[ " << j << " ] = " << complete_graph_[i].connections_indexes[j] << std::endl;
         }
@@ -167,6 +168,7 @@ MissionController::MissionController() {
     stop_supervising_srv_ = n_.advertiseService("mission_controller/stop_supervising", &MissionController::stopSupervisingServiceCallback, this);
     do_specific_supervision_srv_ = n_.advertiseService("mission_controller/do_specific_supervision", &MissionController::doSpecificSupervisionServiceCallback, this);
     do_continuous_supervision_srv_ = n_.advertiseService("mission_controller/do_continuous_supervision", &MissionController::doContinuousSupervisionServiceCallback, this);
+    start_specific_supervision_plan_srv_ = n_.advertiseService("mission_controller/start_specific_supervision_plan", &MissionController::startSpecificSupervisionPlanServiceCallback, this);
 
     // Clients:
     post_yaml_client_ = n_.serviceClient<aerialcore_msgs::PostString>("post_yaml");
@@ -301,7 +303,7 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
             geometry_msgs::PoseStamped current_pose_stamped;
             current_pose_stamped.pose.position.x = current_graph_[ flight_plan_for_current_uav.nodes[i] ].x;
             current_pose_stamped.pose.position.y = current_graph_[ flight_plan_for_current_uav.nodes[i] ].y;
-            current_pose_stamped.pose.position.z = current_graph_[ flight_plan_for_current_uav.nodes[i] ].z + (current_graph_[ flight_plan_for_current_uav.nodes[i] ].altitude - map_origin_geo_.altitude);
+            current_pose_stamped.pose.position.z = current_graph_[ flight_plan_for_current_uav.nodes[i] ].altitude == 0 ? current_graph_[ flight_plan_for_current_uav.nodes[i] ].z : current_graph_[ flight_plan_for_current_uav.nodes[i] ].z + (current_graph_[ flight_plan_for_current_uav.nodes[i] ].altitude - map_origin_geo_.altitude);
 
             if (current_graph_[ flight_plan_for_current_uav.nodes[i] ].type != aerialcore_msgs::GraphNode::TYPE_PYLON) {
 
@@ -309,7 +311,7 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
                     UAVs_[current_uav_index].mission->addPassWpList(pass_poses);
                 }
                 if (first_iteration) {
-                    current_pose_stamped.pose.position.z = current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].z + (current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].altitude - map_origin_geo_.altitude);
+                    current_pose_stamped.pose.position.z = current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].altitude == 0 ? current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].z : current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].z + (current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].altitude - map_origin_geo_.altitude);
                     UAVs_[current_uav_index].mission->addTakeOffWp(current_pose_stamped);
                     flying_or_landed = true;
                     first_iteration=false;
@@ -326,7 +328,7 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
                         }
                         flying_or_landed = false;
                     } else {
-                        current_pose_stamped.pose.position.z = current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].z + (current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].altitude - map_origin_geo_.altitude);
+                        current_pose_stamped.pose.position.z = current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].altitude == 0 ? current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].z : current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].z + (current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].altitude - map_origin_geo_.altitude);
                         UAVs_[current_uav_index].mission->addTakeOffWp(current_pose_stamped);
                         flying_or_landed = true;
                     }
@@ -417,6 +419,132 @@ bool MissionController::doContinuousSupervisionServiceCallback(std_srvs::Trigger
     _res.success=true;
     return true;
 } // end doContinuousSupervisionServiceCallback
+
+
+bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_msgs::PostString::Request& _req, aerialcore_msgs::PostString::Response& _res) {
+    ROS_INFO("Mission Controller: start specific supervision plan servive received.");
+
+    // Load to the parameter server the yaml string received:
+    std::remove("current_plan.yaml");
+    std::ofstream out("current_plan.yaml");
+    out << _req.data;
+    out.close();
+    system("rosparam load current_plan.yaml");
+
+    current_graph_.clear();
+
+    // Iterate the parameters loaded and create from them the graph:
+    for (int id=1; id<=20; id++) {
+        if (ros::param::has("waypoints_"+std::to_string( id ))) {
+
+            // Build the initial UAV positions and regular land stations (same spot where the UAV is when yaml string received) graph nodes for the current graph:
+            aerialcore_msgs::GraphNode initial_graph_node;
+            initial_graph_node.type = aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION;
+            if (commanding_UAV_with_mission_lib_or_DJI_SDK_) {
+                initial_graph_node.x = UAVs_[findUavIndexById(id)].mission->pose().pose.position.x;
+                initial_graph_node.y = UAVs_[findUavIndexById(id)].mission->pose().pose.position.y;
+                initial_graph_node.z = UAVs_[findUavIndexById(id)].mission->pose().pose.position.z;
+            } else {
+                // // HARDCODED INITIAL POSES ?
+            }
+            current_graph_.push_back(initial_graph_node);
+            initial_graph_node.type = aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION;
+            initial_graph_node.id = id;
+            current_graph_.push_back(initial_graph_node);
+
+            // Build the pylons graph nodes for the current graph from the yaml string received:
+            std::string waypoints;
+            ros::param::get("waypoints_"+std::to_string( id ),waypoints);
+            // Remove new lines if exist in the strings for all strings and semicolons:
+            waypoints.erase(std::remove(waypoints.begin(), waypoints.end(), '\n'), waypoints.end());
+            waypoints.erase(std::remove(waypoints.begin(), waypoints.end(), '\r'), waypoints.end());
+            waypoints.erase(std::remove(waypoints.begin(), waypoints.end(), ','), waypoints.end());
+            waypoints.erase(std::remove(waypoints.begin(), waypoints.end(), ';'), waypoints.end());
+            // For strings with point information, convert the string data, clean and ready, to double (float64 because of point) with stod.
+            // Each time a number is converted (numbers separated by space ' '), the string is overwriten with the rest of the string using substr.
+            // The quantity of numbers have to be multiple of 4.
+            std::string::size_type sz;
+            aerialcore_msgs::GraphNode pylon_graph_node;
+            pylon_graph_node.type = aerialcore_msgs::GraphNode::TYPE_PYLON;
+            while ( waypoints.size()>1 ) {
+                pylon_graph_node.x = (float) std::stod (waypoints,&sz);
+                waypoints = waypoints.substr(sz);
+                pylon_graph_node.y = (float) std::stod (waypoints,&sz);
+                waypoints = waypoints.substr(sz);
+                pylon_graph_node.z = (float) std::stod (waypoints,&sz);
+                waypoints = waypoints.substr(sz);
+                (float) std::stod (waypoints,&sz);  // Don't save right now the heading.
+                waypoints = waypoints.substr(sz);
+                current_graph_.push_back(pylon_graph_node);
+            }
+        }
+    }
+#ifdef DEBUG
+    for (int i=0; i<current_graph_.size(); i++) {      // Print current_graph_ to check that the yaml file was parsed correctly:
+        std::cout << "graph_node[ " << i << " ].type                     = " << (int) current_graph_[i].type << std::endl;
+        std::cout << "graph_node[ " << i << " ].id                       = " << current_graph_[i].id << std::endl;
+        for (int j=0; j<current_graph_[i].connections_indexes.size(); j++) {
+            std::cout << "graph_node[ " << i << " ].connections_indexes[ " << j << " ] = " << current_graph_[i].connections_indexes[j] << std::endl;
+        }
+        std::cout << "graph_node[ " << i << " ].x                        = " << current_graph_[i].x << std::endl;
+        std::cout << "graph_node[ " << i << " ].y                        = " << current_graph_[i].y << std::endl;
+        std::cout << "graph_node[ " << i << " ].z                        = " << current_graph_[i].z << std::endl;
+        std::cout << "graph_node[ " << i << " ].latitude                 = " << current_graph_[i].latitude << std::endl;
+        std::cout << "graph_node[ " << i << " ].longitude                = " << current_graph_[i].longitude << std::endl;
+        std::cout << "graph_node[ " << i << " ].altitude                 = " << current_graph_[i].altitude << std::endl;
+    }
+#endif
+
+    // Build the flight_plan_ so we can translate it later to use the mission_lib or DJI SDK:
+    flight_plan_.clear();
+    aerialcore_msgs::FlightPlan current_flight_plan;
+    int regular_landing_station_index = -1;
+    for (int i=0; i<=current_graph_.size(); i++) {
+        if (i==current_graph_.size() || current_graph_[i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && regular_landing_station_index!=-1) {
+            current_flight_plan.nodes.push_back(regular_landing_station_index);
+            flight_plan_.push_back(current_flight_plan);
+            current_flight_plan.nodes.clear();
+            if (i==current_graph_.size()) {
+                break;
+            }
+        }
+        if (current_graph_[i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION) {
+            regular_landing_station_index = i-1;
+            current_flight_plan.uav_id = current_graph_[i].id;
+            current_flight_plan.nodes.push_back(i);
+        } else if (current_graph_[i].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
+            current_flight_plan.nodes.push_back(i);
+        }
+    }
+
+    if (commanding_UAV_with_mission_lib_or_DJI_SDK_) {
+        translateFlightPlanIntoUAVMission(flight_plan_);
+
+        for (const aerialcore_msgs::FlightPlan& flight_plan_for_current_uav : flight_plan_) {
+            // // HARDCODED WAITS BETWEEN TAKEOFFS FOR NOVEMBER EXPERIMENTS:
+            // if (flight_plan_for_current_uav.uav_id==2) sleep(10);
+            // if (flight_plan_for_current_uav.uav_id==3) sleep(74);
+#ifdef DEBUG
+            UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->print();
+#endif
+            UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->push();
+            UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->start();
+        }
+        _res.success=true;
+    } else {
+        aerialcore_msgs::PostString post_yaml_string;
+        post_yaml_string.request.data = translateFlightPlanIntoDJIyaml(flight_plan_);
+        if (post_yaml_client_.call(post_yaml_string)) {
+            ROS_INFO("Mission Controller: yaml sent to DJI SDK.");
+            _res.success=true;
+        } else {
+            ROS_WARN("Mission Controller: yaml not sent to DJI SDK, service didn't answer.");
+            _res.success=false;
+        }
+    }
+
+    return true;
+} // end startSpecificSupervisionPlanServiceCallback
 
 
 int MissionController::findUavIndexById(int _UAV_id) {

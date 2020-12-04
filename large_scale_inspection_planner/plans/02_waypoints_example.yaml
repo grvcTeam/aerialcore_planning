@@ -1,0 +1,43 @@
+# The number after "waypoint_" is the id of the UAV which trajectory is being described. The structure for each waypoint is [x, y, z, heading]. Commas and semicolons are optional to separate elements and rows respectively.
+# These yaml plans only include pass waypoints, omitting the takeoff and landing waypoints, which are automatically created in the position that occupies UAV at the time the plan is sent before and after all the pass waypoints.
+# Only UAV ids between 1 and 20 will be recognized.
+
+# Waypoints for the UAV with id=1, which is the multicopter. Slow but precise, better use it for the tricky parts.
+waypoints_1: "-490.208 -215.834 17 0;
+-492.875 -240.864 18 0;
+-598.496 -281.095 13 0;
+-633.009 -319.444 13 0;
+-627.564 -283.028 13 0;
+-611.221 -232.533 13 0;
+-633.009 -319.444 13 0;
+-544.794 -296.507 15 0;"
+
+# Waypoints for the UAV with id=2, which is the fixed wing. Fast, but better use it for trajectories more or less straight.
+waypoints_2: "894.348 293.824 32 0;
+719.770 208.398 39 0;
+641.898 170.080 30 0;
+543.828 136.838 28 0;
+447.289 103.004 26 0;
+351.502 70.480 25 0;
+252.476 37.164 23 0;
+163.171 6.176 22 0;
+65.174 -27.481 21 0;
+-28.178 -63.028 19 0;
+-118.176 -97.355 17 0;
+-208.036 -131.632 16 0;
+-301.302 -167.188 15 0;
+-391.957 -202.912 13 0;
+-492.875 -240.864 18 0;"
+
+# Waypoints for the UAV with id=3, which is the VTOL. Fast, but better use it for trajectories more or less straight.
+waypoints_3: "-409.120 449.015 56 0;
+-430.169 276.424 37 0;
+-450.540 108.275 21 0;
+-470.078 -41.682 15 0;
+-490.208 -215.834 17 0;
+-544.794 -296.507 15 0;
+-413.182 -301.398 14 0;
+-244.429 -290.325 26 0;
+-32.435 -276.509 32 0;
+119.719 -383.291 37 0;
+276.420 -493.459 51 0;"

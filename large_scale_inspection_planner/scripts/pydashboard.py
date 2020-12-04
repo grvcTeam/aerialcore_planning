@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 from aerialcore_msgs.msg import GraphNode
-from aerialcore_msgs.srv import DoSpecificSupervision, DoSpecificSupervisionRequest, StartSupervising, StartSupervisingRequest, StopSupervising, StopSupervisingRequest
+from aerialcore_msgs.srv import DoSpecificSupervision, DoSpecificSupervisionRequest, StartSupervising, StartSupervisingRequest, StopSupervising, StopSupervisingRequest, PostString, PostStringRequest
 from std_srvs.srv import Trigger, TriggerRequest
 import rospkg
 import rospy
 import time
 from os import system
+from os import listdir
+from os.path import isfile, join
 import signal
 import sys
 
@@ -17,6 +19,7 @@ def main_menu():
     print "2. Stop supervising"
     print "3. Do specific supervision"
     print "4. Do continuous supervision"
+    print "5. Start specific supervision plan"
 
     selected = raw_input(" >> ")
     system("clear")
@@ -28,6 +31,8 @@ def main_menu():
         do_specific_supervision_menu()
     elif selected == "4":
         do_continuous_supervision_menu()
+    elif selected == "5":
+        start_specific_supervision_plan_menu()
 
     else:
         system("clear")
@@ -76,109 +81,9 @@ def stop_supervising_menu():
 def do_specific_supervision_menu():
     system("clear")
     print "Do specific supervision."
+
     # Custom specific subgraph to send:
     do_specific_supervision_request = DoSpecificSupervisionRequest()
-
-    # # Pylon 0: Rafa's waypoints (not for planning)
-    # graph_node_struct = GraphNode()
-    # graph_node_struct.type = GraphNode.TYPE_PYLON
-    # graph_node_struct.x = 162.829
-    # graph_node_struct.y = 4.800
-    # graph_node_struct.z = 20
-    # graph_node_struct.latitude = 38.138774
-    # graph_node_struct.longitude = -3.171967
-    # graph_node_struct.altitude = 20
-    # graph_node_struct.connections_indexes.append(1)
-    # graph_node_struct.connections_indexes.append(4)
-    # do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
-
-    # # Pylon 1
-    # graph_node_struct = GraphNode()
-    # graph_node_struct.type = GraphNode.TYPE_PYLON
-    # graph_node_struct.x = -28.600
-    # graph_node_struct.y = -64.189
-    # graph_node_struct.z = 20
-    # graph_node_struct.latitude = 38.138149
-    # graph_node_struct.longitude = -3.174150
-    # graph_node_struct.altitude = 20
-    # graph_node_struct.connections_indexes.append(0)
-    # graph_node_struct.connections_indexes.append(2)
-    # do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
-
-    # # Pylon 2
-    # graph_node_struct = GraphNode()
-    # graph_node_struct.type = GraphNode.TYPE_PYLON
-    # graph_node_struct.x = -122.087
-    # graph_node_struct.y = -101.294
-    # graph_node_struct.z = 20
-    # graph_node_struct.latitude = 38.137813
-    # graph_node_struct.longitude = -3.175216
-    # graph_node_struct.altitude = 20
-    # graph_node_struct.connections_indexes.append(1)
-    # graph_node_struct.connections_indexes.append(3)
-    # do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
-
-    # # Pylon 3
-    # graph_node_struct = GraphNode()
-    # graph_node_struct.type = GraphNode.TYPE_PYLON
-    # graph_node_struct.x = -132.693
-    # graph_node_struct.y = -56.115
-    # graph_node_struct.z = 20
-    # graph_node_struct.latitude = 38.138220
-    # graph_node_struct.longitude = -3.175338
-    # graph_node_struct.altitude = 20
-    # graph_node_struct.connections_indexes.append(2)
-    # do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
-
-    # # Pylon 4
-    # graph_node_struct = GraphNode()
-    # graph_node_struct.type = GraphNode.TYPE_PYLON
-    # graph_node_struct.x = 2103.453
-    # graph_node_struct.y = 665.168
-    # graph_node_struct.z = 20
-    # graph_node_struct.latitude = 38.144756
-    # graph_node_struct.longitude = -3.149834
-    # graph_node_struct.altitude = 20
-    # graph_node_struct.connections_indexes.append(0)
-    # do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
-
-    # # Pylon 5
-    # graph_node_struct = GraphNode()
-    # graph_node_struct.type = GraphNode.TYPE_PYLON
-    # graph_node_struct.x = -137.243
-    # graph_node_struct.y = -52.778
-    # graph_node_struct.z = 20
-    # graph_node_struct.latitude = 38.138250
-    # graph_node_struct.longitude = -3.175390
-    # graph_node_struct.altitude = 20
-    # graph_node_struct.connections_indexes.append(6)
-    # do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
-
-    # # Pylon 6
-    # graph_node_struct = GraphNode()
-    # graph_node_struct.type = GraphNode.TYPE_PYLON
-    # graph_node_struct.x = -126.820
-    # graph_node_struct.y = -101.840
-    # graph_node_struct.z = 20
-    # graph_node_struct.latitude = 38.137808
-    # graph_node_struct.longitude = -3.175270
-    # graph_node_struct.altitude = 20
-    # graph_node_struct.connections_indexes.append(5)
-    # graph_node_struct.connections_indexes.append(7)
-    # do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
-
-    # # Pylon 7
-    # graph_node_struct = GraphNode()
-    # graph_node_struct.type = GraphNode.TYPE_PYLON
-    # graph_node_struct.x = -308.702
-    # graph_node_struct.y = -170.064
-    # graph_node_struct.z = 20
-    # graph_node_struct.latitude = 38.137190
-    # graph_node_struct.longitude = -3.177344
-    # graph_node_struct.altitude = 20
-    # graph_node_struct.connections_indexes.append(6)
-    # do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
-
 
     # Pylon 0
     graph_node_struct = GraphNode()
@@ -311,30 +216,30 @@ def do_specific_supervision_menu():
     graph_node_struct.x = 28
     graph_node_struct.y = 61
     graph_node_struct.z = 0.32
-    graph_node_struct.latitude = 0
-    graph_node_struct.longitude = 0
-    graph_node_struct.altitude = 0
+    graph_node_struct.latitude = 38.139275
+    graph_node_struct.longitude = -3.173516
+    graph_node_struct.altitude = 444
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
     graph_node_struct = GraphNode()
     graph_node_struct.type = GraphNode.TYPE_REGULAR_LAND_STATION
-    graph_node_struct.x = 36.119532
-    graph_node_struct.y = 63.737163
+    graph_node_struct.x = 38.8
+    graph_node_struct.y = 65
     graph_node_struct.z = 0
-    graph_node_struct.latitude = 0
-    graph_node_struct.longitude = 0
-    graph_node_struct.altitude = 0
+    graph_node_struct.latitude = 38.139309
+    graph_node_struct.longitude = -3.173386
+    graph_node_struct.altitude = 444
     do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
-    # graph_node_struct = GraphNode()
-    # graph_node_struct.type = GraphNode.TYPE_REGULAR_LAND_STATION
-    # graph_node_struct.x = 32.5
-    # graph_node_struct.y = 61
-    # graph_node_struct.z = 0
-    # graph_node_struct.latitude = 0
-    # graph_node_struct.longitude = 0
-    # graph_node_struct.altitude = 0
-    # do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
+    graph_node_struct = GraphNode()
+    graph_node_struct.type = GraphNode.TYPE_REGULAR_LAND_STATION
+    graph_node_struct.x = 32.5
+    graph_node_struct.y = 61
+    graph_node_struct.z = 0
+    graph_node_struct.latitude = 38.139272
+    graph_node_struct.longitude = -3.173451
+    graph_node_struct.altitude = 444
+    do_specific_supervision_request.specific_subgraph.append(graph_node_struct)
 
     try:
         print do_specific_supervision_client.call(do_specific_supervision_request)
@@ -352,6 +257,39 @@ def do_continuous_supervision_menu():
         print "\nService call failed: %s"%e
 
 
+# 5. Start specific supervision plan:
+def start_specific_supervision_plan_menu():
+    system("clear")
+    #show the files in the directory:
+    onlyfiles = [f for f in listdir(plans_path) if isfile(join(plans_path, f))]
+    print "Start specific supervision plan selected. The next plans' YAMLs are available:"
+    cont = 0
+    orded_list = sorted(onlyfiles)
+    for i in range(len(orded_list)):
+        num = i+int(1)
+        print("%d. %s" %(num, orded_list[i]) )
+        cont = cont+1
+    print("Press any other key to quit.")
+    selected = raw_input(" >> ")
+    try:
+        if not( selected.isalpha() ) and int(selected)>=1 and int(selected) <= len(orded_list): # selected.isalpha() return true if selected is a leter
+            yaml_plan_name = orded_list[int(selected)-1]
+            print("%s selected" %yaml_plan_name )
+            yaml_string = open( plans_path + yaml_plan_name, 'r').read()
+            yaml_string_plan_to_post = PostStringRequest()
+            yaml_string_plan_to_post.data = yaml_string
+            try:
+                print start_specific_supervision_plan_client.call(yaml_string_plan_to_post)
+            except rospy.ServiceException, e:
+                print "\nService call failed: %s"%e
+        else:
+            system("clear")
+            print "Not a valid option."
+    except:
+        system("clear")
+        print "Not a valid option."
+
+
 # Finish the execution directly when Ctrl+C is pressed (signal.SIGINT received), without escalating to SIGTERM.
 def signal_handler(sig, frame):
     print('Ctrl+C pressed, signal.SIGINT received.')
@@ -360,10 +298,12 @@ def signal_handler(sig, frame):
 
 if __name__ == "__main__":
     rospy.init_node('pydashboard', anonymous=True)
+    plans_path = rospy.get_param('~plans_path')
     start_supervising_client = rospy.ServiceProxy('mission_controller/start_supervising',StartSupervising)
     stop_supervising_client = rospy.ServiceProxy('mission_controller/stop_supervising',StopSupervising)
     do_specific_supervision_client = rospy.ServiceProxy('mission_controller/do_specific_supervision',DoSpecificSupervision)
     do_continuous_supervision_client = rospy.ServiceProxy('mission_controller/do_continuous_supervision',Trigger)
+    start_specific_supervision_plan_client = rospy.ServiceProxy('mission_controller/start_specific_supervision_plan',PostString)
     signal.signal(signal.SIGINT, signal_handler)    # Associate signal SIGINT (Ctrl+C pressed) to handler (function "signal_handler")
 
     system("clear")

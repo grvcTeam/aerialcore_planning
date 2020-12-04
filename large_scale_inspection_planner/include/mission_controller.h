@@ -9,8 +9,10 @@
 #define MISSION_CONTROLLER_H
 
 #include <ros/ros.h>
-#include <sstream>
 #include <string>
+#include <sstream>
+#include <fstream>
+#include <iostream>
 #include <vector>
 #include <map>
 #include <thread>
@@ -46,6 +48,7 @@ private:
   bool stopSupervisingServiceCallback(aerialcore_msgs::StopSupervising::Request& _req, aerialcore_msgs::StopSupervising::Response& _res);
   bool doSpecificSupervisionServiceCallback(aerialcore_msgs::DoSpecificSupervision::Request& _req, aerialcore_msgs::DoSpecificSupervision::Response& _res);
   bool doContinuousSupervisionServiceCallback(std_srvs::Trigger::Request& _req, std_srvs::Trigger::Response& _res);
+  bool startSpecificSupervisionPlanServiceCallback(aerialcore_msgs::PostString::Request& _req, aerialcore_msgs::PostString::Response& _res);
 
   int findUavIndexById(int _UAV_id);
 
@@ -53,6 +56,7 @@ private:
   ros::ServiceServer stop_supervising_srv_;
   ros::ServiceServer do_specific_supervision_srv_;
   ros::ServiceServer do_continuous_supervision_srv_;
+  ros::ServiceServer start_specific_supervision_plan_srv_;
   ros::ServiceClient post_yaml_client_;
 
   // Power lines graph:
