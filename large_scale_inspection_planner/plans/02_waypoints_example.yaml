@@ -1,5 +1,5 @@
-# The number after "waypoint_" is the id of the UAV which trajectory is being described. The structure for each waypoint is [x, y, z, heading]. Commas and semicolons are optional to separate elements and rows respectively.
-# These yaml plans only include pass waypoints, omitting the takeoff and landing waypoints, which are automatically created in the position that occupies UAV at the time the plan is sent before and after all the pass waypoints.
+# The number after "waypoint_" is the id of the UAV which trajectory is being described. The structure for each waypoint is [x, y, z, heading], where heading is not being used right now. Commas and semicolons are optional to separate elements and rows respectively.
+# These yaml plans only include pass waypoints, omitting the takeoff and landing waypoints, which are automatically created before and after all the pass waypoints respectively, using the position that the UAV occupies at the time the plan is sent.
 # Only UAV ids between 1 and 20 will be recognized.
 
 # Waypoints for the UAV with id=1, which is the multicopter. Slow but precise, better use it for the tricky parts.
