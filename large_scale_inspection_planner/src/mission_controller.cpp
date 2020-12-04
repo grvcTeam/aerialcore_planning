@@ -88,7 +88,7 @@ MissionController::MissionController() {
     std::string::size_type sz;
     aerialcore_msgs::GraphNode current_graph_node;
     current_graph_node.type = aerialcore_msgs::GraphNode::TYPE_PYLON;
-    while ( pylons_position_string.size()>1 ) {
+    while ( pylons_position_string.size()>0 && pylons_position_string!=" " ) {
         current_graph_node.x = (float) std::stod (pylons_position_string,&sz);
         pylons_position_string = pylons_position_string.substr(sz);
         current_graph_node.y = (float) std::stod (pylons_position_string,&sz);
@@ -107,7 +107,7 @@ MissionController::MissionController() {
         std::string delimiter = ";";
         std::string string_until_first_semicolon = connections_indexes_string.substr(0, connections_indexes_string.find(delimiter));
         int current_connection_index;
-        while ( string_until_first_semicolon.size()>1 ) {
+        while ( string_until_first_semicolon.size()>0 && string_until_first_semicolon!=" " ) {
             current_connection_index = (int) std::stod (string_until_first_semicolon,&sz);
             string_until_first_semicolon = string_until_first_semicolon.substr(sz);
             complete_graph_[i].connections_indexes.push_back(current_connection_index-1);
@@ -115,7 +115,7 @@ MissionController::MissionController() {
         connections_indexes_string.erase(0, connections_indexes_string.find(delimiter) + delimiter.length());
     }
     current_graph_node.type = aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION;
-    while ( recharge_land_stations_string.size()>1 ) {
+    while ( recharge_land_stations_string.size()>0 && recharge_land_stations_string!=" " ) {
         current_graph_node.x = (float) std::stod (recharge_land_stations_string,&sz);
         recharge_land_stations_string = recharge_land_stations_string.substr(sz);
         current_graph_node.y = (float) std::stod (recharge_land_stations_string,&sz);
@@ -131,7 +131,7 @@ MissionController::MissionController() {
         complete_graph_.push_back(current_graph_node);
     }
     current_graph_node.type = aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION;
-    while ( regular_land_stations_string.size()>1 ) {
+    while ( regular_land_stations_string.size()>0 && regular_land_stations_string!=" " ) {
         current_graph_node.x = (float) std::stod (regular_land_stations_string,&sz);
         regular_land_stations_string = regular_land_stations_string.substr(sz);
         current_graph_node.y = (float) std::stod (regular_land_stations_string,&sz);
@@ -466,7 +466,7 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
             std::string::size_type sz;
             aerialcore_msgs::GraphNode pylon_graph_node;
             pylon_graph_node.type = aerialcore_msgs::GraphNode::TYPE_PYLON;
-            while ( waypoints.size()>1 ) {
+            while ( waypoints.size()>0 && waypoints!=" " ) {
                 pylon_graph_node.x = (float) std::stod (waypoints,&sz);
                 waypoints = waypoints.substr(sz);
                 pylon_graph_node.y = (float) std::stod (waypoints,&sz);
