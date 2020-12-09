@@ -1,11 +1,7 @@
 # This file describes the settings for the planning problem for the ATLAS_power_lines.world
 
 
-# Geographic coordinate (latitude, longitude, altitude) that makes (x,y,z) = (0,0,0) meters in cartesian coordinates:
-map_origin_geo: [38.138728, -3.173825, 444]
-
-
-# Dictionary of the actual drones used in the simulation (key: UAV id, value: airframe type):
+# Dictionary of the actual drones used in the simulation or reality (key: UAV id, value: airframe type):
 drones: {"1": "multicopter", "2": "fixed_wing", "3": "VTOL"}
 
 
@@ -35,6 +31,10 @@ VTOL:
   time_until_fully_charged: 1800
 
 
+# Geographic coordinate (latitude, longitude, altitude) that makes (x,y,z) = (0,0,0) meters in cartesian coordinates:
+map_origin_geo: [38.138728, -3.173825, 444]
+
+
 # Three different types of graph elements: recharge land stations, regular land stations and pylons (electric towers).
 # Locations of graph elements provided by the following matrices in both cartesian coordinates (x,y,z) and geographic coordinates (latitude, longitude, altitude).
 # For each graph element matrix, the equivalent in the other coordinates system must have the same number of rows. Each row represent an element.
@@ -43,6 +43,25 @@ VTOL:
 # The electric graph is conformed with the positions of the pylons and their wire connections.
 # The vector of vectors "pylons_connection_indexes" must be of the same size of "pylons_position_cartesian" (and "pylons_position_geographic") and represents
 # the wire connections among electric towers. ATTENTION: indexes start at 1, so you may want to rest 1 at parsing to start by 0 (C++ or Python).
+
+# Consider the following simple power grid example of 3 pylons and 2 wires as an explanation for the electric graph structure:
+
+# O---O---O
+# 1   2   3
+
+# These 3 pylons would result into the following electric graph (Octave syntax):
+
+# pylons_position_cartesian = [0 0 20;  # Pylon 1 with x=0m,  y=0m relative to the origin, pylon of 20 meters height.
+# 10 0 20;                              # Pylon 2 with x=10m, y=0m relative to the origin, pylon of 20 meters height.
+# 20 0 20;];                            # Pylon 3 with x=20m, y=0m relative to the origin, pylon of 20 meters height.
+
+# pylons_position_geographic = [38.119002 -3.221949 444;  # Pylon 1 latitude, longitude and ground level altitude (above sea level).
+# 38.119004 -3.220921 444;                                # Pylon 2 latitude, longitude and ground level altitude (above sea level).
+# 38.132953 -3.219796 444;];                              # Pylon 3 latitude, longitude and ground level altitude (above sea level).
+
+# pylons_connections_indexes = [ { [2] }  # Pylon 1 connected to pylon 2.
+# { [1 3] }                               # Pylon 2 connected to pylon 1 and 3.
+# { [2] } ];                              # Pylon 3 connected to pylon 2.
 
 recharge_land_stations_cartesian: "28 61 0.32;"
 recharge_land_stations_geographic: "38.139275 -3.173516 444;"
