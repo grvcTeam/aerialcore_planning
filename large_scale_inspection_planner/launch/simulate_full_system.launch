@@ -2,10 +2,10 @@
 
     <!-- Launch Gazebo simulation. -->
 	<rosparam param="/use_sim_time">true</rosparam>
-    <node pkg="aerialcore_simulation" type="launch_gzworld.py" name="gazebo_world" output="screen"
+    <node pkg="px4_bringup" type="launch_gzworld.py" name="gazebo_world" output="screen"
     args="-physics=ode -world=$(find aerialcore_simulation)/worlds/ATLAS_power_lines.world
 		  -add_model_path=$(find aerialcore_simulation)/models
-		  -description_package=robots_description">
+		  -description_package=aerialcore_simulation">
 		<rosparam param="sim_origin">[38.138728, -3.173825, 392.3]</rosparam>  <!-- [lat,lon,alt] -->
 	</node>
     <!-- By default in the simulation the UAVs have an altitude of 51.7 meters according to MAVROS, but they should have 444, so I put the sim_origin at 392.3 -->
@@ -28,6 +28,7 @@
         <arg name="id" value="1"/>
         <arg name="material" value="Orange"/>
         <arg name="mode" value="$(arg mode)"/>
+        <arg name="description_package" value="robots_description"/>
         <arg name="x" value="28"/>
         <arg name="y" value="61"/>
         <arg name="z" value="0.32"/>
@@ -40,11 +41,12 @@
         <arg name="id" value="2"/>
         <arg name="material" value="Orange"/>
         <arg name="mode" value="$(arg mode)"/>
+        <arg name="description_package" value="aerialcore_simulation"/>
         <arg name="x" value="38.8"/>
         <arg name="y" value="65"/>
         <arg name="z" value="0"/>
         <arg name="yaw" value="0.3"/>
-        <arg name="robot_model" value="plane"/>
+        <arg name="robot_model" value="sensefly_ebee"/>
     </include>
 
     <!-- Launch robot id=3 -->
@@ -52,6 +54,7 @@
         <arg name="id" value="3"/>
         <arg name="material" value="Orange"/>
         <arg name="mode" value="$(arg mode)"/>
+        <arg name="description_package" value="aerialcore_simulation"/>
         <arg name="x" value="32.5"/>
         <arg name="y" value="61"/>
         <arg name="z" value="0"/>
