@@ -5,7 +5,7 @@
 drones: {"1": "multicopter", "2": "fixed_wing", "3": "VTOL"}
 
 
-# Airframe types, each one with its own parameter values:
+# Airframe types, each one with its own parameter values (time in seconds, speed in m/s, battery in in parts per unit):
 multicopter:
   time_max_flying: 1800
   speed_xy: 5.5
