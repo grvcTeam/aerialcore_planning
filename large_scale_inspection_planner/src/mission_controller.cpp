@@ -35,13 +35,13 @@ MissionController::MissionController() {
     for (std::map<std::string, std::string>::iterator it = drones.begin(); it != drones.end(); it++) {
         UAV new_uav;
         new_uav.id = stoi(it->first);
-        new_uav.mission = new grvc::mission_ns::Mission( new_uav.id );
-        int time_max_flying;            n_.getParam(it->second+"/time_max_flying", time_max_flying);                     new_uav.time_max_flying = time_max_flying;
-        float speed_xy;                 n_.getParam(it->second+"/speed_xy", speed_xy);                                   new_uav.speed_xy = speed_xy;
-        float speed_z_down;             n_.getParam(it->second+"/speed_z_down", speed_z_down);                           new_uav.speed_z_down = speed_z_down;
-        float speed_z_up;               n_.getParam(it->second+"/speed_z_up", speed_z_up);                               new_uav.speed_z_up = speed_z_up;
-        float minimum_battery;          n_.getParam(it->second+"/minimum_battery", minimum_battery);                     new_uav.minimum_battery = minimum_battery;
-        int time_until_fully_charged;   n_.getParam(it->second+"/time_until_fully_charged", time_until_fully_charged);   new_uav.time_until_fully_charged = time_until_fully_charged;
+        new_uav.mission = new grvc::mission_ns::Mission(new_uav.id);
+        n_.getParam(it->second+"/time_max_flying", new_uav.time_max_flying);
+        n_.getParam(it->second+"/speed_xy", new_uav.speed_xy);
+        n_.getParam(it->second+"/speed_z_down", new_uav.speed_z_down);
+        n_.getParam(it->second+"/speed_z_up", new_uav.speed_z_up);
+        n_.getParam(it->second+"/minimum_battery", new_uav.minimum_battery);
+        n_.getParam(it->second+"/time_until_fully_charged", new_uav.time_until_fully_charged);
         UAVs_.push_back(new_uav);
     }
 
@@ -195,8 +195,16 @@ MissionController::~MissionController() {
 
 bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSupervising::Request& _req, aerialcore_msgs::StartSupervising::Response& _res) {
     if (_req.uav_id.size()>0) {     // There are specific UAVs to start.
+        // First disable all UAVs from supervising to then enable only the ones used:
+        for (UAV& current_uav : UAVs_) {
+            current_uav.enabled_to_supervise = false;
+        }
+
         for (const int& current_uav_id : _req.uav_id) {
-            UAVs_[findUavIndexById(current_uav_id)].enabled_to_supervise = true;
+            int current_uav_index = findUavIndexById(current_uav_id);
+            if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
+
+            UAVs_[current_uav_index].enabled_to_supervise = true;
         }
     } else {    // If empty start all UAVs.
         for (UAV& current_uav : UAVs_) {
@@ -266,11 +274,13 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
             // // HARDCODED WAITS BETWEEN TAKEOFFS FOR NOVEMBER EXPERIMENTS:
             // if (flight_plan_for_current_uav.uav_id==2) sleep(10);
             // if (flight_plan_for_current_uav.uav_id==3) sleep(74);
+            int current_uav_index = findUavIndexById(flight_plan_for_current_uav.uav_id);
+            if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
 #ifdef DEBUG
-            UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->print();
+            UAVs_[current_uav_index].mission->print();
 #endif
-            UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->push();
-            UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->start();
+            UAVs_[current_uav_index].mission->push();
+            UAVs_[current_uav_index].mission->start();
         }
         _res.success=true;
     } else {
@@ -291,6 +301,7 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
 void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plan) {
     for (const aerialcore_msgs::FlightPlan& flight_plan_for_current_uav : _flight_plan) {
         int current_uav_index = findUavIndexById(flight_plan_for_current_uav.uav_id);
+        if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
 
         UAVs_[current_uav_index].mission->clear();
 
@@ -384,6 +395,7 @@ bool MissionController::stopSupervisingServiceCallback(aerialcore_msgs::StopSupe
     if (_req.uav_id.size()>0) {     // There are specific UAVs to stop.
         for (const int& current_uav_id : _req.uav_id) {
             int current_uav_index = findUavIndexById(current_uav_id);
+            if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
 
             UAVs_[current_uav_index].mission->stop();
             UAVs_[current_uav_index].enabled_to_supervise = false;
@@ -441,9 +453,12 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
             aerialcore_msgs::GraphNode initial_graph_node;
             initial_graph_node.type = aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION;
             if (commanding_UAV_with_mission_lib_or_DJI_SDK_) {
-                initial_graph_node.x = UAVs_[findUavIndexById(id)].mission->pose().pose.position.x;
-                initial_graph_node.y = UAVs_[findUavIndexById(id)].mission->pose().pose.position.y;
-                initial_graph_node.z = UAVs_[findUavIndexById(id)].mission->pose().pose.position.z;
+                int current_uav_index = findUavIndexById(id);
+                if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
+
+                initial_graph_node.x = UAVs_[current_uav_index].mission->pose().pose.position.x;
+                initial_graph_node.y = UAVs_[current_uav_index].mission->pose().pose.position.y;
+                initial_graph_node.z = UAVs_[current_uav_index].mission->pose().pose.position.z;
             } else {
                 // // HARDCODED INITIAL POSES ?
             }
@@ -517,6 +532,11 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
         }
     }
 
+    // First disable all UAVs from supervising to then enable only the ones used:
+    for (UAV& current_uav : UAVs_) {
+        current_uav.enabled_to_supervise = false;
+    }
+
     if (commanding_UAV_with_mission_lib_or_DJI_SDK_) {
         translateFlightPlanIntoUAVMission(flight_plan_);
 
@@ -524,11 +544,14 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
             // // HARDCODED WAITS BETWEEN TAKEOFFS FOR NOVEMBER EXPERIMENTS:
             // if (flight_plan_for_current_uav.uav_id==2) sleep(10);
             // if (flight_plan_for_current_uav.uav_id==3) sleep(74);
+            int current_uav_index = findUavIndexById(flight_plan_for_current_uav.uav_id);
+            if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
+            UAVs_[current_uav_index].enabled_to_supervise = true;
 #ifdef DEBUG
-            UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->print();
+            UAVs_[current_uav_index].mission->print();
 #endif
-            UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->push();
-            UAVs_[findUavIndexById(flight_plan_for_current_uav.uav_id)].mission->start();
+            UAVs_[current_uav_index].mission->push();
+            UAVs_[current_uav_index].mission->start();
         }
         _res.success=true;
     } else {
@@ -556,8 +579,7 @@ int MissionController::findUavIndexById(int _UAV_id) {
         }
     }
     if (uav_index == -1) {
-        ROS_ERROR("Mission Controller: UAV id provided not found on the Mission Controller.");
-        exit(EXIT_FAILURE);
+        ROS_ERROR("Mission Controller: UAV id=%d provided not found on the Mission Controller.", _UAV_id);
     }
     return uav_index;
 } // end findUavIndexById
