@@ -232,14 +232,14 @@ PathPlanner::PathPlanner(const std::string& _KML_string, const geographic_msgs::
 
 // Constructor that generates the obstacle map (no-fly zones) for the A* algorithm from the a vector of polygons.
 // IMPORTANT: the limits of the obstacles are expanded with an empty (without obstacles) row or column at each side of the KML no_fly_zone_ map, if this is a problem just add obstacles at the borders of the matrix map.
-PathPlanner::PathPlanner(const std::vector<geometry_msgs::Polygon>& _obstacle_polygon_vector, std::vector<geometry_msgs::Point32> _geofence_cartesian, unsigned int _max_grid_side) { // _max_grid_side is the number of cells that the grid has in the bigger side of the rectangular map of obstacles (predefined in the header file). KML_string is the string that contains the KML.
+PathPlanner::PathPlanner(const std::vector<geometry_msgs::Polygon>& _obstacle_polygon_vector, const geometry_msgs::Polygon& _geofence_cartesian, unsigned int _max_grid_side) { // _max_grid_side is the number of cells that the grid has in the bigger side of the rectangular map of obstacles (predefined in the header file). KML_string is the string that contains the KML.
     trivial_path_planner_ = false;
 
     path_distance_ = std::numeric_limits<double>::max();      // Distance initialized to "infinity" (maximum value possible for double).
     path_flat_distance_ = std::numeric_limits<double>::max(); // Distance initialized to "infinity" (maximum value possible for double).
 
     KML_parser_from_path_planner_.geofence_cartesian_.clear();
-    KML_parser_from_path_planner_.geofence_cartesian_ = _geofence_cartesian;
+    KML_parser_from_path_planner_.geofence_cartesian_ = _geofence_cartesian.points;
 
     KML_parser_from_path_planner_.no_fly_zones_cartesian_.clear();
 
@@ -248,6 +248,12 @@ PathPlanner::PathPlanner(const std::vector<geometry_msgs::Polygon>& _obstacle_po
     KML_parser_from_path_planner_.min_y_ =  std::numeric_limits<double>::max() ;   // Minimum coordinate initialized to "infinity" (maximum value possible for double).
     KML_parser_from_path_planner_.max_y_ = -std::numeric_limits<double>::max() ;   // Maximum coordinate initialized to minus "infinity" (minimum value possible for double).
 
+    for (int i=0; i<_geofence_cartesian.points.size(); i++) {
+        if (_geofence_cartesian.points[i].x < KML_parser_from_path_planner_.min_x_)  KML_parser_from_path_planner_.min_x_ = _geofence_cartesian.points[i].x;
+        if (_geofence_cartesian.points[i].x > KML_parser_from_path_planner_.max_x_)  KML_parser_from_path_planner_.max_x_ = _geofence_cartesian.points[i].x;
+        if (_geofence_cartesian.points[i].y < KML_parser_from_path_planner_.min_y_)  KML_parser_from_path_planner_.min_y_ = _geofence_cartesian.points[i].y;
+        if (_geofence_cartesian.points[i].y > KML_parser_from_path_planner_.max_y_)  KML_parser_from_path_planner_.max_y_ = _geofence_cartesian.points[i].y;
+    }
     for (int i=0; i<_obstacle_polygon_vector.size(); i++) {
         KML_parser_from_path_planner_.no_fly_zones_cartesian_.push_back(_obstacle_polygon_vector[i].points);
 
@@ -310,14 +316,14 @@ PathPlanner::PathPlanner(const std::vector<geometry_msgs::Polygon>& _obstacle_po
 
 #ifdef DEBUG_MODE
     /////////////////// Show the map in the terminal. ///////////////////
-    for (int i=no_fly_zones_.size()-1;i>=0;i--)         // IMPORTANT: visual matrix represented upside-down!! Thats because the y axis is backwards when treated as matrix.
-    {
-        for (int j=0;j<no_fly_zones_[0].size();j++)
-        {
-            std::cout << no_fly_zones_[i][j] << ' ';
-        }
-        std::cout << std::endl;
-    }
+    // for (int i=no_fly_zones_.size()-1;i>=0;i--)         // IMPORTANT: visual matrix represented upside-down!! Thats because the y axis is backwards when treated as matrix.
+    // {
+    //     for (int j=0;j<no_fly_zones_[0].size();j++)
+    //     {
+    //         std::cout << no_fly_zones_[i][j] << ' ';
+    //     }
+    //     std::cout << std::endl;
+    // }
     /////////////////// Show the map in the terminal. ///////////////////
 
     /////////////////////// Plot grid and obstacles (not the path). ///////////////////////

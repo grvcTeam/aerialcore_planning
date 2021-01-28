@@ -20,7 +20,7 @@ CentralizedPlanner::CentralizedPlanner() : path_planner_() {}
 CentralizedPlanner::~CentralizedPlanner() {}
 
 
-std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info) {
+std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence) {
 
     graph_.clear();
     edges_.clear();
@@ -28,6 +28,10 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(const std::
     flight_plan_.clear();
 
     graph_ = _graph;
+
+    if (_no_fly_zones.size()>0) {
+        path_planner_ = multidrone::PathPlanner(_no_fly_zones, _geofence);
+    }
 
     // _drone_info it's a vector of tuples, each tuple with 10 elements. The first in the tuple is the initial battery, and so on with all the elements in the "UAV" structure defined here below.
     for (const std::tuple<float, float, int, int, int, int, int, int, bool, bool>& current_drone : _drone_info) {
@@ -125,7 +129,8 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(const std::
                 else {  // Pylon has edges unserved connected.
                     mostRewardedPylon(index_graph_of_next_pylon, index_pylon_connected_with_unserved_edge, distance_pylon_connected_with_unserved_edge, index_edge_to_erase);
                     nearestGraphNodeLandStation(index_pylon_connected_with_unserved_edge, index_graph_land_station_from_next_pylon, distance_land_station_from_next_pylon);
-                    if (battery - batteryDrop( (distance_of_next_pylon+distance_pylon_connected_with_unserved_edge+distance_land_station_from_next_pylon)/current_uav.speed_xy , current_uav.time_max_flying) > current_uav.minimum_battery) {
+                    // TODO: check if points are inside obstacles before calculating paths.
+                    if ( (index_pylon_connected_with_unserved_edge!=-1) && (index_graph_land_station_from_next_pylon!=-1) && (battery - batteryDrop( (distance_of_next_pylon+distance_pylon_connected_with_unserved_edge+distance_land_station_from_next_pylon)/current_uav.speed_xy , current_uav.time_max_flying) > current_uav.minimum_battery) ) {
                         current_flight_plan.nodes.push_back(index_graph_of_next_pylon);
                         battery -= batteryDrop( distance_of_next_pylon/current_uav.speed_xy , current_uav.time_max_flying);
                         index_graph_of_next_pylon = index_pylon_connected_with_unserved_edge;
@@ -170,9 +175,9 @@ void CentralizedPlanner::nearestGraphNodeLandStation(int _from_this_index_graph,
             to_here.point.y = graph_[i].y;
 
             auto path = path_planner_.getPath(from_here, to_here);
-            if (path.size()==0) continue;       // No path found.
+            if (path.size() == 0) continue;         // No path found.
             float distance_xy = path_planner_.getFlatDistance();
-            if (distance_xy==0) continue;       // It's the same graph node, ignore and continue.
+            if (distance_xy <= 0.001) continue;     // It's the same graph node, ignore and continue.
 
             if ( _distance_to_return > distance_xy ) {
                 _index_graph_node_to_return = i;
@@ -214,24 +219,24 @@ void CentralizedPlanner::nearestGraphNodePylon(int _from_this_index_graph, int& 
             to_here.point.y = graph_[i].y;
 
             auto path = path_planner_.getPath(from_here, to_here);
-            if (path.size()==0) continue;       // No path found.
+            if (path.size() == 0) continue;         // No path found.
             float distance_xy = path_planner_.getFlatDistance();
-            if (distance_xy==0) continue;       // It's the same graph node, ignore and continue.
+            if (distance_xy <= 0.001) continue;     // It's the same graph node, ignore and continue.
 
             // Only consider i (current node iterated) if it has edges unserved:
-            bool has_edges_unserved = true;
+            bool has_edges_unserved = false;
             for (const int& current_connection_index : graph_[i].connections_indexes) {
                 std::pair <int,int> current_edge;
                 current_edge.first =  i < current_connection_index ? i : current_connection_index;
                 current_edge.second = i < current_connection_index ? current_connection_index : i;
                 for (int j=0; j<edges_.size(); j++) {
                     if (edges_[j] == current_edge) {
-                        has_edges_unserved = false;
+                        has_edges_unserved = true;
                         break;
                     }
                 }
             }
-            if (has_edges_unserved) {
+            if (!has_edges_unserved) {
                 continue;
             }
 
@@ -252,9 +257,14 @@ void CentralizedPlanner::mostRewardedPylon(int _initial_pylon_index, int& _index
     _distance_to_return = 0;
     _index_edge_to_erase = -1;
 
+    geometry_msgs::PointStamped from_here;
+    from_here.point.x = graph_[_initial_pylon_index].x;
+    from_here.point.y = graph_[_initial_pylon_index].y;
+
     if (!graph_[_initial_pylon_index].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
         return;
     }
+std::cout << _initial_pylon_index << std::endl;
 
     for (const int& current_connection_index : graph_[_initial_pylon_index].connections_indexes) {
 
@@ -276,7 +286,14 @@ void CentralizedPlanner::mostRewardedPylon(int _initial_pylon_index, int& _index
             continue;
         }
 
-        float distance_xy = sqrt( pow(graph_[_initial_pylon_index].x-graph_[current_connection_index].x, 2) + pow(graph_[_initial_pylon_index].y-graph_[current_connection_index].y, 2) );
+        geometry_msgs::PointStamped to_here;
+        to_here.point.x = graph_[current_connection_index].x;
+        to_here.point.y = graph_[current_connection_index].y;
+
+        auto path = path_planner_.getPath(from_here, to_here);
+        if (path.size() == 0) continue;         // No path found.
+        float distance_xy = path_planner_.getFlatDistance();
+        if (distance_xy <= 0.001) continue;     // It's the same graph node, ignore and continue.
 
         if ( _distance_to_return < distance_xy ) {
             _index_graph_node_to_return = current_connection_index;

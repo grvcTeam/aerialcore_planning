@@ -7,6 +7,8 @@
 
 #include <mission_controller.h>
 
+#include <XmlRpcValue.h>
+
 #define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
 
 namespace aerialcore {
@@ -45,7 +47,48 @@ MissionController::MissionController() {
         UAVs_.push_back(new_uav);
     }
 
+    // Read the no-fly zones parameter from the list of polygons:
+    XmlRpc::XmlRpcValue no_fly_zones_geo;
+    n_.getParam("no_fly_zones_geo", no_fly_zones_geo);
+    if (no_fly_zones_geo.getType() == XmlRpc::XmlRpcValue::TypeArray) {
+        for (int i=0; i<no_fly_zones_geo.size(); i++) {
+            if (no_fly_zones_geo[i].getType() == XmlRpc::XmlRpcValue::TypeArray) {
+                geometry_msgs::Polygon current_polygon_obstacle;
+                for (int j=0; j<no_fly_zones_geo[i].size(); j++) {
+                    geographic_msgs::GeoPoint current_geo_point;
+                    current_geo_point.latitude = no_fly_zones_geo[i][j][0];
+                    current_geo_point.longitude = no_fly_zones_geo[i][j][1];
+
+                    geometry_msgs::Point32 current_cartesian_point = geographic_to_cartesian(current_geo_point, map_origin_geo_);
+                    std::cout << current_cartesian_point.x << " " << current_cartesian_point.y << std::endl;
+                    current_cartesian_point.z = 0;
+                    current_polygon_obstacle.points.push_back(current_cartesian_point);
+                }
+                no_fly_zones_.push_back(current_polygon_obstacle);
+            }
+        }
+    }
+
+    // Read the geofence parameter:
+    XmlRpc::XmlRpcValue geofence;
+    n_.getParam("geofence", geofence);
+    if (geofence.getType() == XmlRpc::XmlRpcValue::TypeArray) {
+        for (int i=0; i<geofence.size(); i++) {
+            if (geofence[i].getType() == XmlRpc::XmlRpcValue::TypeArray) {
+                geographic_msgs::GeoPoint current_geo_point;
+                current_geo_point.latitude = geofence[i][0];
+                current_geo_point.longitude = geofence[i][1];
+
+                geometry_msgs::Point32 current_cartesian_point = geographic_to_cartesian(current_geo_point, map_origin_geo_);
+                std::cout << current_cartesian_point.x << " " << current_cartesian_point.y << std::endl;
+                current_cartesian_point.z = 0;
+                geofence_.points.push_back(current_cartesian_point);
+            }
+        }
+    }
+
     // Read parameters of the complete graph (from the yaml). Numeric parameters extracted from a string, so some steps are needed:
+    // TODO: the above method of reading list of waypoints with XmlRpcValue (used for no-fly zones) is much better than the one below (used for pylons, etc.). Less verbose and more flexible. Consider adapting this with XmlRpcValue.
     std::string pylons_position_string;
     std::string pylons_position_geo_string;
     std::string connections_indexes_string;
@@ -212,10 +255,10 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
         }
     }
 
-    // Erase the graph nodes corresponding to the initial position of the UAVs (if there are any because of previously started missions).
+    // Erase the graph nodes corresponding to the initial position of the UAVs and pass waypoints for avoiding no-fly zones (if there are any because of previously started missions).
     std::vector<int> indexes_to_erase;              // Dont't erase directly the indexes, it's safer erase later with a sorted decreasing vector.
     for (int i=0; i<current_graph_.size(); i++) {
-        if (current_graph_[i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION) {
+        if (current_graph_[i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION || current_graph_[i].type == aerialcore_msgs::GraphNode::TYPE_PASS_WP_AVOIDING_NO_FLY_ZONE) {
             indexes_to_erase.push_back(i);
         }
     }
@@ -259,7 +302,7 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
         }
     }
 
-    flight_plan_ = centralized_planner_.getPlan(current_graph_, drone_info);
+    flight_plan_ = centralized_planner_.getPlan(current_graph_, drone_info, no_fly_zones_, geofence_);
 
     // TODO: no-fly zones.
 
@@ -316,7 +359,7 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
             current_pose_stamped.pose.position.y = current_graph_[ flight_plan_for_current_uav.nodes[i] ].y;
             current_pose_stamped.pose.position.z = current_graph_[ flight_plan_for_current_uav.nodes[i] ].altitude == 0 ? current_graph_[ flight_plan_for_current_uav.nodes[i] ].z : current_graph_[ flight_plan_for_current_uav.nodes[i] ].z + (current_graph_[ flight_plan_for_current_uav.nodes[i] ].altitude - map_origin_geo_.altitude);
 
-            if (current_graph_[ flight_plan_for_current_uav.nodes[i] ].type != aerialcore_msgs::GraphNode::TYPE_PYLON) {
+            if ( (current_graph_[ flight_plan_for_current_uav.nodes[i] ].type != aerialcore_msgs::GraphNode::TYPE_PYLON) && (current_graph_[ flight_plan_for_current_uav.nodes[i] ].type != aerialcore_msgs::GraphNode::TYPE_PASS_WP_AVOIDING_NO_FLY_ZONE) ) {
 
                 if (pass_poses.size()>0) {
                     UAVs_[current_uav_index].mission->addPassWpList(pass_poses);
@@ -390,7 +433,6 @@ uav_n: )"};
 } // end translateFlightPlanIntoDJIyaml
 
 
-
 bool MissionController::stopSupervisingServiceCallback(aerialcore_msgs::StopSupervising::Request& _req, aerialcore_msgs::StopSupervising::Response& _res) {
     if (_req.uav_id.size()>0) {     // There are specific UAVs to stop.
         for (const int& current_uav_id : _req.uav_id) {
@@ -441,6 +483,11 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
     std::ofstream out("current_plan.yaml");
     out << _req.data;
     out.close();
+    for (int id=1; id<=20; id++) {  // Remove previous waypoints parameters (if exist):
+        if (ros::param::has("waypoints_"+std::to_string( id ))) {
+            system((std::string("rosparam delete /waypoints_").append(std::to_string( id ).c_str())).c_str());
+        }
+    }
     system("rosparam load current_plan.yaml");
 
     current_graph_.clear();

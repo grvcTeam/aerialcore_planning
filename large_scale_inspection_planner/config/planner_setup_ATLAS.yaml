@@ -35,6 +35,43 @@ VTOL:
 map_origin_geo: [38.138728, -3.173825, 444]
 
 
+# List of closed polygons (list of waypoints which first and end point must be the same) in geographic coordinates. Each polygon is an obstacle or no-fly zone:
+no_fly_zones_geo: [ [
+[38.138621, -3.174005],
+[38.138923, -3.172830],
+[38.138652, -3.172695],
+[38.138347, -3.173893],
+[38.138621, -3.174005] 
+],[
+[38.136774, -3.179633],
+[38.136911, -3.179653],
+[38.137158, -3.180338],
+[38.137120, -3.180940],
+[38.136538, -3.180878],
+[38.136774, -3.179633]
+],[
+[38.135994, -3.179585],
+[38.134940, -3.179584],
+[38.134502, -3.181708],
+[38.135402, -3.181809],
+[38.136153, -3.180090],
+[38.135994, -3.179585]
+] ]
+
+
+# Geofence in geographic coordinates, the planner won't calculate paths out of it:
+geofence: [
+[38.132439, -3.184625],
+[38.143406, -3.182860],
+[38.143863, -3.164912],
+[38.133770, -3.164140],
+[38.132439, -3.184625] 
+]
+
+
+# TODO: express waypoints of pylons and land stations as no-fly zones and geofence (anidated lists).
+
+
 # Three different types of graph elements: recharge land stations, regular land stations and pylons (electric towers).
 # Locations of graph elements provided by the following matrices in both cartesian coordinates (x,y,z) and geographic coordinates (latitude, longitude, altitude).
 # For each graph element matrix, the equivalent in the other coordinates system must have the same number of rows. Each row represent an element.

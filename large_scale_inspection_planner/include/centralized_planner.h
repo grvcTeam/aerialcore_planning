@@ -33,7 +33,7 @@ public:
 
     std::vector<aerialcore_msgs::FlightPlan> const getPlan() { return flight_plan_; };      // Returns plan already calculated.
 
-    std::vector<aerialcore_msgs::FlightPlan> getPlan(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info);    // Returns new plan.
+    std::vector<aerialcore_msgs::FlightPlan> getPlan(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence);    // Returns new plan.
     // _drone_info it's a vector of tuples, each tuple with 10 elements. The first in the tuple is the initial battery, and so on with all the elements in the "UAV" structure defined here below.
 
     void printPlan();
