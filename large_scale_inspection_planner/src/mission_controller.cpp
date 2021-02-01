@@ -56,11 +56,10 @@ MissionController::MissionController() {
                 geometry_msgs::Polygon current_polygon_obstacle;
                 for (int j=0; j<no_fly_zones_geo[i].size(); j++) {
                     geographic_msgs::GeoPoint current_geo_point;
-                    current_geo_point.latitude = no_fly_zones_geo[i][j][0];
+                    current_geo_point.latitude =  no_fly_zones_geo[i][j][0];
                     current_geo_point.longitude = no_fly_zones_geo[i][j][1];
 
                     geometry_msgs::Point32 current_cartesian_point = geographic_to_cartesian(current_geo_point, map_origin_geo_);
-                    std::cout << current_cartesian_point.x << " " << current_cartesian_point.y << std::endl;
                     current_cartesian_point.z = 0;
                     current_polygon_obstacle.points.push_back(current_cartesian_point);
                 }
@@ -76,11 +75,10 @@ MissionController::MissionController() {
         for (int i=0; i<geofence.size(); i++) {
             if (geofence[i].getType() == XmlRpc::XmlRpcValue::TypeArray) {
                 geographic_msgs::GeoPoint current_geo_point;
-                current_geo_point.latitude = geofence[i][0];
+                current_geo_point.latitude =  geofence[i][0];
                 current_geo_point.longitude = geofence[i][1];
 
                 geometry_msgs::Point32 current_cartesian_point = geographic_to_cartesian(current_geo_point, map_origin_geo_);
-                std::cout << current_cartesian_point.x << " " << current_cartesian_point.y << std::endl;
                 current_cartesian_point.z = 0;
                 geofence_.points.push_back(current_cartesian_point);
             }
@@ -88,7 +86,9 @@ MissionController::MissionController() {
     }
 
     // Read parameters of the complete graph (from the yaml). Numeric parameters extracted from a string, so some steps are needed:
-    // TODO: the above method of reading list of waypoints with XmlRpcValue (used for no-fly zones) is much better than the one below (used for pylons, etc.). Less verbose and more flexible. Consider adapting this with XmlRpcValue.
+    // Note: the no_fly_zones_geo and geofence way of anidating waypoints in yaml lists may be more simple to implement and nicer to see than the one below parsing manually strings,
+    // but with the XmlRpcValue parser for lists ALL numbers must be of the same type, meaning that an int has to have ".0" if int so that the parser recognize it as a double (also, no float type).
+    // TODO: if found how to parse numbers without point to dobule, adapt thes with XmlRpcValue. Less verbose and more flexible.
     std::string pylons_position_string;
     std::string pylons_position_geo_string;
     std::string connections_indexes_string;
@@ -303,8 +303,6 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
     }
 
     flight_plan_ = centralized_planner_.getPlan(current_graph_, drone_info, no_fly_zones_, geofence_);
-
-    // TODO: no-fly zones.
 
 #ifdef DEBUG
     centralized_planner_.printPlan();

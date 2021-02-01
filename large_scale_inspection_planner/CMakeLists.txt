@@ -29,7 +29,7 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(mission_controller src/mission_controller_node.cpp src/mission_controller.cpp src/centralized_planner.cpp)
+add_executable(mission_controller src/mission_controller_node.cpp src/mission_controller.cpp src/centralized_planner.cpp src/parameter_estimator.cpp src/plan_monitor.cpp)
 target_include_directories(mission_controller PRIVATE ${PYTHON_INCLUDE_DIRS})
 target_link_libraries(mission_controller ${catkin_LIBRARIES} ${PYTHON_LIBRARIES} path_planner)
 add_dependencies(mission_controller ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

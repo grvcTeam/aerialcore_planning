@@ -29,6 +29,8 @@
 #include <aerialcore_msgs/PostString.h>
 
 #include <centralized_planner.h>
+#include <parameter_estimator.h>
+#include <plan_monitor.h>
 #include <mission_lib.h>
 #include <geographic_to_cartesian.h>
 
@@ -68,6 +70,8 @@ private:
   std::vector<aerialcore_msgs::GraphNode> specific_subgraph_;
 
   CentralizedPlanner centralized_planner_;  // Planner that assigns nodes to inspect of the electric grid graph for each UAV.
+  ParameterEstimator parameter_estimator_;  // 
+  PlanMonitor        plan_monitor_;         // 
 
   std::vector<aerialcore_msgs::FlightPlan> flight_plan_;
 
