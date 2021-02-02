@@ -31,6 +31,11 @@ VTOL:
   time_until_fully_charged: 1800
 
 
+# Time (in seconds) between iterations for the Parameter Estimator thread and Plan Monitor thread in the Mission Controller:
+parameter_estimator_time: 5.0
+plan_monitor_time: 5.0
+
+
 # Geographic coordinate (latitude, longitude, altitude) that makes (x,y,z) = (0,0,0) meters in cartesian coordinates:
 map_origin_geo: [38.138728, -3.173825, 444]
 

@@ -16,6 +16,7 @@
 #include <vector>
 #include <map>
 #include <thread>
+#include <atomic>
 
 #include <std_srvs/Trigger.h>
 #include <geographic_msgs/GeoPoint.h>
@@ -57,6 +58,9 @@ private:
 
   int findUavIndexById(int _UAV_id);
 
+  void parameterEstimatorThread(void);
+  void planThread(void);
+
   ros::ServiceServer start_supervising_srv_;
   ros::ServiceServer stop_supervising_srv_;
   ros::ServiceServer do_specific_supervision_srv_;
@@ -70,12 +74,13 @@ private:
   std::vector<aerialcore_msgs::GraphNode> specific_subgraph_;
 
   CentralizedPlanner centralized_planner_;  // Planner that assigns nodes to inspect of the electric grid graph for each UAV.
-  ParameterEstimator parameter_estimator_;  // 
-  PlanMonitor        plan_monitor_;         // 
+  ParameterEstimator parameter_estimator_;  // Module to estimate the time cost matrix and battery drop matrix between edges.
+  PlanMonitor        plan_monitor_;         // Module to check if the drones are deviating enough to run the replanning.
 
   std::vector<aerialcore_msgs::FlightPlan> flight_plan_;
 
   bool commanding_UAV_with_mission_lib_or_DJI_SDK_ = true;  // Use mission_lib for commanding UAVs (true) or output a yaml string for using the DJI SDK (false).
+  std::atomic<bool> stop_current_supervising_ = {false};
 
   geographic_msgs::GeoPoint map_origin_geo_;
   std::vector<geometry_msgs::Polygon> no_fly_zones_;
@@ -105,6 +110,12 @@ private:
   std::vector<UAV> UAVs_;
 
   std::thread spin_thread_;
+
+  std::thread parameter_estimator_thread_;
+  std::thread plan_thread_;
+
+  float parameter_estimator_time_;
+  float plan_monitor_time_;
 
 }; // MissionController class
 

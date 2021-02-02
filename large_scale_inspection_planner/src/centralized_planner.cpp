@@ -152,6 +152,8 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(std::vector
         }
     }
 
+    // TODO: actually add TYPE_PASS_WP_AVOIDING_NO_FLY_ZONE to the graph.
+
     return flight_plan_;
 
 } // end getPlan method

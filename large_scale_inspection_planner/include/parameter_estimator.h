@@ -30,15 +30,15 @@ public:
     ~ParameterEstimator();
 
     // Method called periodically in an external thread, located in the Mission Controller, that will update both the cost and battery drop matrices with the last prediction:
-    // updateMatrices(poses, batteries, plan, wind sensor?)
+    void updateMatrices(/*poses, batteries, plan, wind sensor?*/);
 
     // Getters that the Mission Controller will use for the Planner and Plan Monitor:
-    // getCostMatrix()
-    // getBatteryDropMatrix()
+    std::vector< std::vector<float> > getTimeCostMatrix() { return time_cost_matrix_; };
+    std::vector< std::vector<float> > getBatteryDropMatrix() { return battery_drop_matrix_; };
 
 private:
-    // cost_matrix_
-    // battery_drop_matrix_
+    std::vector< std::vector<float> > time_cost_matrix_;    // Square non-symetrical matrix, one row and column for each pylon and land station. The elements represent the time (in seconds) to cover that edge if exist, if not the value is -1.
+    std::vector< std::vector<float> > battery_drop_matrix_; // Square non-symetrical matrix, one row and column for each pylon and land station. The elements represent the battery drop (per unit, not %) to cover that edge if exist, if not the value is -1.
 
 };  // end ParameterEstimator class
 

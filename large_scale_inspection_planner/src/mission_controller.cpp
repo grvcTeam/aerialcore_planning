@@ -20,6 +20,10 @@ MissionController::MissionController() {
 
     pnh_.getParam("commanding_UAV_with_mission_lib_or_DJI_SDK", commanding_UAV_with_mission_lib_or_DJI_SDK_);
 
+    // Charge from the YAML file the time between iterations for the loops in the Parameter Estimator and Plan (Monitor and Planner) threads:
+    n_.param<float>("parameter_estimator_time", parameter_estimator_time_, 5.0);
+    n_.param<float>("plan_monitor_time", plan_monitor_time_, 5.0);
+
     // map_origin_geo is the geographic coordinate origin of the cartesian coordinates. Loaded to the param server in the YAML config file.
     std::vector<double> map_origin_geo_vector;
     n_.getParam("map_origin_geo", map_origin_geo_vector);
@@ -230,6 +234,10 @@ MissionController::MissionController() {
 // Brief Destructor
 MissionController::~MissionController() {
     if(spin_thread_.joinable()) spin_thread_.join();
+    stop_current_supervising_ = true;
+    if(parameter_estimator_thread_.joinable()) parameter_estimator_thread_.join();
+    if(plan_thread_.joinable()) plan_thread_.join();
+    stop_current_supervising_ = false;
     for (UAV& uav : UAVs_) {
         delete uav.mission;
     }
@@ -255,7 +263,7 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
         }
     }
 
-    // Erase the graph nodes corresponding to the initial position of the UAVs and pass waypoints for avoiding no-fly zones (if there are any because of previously started missions).
+    // Reset the current graph: erase the graph nodes corresponding to the initial position of the UAVs and pass waypoints for avoiding no-fly zones (if there are any because of previously started missions).
     std::vector<int> indexes_to_erase;              // Dont't erase directly the indexes, it's safer erase later with a sorted decreasing vector.
     for (int i=0; i<current_graph_.size(); i++) {
         if (current_graph_[i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION || current_graph_[i].type == aerialcore_msgs::GraphNode::TYPE_PASS_WP_AVOIDING_NO_FLY_ZONE) {
@@ -269,74 +277,108 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
         current_graph_.erase( current_graph_.begin() + current_index_to_erase );
     }
 
-    std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> > drone_info;
-    for (const UAV& current_uav : UAVs_) {
-        if (current_uav.enabled_to_supervise == true) {
-            std::tuple<float, float, int, int, int, int, int, int, bool, bool> new_tuple;
-            std::get<0>(new_tuple) = commanding_UAV_with_mission_lib_or_DJI_SDK_ ? current_uav.mission->battery() : 1.0;
-            std::get<1>(new_tuple) = current_uav.minimum_battery;
-            std::get<2>(new_tuple) = current_uav.time_until_fully_charged;
-            std::get<3>(new_tuple) = current_uav.time_max_flying;
-            std::get<4>(new_tuple) = current_uav.speed_xy;
-            std::get<5>(new_tuple) = current_uav.speed_z_down;
-            std::get<6>(new_tuple) = current_uav.speed_z_up;
-            std::get<7>(new_tuple) = current_uav.id;
-            std::get<8>(new_tuple) = commanding_UAV_with_mission_lib_or_DJI_SDK_ ? current_uav.mission->armed() : false;  // TODO: better way to know if flying?
-            std::get<9>(new_tuple) = current_uav.recharging;
-            drone_info.push_back(new_tuple);
+    // Stop the current supervising threads, consisting on the parameter estimator (module of same name) and plan thread (plan monitor and planner modules):
+    stop_current_supervising_ = true;
+    if(parameter_estimator_thread_.joinable()) parameter_estimator_thread_.join();
+    if(plan_thread_.joinable()) plan_thread_.join();
+    stop_current_supervising_ = false;
 
-            aerialcore_msgs::GraphNode current_uav_initial_position_graph_node;
-            current_uav_initial_position_graph_node.type = aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION;
-            current_uav_initial_position_graph_node.id = current_uav.id;
-            if (commanding_UAV_with_mission_lib_or_DJI_SDK_) {
-                current_uav_initial_position_graph_node.x = current_uav.mission->pose().pose.position.x;
-                current_uav_initial_position_graph_node.y = current_uav.mission->pose().pose.position.y;
-                current_uav_initial_position_graph_node.z = current_uav.mission->pose().pose.position.z;
-            } else {
-                // // HARDCODED INITIAL POSES FOR NOVEMBER EXPERIMENTS?
-                // current_uav_initial_position_graph_node.x = current_uav.id==1 ? 28 : 36.119532;
-                // current_uav_initial_position_graph_node.y = current_uav.id==1 ? 61 : 63.737163;
-                // current_uav_initial_position_graph_node.z = current_uav.id==1 ? 0.32 : 0;
-            }
-            current_graph_.push_back(current_uav_initial_position_graph_node);
-        }
-    }
+    // Start the supervising threads, consisting on the parameter estimator (module of same name) and plan thread (plan monitor and planner modules):
+    parameter_estimator_thread_ = std::thread(&MissionController::parameterEstimatorThread, this);
+    plan_thread_ = std::thread(&MissionController::planThread, this);
 
-    flight_plan_ = centralized_planner_.getPlan(current_graph_, drone_info, no_fly_zones_, geofence_);
-
-#ifdef DEBUG
-    centralized_planner_.printPlan();
-#endif
-
-    if (commanding_UAV_with_mission_lib_or_DJI_SDK_) {
-        translateFlightPlanIntoUAVMission(flight_plan_);
-
-        for (const aerialcore_msgs::FlightPlan& flight_plan_for_current_uav : flight_plan_) {
-            // // HARDCODED WAITS BETWEEN TAKEOFFS FOR NOVEMBER EXPERIMENTS:
-            // if (flight_plan_for_current_uav.uav_id==2) sleep(10);
-            // if (flight_plan_for_current_uav.uav_id==3) sleep(74);
-            int current_uav_index = findUavIndexById(flight_plan_for_current_uav.uav_id);
-            if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
-#ifdef DEBUG
-            UAVs_[current_uav_index].mission->print();
-#endif
-            UAVs_[current_uav_index].mission->push();
-            UAVs_[current_uav_index].mission->start();
-        }
-        _res.success=true;
-    } else {
-        aerialcore_msgs::PostString post_yaml_string;
-        post_yaml_string.request.data = translateFlightPlanIntoDJIyaml(flight_plan_);
-        if (post_yaml_client_.call(post_yaml_string)) {
-            ROS_INFO("Mission Controller: yaml sent to DJI SDK.");
-            _res.success=true;
-        } else {
-            ROS_WARN("Mission Controller: yaml not sent to DJI SDK, service didn't answer.");
-            _res.success=false;
-        }
-    }
+    _res.success=true;
     return true;
 } // end startSupervisingServiceCallback
+
+
+// Parameter Estimator thread:
+void MissionController::parameterEstimatorThread(void) {
+    ros::Rate loop_rate(1.0/parameter_estimator_time_); // [Hz, inverse of seconds]
+    while (!stop_current_supervising_) {
+        parameter_estimator_.updateMatrices();
+        loop_rate.sleep();
+    }
+} // end parameterEstimatorThread
+
+
+// Plan thread:
+void MissionController::planThread(void) {
+    ros::Rate loop_rate(1.0/plan_monitor_time_);        // [Hz, inverse of seconds]
+    while (!stop_current_supervising_) {
+
+        if (plan_monitor_.enoughDeviationToReplan(parameter_estimator_.getTimeCostMatrix(), parameter_estimator_.getBatteryDropMatrix())) {
+
+            std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> > drone_info_for_planning;
+            for (const UAV& current_uav : UAVs_) {
+                if (current_uav.enabled_to_supervise == true) {
+                    std::tuple<float, float, int, int, int, int, int, int, bool, bool> new_tuple;
+                    std::get<0>(new_tuple) = commanding_UAV_with_mission_lib_or_DJI_SDK_ ? current_uav.mission->battery() : 1.0;
+                    std::get<1>(new_tuple) = current_uav.minimum_battery;
+                    std::get<2>(new_tuple) = current_uav.time_until_fully_charged;
+                    std::get<3>(new_tuple) = current_uav.time_max_flying;
+                    std::get<4>(new_tuple) = current_uav.speed_xy;
+                    std::get<5>(new_tuple) = current_uav.speed_z_down;
+                    std::get<6>(new_tuple) = current_uav.speed_z_up;
+                    std::get<7>(new_tuple) = current_uav.id;
+                    std::get<8>(new_tuple) = commanding_UAV_with_mission_lib_or_DJI_SDK_ ? current_uav.mission->armed() : false;  // TODO: better way to know if flying?
+                    std::get<9>(new_tuple) = current_uav.recharging;
+                    drone_info_for_planning.push_back(new_tuple);
+
+                    aerialcore_msgs::GraphNode current_uav_initial_position_graph_node;
+                    current_uav_initial_position_graph_node.type = aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION;
+                    current_uav_initial_position_graph_node.id = current_uav.id;
+                    if (commanding_UAV_with_mission_lib_or_DJI_SDK_) {
+                        current_uav_initial_position_graph_node.x = current_uav.mission->pose().pose.position.x;
+                        current_uav_initial_position_graph_node.y = current_uav.mission->pose().pose.position.y;
+                        current_uav_initial_position_graph_node.z = current_uav.mission->pose().pose.position.z;
+                    } else {
+                        // // HARDCODED INITIAL POSES FOR NOVEMBER EXPERIMENTS?
+                        // current_uav_initial_position_graph_node.x = current_uav.id==1 ? 28 : 36.119532;
+                        // current_uav_initial_position_graph_node.y = current_uav.id==1 ? 61 : 63.737163;
+                        // current_uav_initial_position_graph_node.z = current_uav.id==1 ? 0.32 : 0;
+                    }
+                    current_graph_.push_back(current_uav_initial_position_graph_node);
+                }
+            }
+
+            flight_plan_ = centralized_planner_.getPlan(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_);
+
+            // TODO: actually add TYPE_PASS_WP_AVOIDING_NO_FLY_ZONE to the plan.
+
+#ifdef DEBUG
+            centralized_planner_.printPlan();
+#endif
+
+            if (commanding_UAV_with_mission_lib_or_DJI_SDK_) {
+                translateFlightPlanIntoUAVMission(flight_plan_);
+
+                for (const aerialcore_msgs::FlightPlan& flight_plan_for_current_uav : flight_plan_) {
+                    // // HARDCODED WAITS BETWEEN TAKEOFFS FOR NOVEMBER EXPERIMENTS:
+                    // if (flight_plan_for_current_uav.uav_id==2) sleep(10);
+                    // if (flight_plan_for_current_uav.uav_id==3) sleep(74);
+                    int current_uav_index = findUavIndexById(flight_plan_for_current_uav.uav_id);
+                    if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
+#ifdef DEBUG
+                    UAVs_[current_uav_index].mission->print();
+#endif
+                    UAVs_[current_uav_index].mission->push();
+                    UAVs_[current_uav_index].mission->start();
+                }
+            } else {
+                aerialcore_msgs::PostString post_yaml_string;
+                post_yaml_string.request.data = translateFlightPlanIntoDJIyaml(flight_plan_);
+                if (post_yaml_client_.call(post_yaml_string)) {
+                    ROS_INFO("Mission Controller: yaml sent to DJI SDK.");
+                } else {
+                    ROS_WARN("Mission Controller: yaml not sent to DJI SDK, service didn't answer.");
+                }
+            }
+        }
+
+        loop_rate.sleep();
+    }
+} // end planThread
 
 
 void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plan) {
@@ -432,6 +474,11 @@ uav_n: )"};
 
 
 bool MissionController::stopSupervisingServiceCallback(aerialcore_msgs::StopSupervising::Request& _req, aerialcore_msgs::StopSupervising::Response& _res) {
+    stop_current_supervising_ = true;
+    if(parameter_estimator_thread_.joinable()) parameter_estimator_thread_.join();
+    if(plan_thread_.joinable()) plan_thread_.join();
+    stop_current_supervising_ = false;
+
     if (_req.uav_id.size()>0) {     // There are specific UAVs to stop.
         for (const int& current_uav_id : _req.uav_id) {
             int current_uav_index = findUavIndexById(current_uav_id);
@@ -446,6 +493,7 @@ bool MissionController::stopSupervisingServiceCallback(aerialcore_msgs::StopSupe
             current_uav.enabled_to_supervise = false;
         }
     }
+
     _res.success=true;
     return true;
 } // end stopSupervisingServiceCallback
