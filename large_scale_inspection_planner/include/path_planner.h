@@ -61,6 +61,10 @@ public:
     bool checkIfPointInsideObstacles(const geometry_msgs::Point32& _test_point) const;
     bool checkIfPointInsideObstacles(const geometry_msgs::PointStamped& _test_point_stamped) const;
 
+    // Return true if the test point is inside the geofence, but outside of any obstacle:
+    bool checkIfPointIsValid(const geometry_msgs::Point32& _test_point) const;
+    bool checkIfPointIsValid(const geometry_msgs::PointStamped& _test_point_stamped) const;
+
 private:
 
     // Struct that will be initialized for each cell explored in the A* algorithm. The algorithm will construct a map of "CellInfo" (with a cell identifier as key) in order to reach the solution.

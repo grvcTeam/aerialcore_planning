@@ -1133,4 +1133,25 @@ bool PathPlanner::checkIfPointInsideObstacles(const geometry_msgs::PointStamped&
 }   // end "checkIfPointInsideObstacles" overloaded for PointStamped.
 
 
+
+bool PathPlanner::checkIfPointIsValid(const geometry_msgs::Point32& _test_point) const {
+
+    return checkIfPointInsideGeofence(_test_point) && !checkIfPointInsideObstacles(_test_point);
+
+}   // end "checkIfPointInsideObstacles"
+
+
+
+bool PathPlanner::checkIfPointIsValid(const geometry_msgs::PointStamped& _test_point_stamped) const {
+
+    geometry_msgs::Point32 test_point32;
+    test_point32.x = _test_point_stamped.point.x;
+    test_point32.y = _test_point_stamped.point.y;
+    test_point32.z = _test_point_stamped.point.z;
+
+    return checkIfPointIsValid(test_point32);
+
+}   // end "checkIfPointInsideObstacles" overloaded for PointStamped.
+
+
 }   // end namespace multidrone
