@@ -31,7 +31,7 @@ public:
     CentralizedPlanner();
     ~CentralizedPlanner();
 
-    std::vector<aerialcore_msgs::FlightPlan> const getPlan() { return flight_plan_; };      // Returns plan already calculated.
+    std::vector<aerialcore_msgs::FlightPlan> getPlan() const { return flight_plan_; }      // Returns plan already calculated.
 
     std::vector<aerialcore_msgs::FlightPlan> getPlan(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence);    // Returns new plan.
     // _drone_info it's a vector of tuples, each tuple with 10 elements. The first in the tuple is the initial battery, and so on with all the elements in the "UAV" structure defined here below.
@@ -72,7 +72,7 @@ private:
     void nearestGraphNodePylon(int _from_this_index_graph, int& _index_graph_node_to_return, float& _distance_to_return);
     void mostRewardedPylon(int _initial_pylon, int& _index_graph_node_to_return, float& _distance_to_return, int& _index_edge_to_erase);
 
-    const float batteryDrop(int _flying_time, int _time_max_flying) { return (float)_flying_time/(float)_time_max_flying; }
+    float batteryDrop(int _flying_time, int _time_max_flying) const { return (float)_flying_time/(float)_time_max_flying; }
 
 };  // end CentralizedPlanner class
 

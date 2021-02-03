@@ -1,7 +1,7 @@
 /**
  * MULTIDRONE Project:
  *
- * Path planner.
+ * Path planner. Refactor for the project Aerial-Core.
  * 
  */
 
@@ -13,32 +13,12 @@
 #include <vector>
 #include <limits>
 #include <utility>
+
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/Point32.h>
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/Polygon.h>
 #include <geographic_msgs/GeoPoint.h>
-
-#ifdef USING_IN_MULTIDRONE_PROJECT
-#include <multidrone_kml_parser/multidrone_kml_parser.h>
-#else
-// Dummy KMLparser class when not using the specific KML parser of MultiDrone.
-class KMLparser {
-public:
-    KMLparser() {}
-    ~KMLparser() {}
-    void runParser(const std::string& _KML_string, const geographic_msgs::GeoPoint& _origin_coordinates_geo) {}
-    std::vector< std::vector<geometry_msgs::Point32> > no_fly_zones_cartesian_;
-    std::vector< std::vector<geometry_msgs::Point32> > private_areas_cartesian_;
-    std::vector<geometry_msgs::Point32>                geofence_cartesian_;
-    // Minimum and maximum values x and y in Cartesian coordinates (initialized to zero):
-    double min_x_=0;
-    double max_x_=0;
-    double min_y_=0;
-    double max_y_=0;
-    bool parsed_correctly_ = true;
-};  // end KMLparser class
-#endif
 
 namespace multidrone {
 
@@ -46,33 +26,37 @@ namespace multidrone {
 class PathPlanner {
 
 public:
-    PathPlanner();                       // Brief Constructor for the simplest case of path planning: return the final point, straight line.
-    PathPlanner(const std::vector< std::vector<bool> >& _no_fly_zones, double _min_x, double _max_x, double _min_y, double _max_y);                 // Constructor that receives directly the no_fly_zones (rectangular boolean matrix) calculated out of the class. _min_x, _max_x, _min_y, _max_y are the x-y and coordinates of the limits of the grid. IMPORTANT: an empty (without obstacles) additional row or column will be added at each side of the given matrix, if this is a problem just add obstacles at the borders of the matrix map.
-    PathPlanner(const std::string& _KML_string, const geographic_msgs::GeoPoint& _origin_coordinates_geo, unsigned int _max_grid_side = 100);  // Constructor that generates the grid of obstacles (no_fly_zones_) from the KML information. The input is the string that contains the KML and the size (in number of cells) of the bigger side of the rectanglular grid of obstacles, predefined at 100. IMPORTANT: the limits of the KML are expanded with an empty (without obstacles) row or column at each side of the KML no_fly_zone_ map, if this is a problem just add obstacles at the borders of the matrix map.
-    PathPlanner(const std::vector<geometry_msgs::Polygon>& _obstacle_polygon_vector, const geometry_msgs::Polygon& _geofence_cartesian, unsigned int _max_grid_side = 100);   // Constructor that does the same that the constructor with KML but receiving the obstacles list directly in a polygon vector, not inside a KML.
+    PathPlanner();    // Brief Constructor for the simplest case of path planning: return the final point, straight line.
+    PathPlanner(const std::vector< std::vector<bool> >& _no_fly_zones, double _min_x, double _max_x, double _min_y, double _max_y);  // Constructor that receives directly the no_fly_zones (rectangular boolean matrix) calculated out of the class. _min_x, _max_x, _min_y, _max_y are the x-y and coordinates of the limits of the grid.
+    PathPlanner(const std::vector<geometry_msgs::Polygon>& _obstacle_polygon_vector, const geometry_msgs::Polygon& _geofence_cartesian, unsigned int _max_grid_side = 100);  // Constructor that receives the obstacles list and geofence directly in a polygon vector. Polygons must start and end with the same point (closed polygon).
 
-    ~PathPlanner();
+    ~PathPlanner() {}
 
-    std::vector<geometry_msgs::PointStamped> getPath(const geometry_msgs::PointStamped& _initial_point_stamped, const geometry_msgs::PointStamped& _final_point_stamped, bool _movement_pattern=0, bool _show_results=0); // Method that returns a feasible path calculated with A* algorithm. All the waypoints at the height (z) of the final point (CAUTION).
-    std::vector<geometry_msgs::PointStamped> getPathWithTimePredictions(const geometry_msgs::PointStamped& _initial_point_stamped, const geometry_msgs::PointStamped& _final_point_stamped, int _full_speed_xy, int _full_speed_z_down, int _full_speed_z_up, bool _movement_pattern=0, bool _show_results=0);   // "getPath" method that estimates the time in each waypoint given the speed of the drone: A* algorithm implementation that returns a path for one robot from his initial position to the end position.
-    std::vector<geometry_msgs::PointStamped> getPathWithTimePredictionsAndInitialPoint(const geometry_msgs::PointStamped& _initial_point_stamped, const geometry_msgs::PointStamped& _final_point_stamped, int _full_speed_xy, int _full_speed_z_down, int _full_speed_z_up, bool _movement_pattern=0, bool _show_results=0); // The same but inserting the initial point in the trajectory.
-    std::vector<geometry_msgs::Point32> getPath(const geometry_msgs::Point32& _initial_point, const geometry_msgs::Point32& _final_point, bool _movement_pattern=0, bool _show_results=0);                                // getPath but overloaded using Point32 instead of PointStamped.
-    std::vector<geometry_msgs::Point> getPath(const geometry_msgs::Point& _initial_point, const geometry_msgs::Point& _final_point, bool _movement_pattern=0, bool _show_results=0);                                      // getPath but overloaded using Point instead of PointStamped.
+    std::vector<geometry_msgs::PointStamped> getPath(const geometry_msgs::PointStamped& _initial_point_stamped, const geometry_msgs::PointStamped& _final_point_stamped, bool _movement_pattern=0, bool _show_results=0);   // Method that returns a feasible path calculated with A* algorithm. All the waypoints at the height (z) of the final point (CAUTION).
+    std::vector<geometry_msgs::Point32>      getPath(const geometry_msgs::Point32& _initial_point, const geometry_msgs::Point32& _final_point, bool _movement_pattern=0, bool _show_results=0);                             // getPath but overloaded using Point32 instead of PointStamped.
+    std::vector<geometry_msgs::Point>        getPath(const geometry_msgs::Point& _initial_point, const geometry_msgs::Point& _final_point, bool _movement_pattern=0, bool _show_results=0);                                 // getPath but overloaded using Point instead of PointStamped.
+    std::vector<geometry_msgs::PointStamped> getPathWithTimePredictions(const geometry_msgs::PointStamped& _initial_point_stamped, const geometry_msgs::PointStamped& _final_point_stamped, int _full_speed_xy, int _full_speed_z_down, int _full_speed_z_up, bool _movement_pattern=0, bool _show_results=0);                 // "getPath" method that estimates the time in each waypoint given the speed of the drone: A* algorithm implementation that returns a path for one robot from its initial position to the end position.
+    std::vector<geometry_msgs::PointStamped> getPathWithTimePredictionsAndInitialPoint(const geometry_msgs::PointStamped& _initial_point_stamped, const geometry_msgs::PointStamped& _final_point_stamped, int _full_speed_xy, int _full_speed_z_down, int _full_speed_z_up, bool _movement_pattern=0, bool _show_results=0);  // The same as "getPathWithTimePredictions" but inserting the initial point in the trajectory.
     // The input of getPath are the initial and final points in cartesian coordinates. IMPORTANT: the origin of coordinates of these points and the origin of coordinates of the obstacles (no-fly zone matrix) must be the same.
     // Also, the method has two optional bool arguments:
     //      _movement_pattern:  if 0 (default) the movement of the agent can be in any direction, and if 1 the agent can only move in angles multiple of 45º (faster to compute if the grid is big, doesn't do visibility-loops).
     //      _show_results:      if 0 (default) no results are shown, and if 1 the map of obstacles and the path is plotted (usiing matplotlib-cpp), and also the path is shown in the terminal, with its cost and computation time.
 
-    double getDistance();                           // Getter that returns path_distance_.
-    double getFlatDistance();                       // Getter that returns path_flat_distance_.
+    double getDistance()     const { return path_distance_; }        // Getter that returns path_distance_.
+    double getFlatDistance() const { return path_flat_distance_; }   // Getter that returns path_flat_distance_.
 
-    bool getTrivialPathPlannerOrNot();              // Return true if using trivial path planner, false if not.
+    // Return true if using trivial path planner, false if not:
+    bool getTrivialPathPlannerOrNot() const { return trivial_path_planner_; }
 
-    KMLparser KML_parser_from_path_planner_;
+    bool checkIfPointInsidePolygon(const std::vector<geometry_msgs::Point32>& _polygon, const geometry_msgs::Point32& _test_point) const;
+    bool checkIfPointInsidePolygon(const std::vector<geometry_msgs::Point32>& _polygon, const geometry_msgs::PointStamped& _test_point_stamped) const;
+    bool checkIfPointInsidePolygon(const geometry_msgs::Polygon& _polygon, const geometry_msgs::Point32& _test_point) const;
 
-    static bool checkIfPointInsidePolygon(const std::vector<geometry_msgs::Point32>& _polygon, const geometry_msgs::Point32& _test_point);
-    static bool checkIfPointInsidePolygon(const std::vector<geometry_msgs::Point32>& _polygon, const geometry_msgs::PointStamped& _test_point_stamped);
-    static bool checkIfPointInsidePolygon(const geometry_msgs::Polygon& _polygon, const geometry_msgs::Point32& _test_point);
+    bool checkIfPointInsideGeofence (const geometry_msgs::Point32& _test_point) const { return checkIfPointInsidePolygon(geofence_cartesian_, _test_point); }
+    bool checkIfPointInsideGeofence (const geometry_msgs::PointStamped& _test_point_stamped) const;
+
+    bool checkIfPointInsideObstacles(const geometry_msgs::Point32& _test_point) const;
+    bool checkIfPointInsideObstacles(const geometry_msgs::PointStamped& _test_point_stamped) const;
 
 private:
 
@@ -87,19 +71,26 @@ private:
         bool closed = false;        // cell closed true if is fully studied
     };
 
-    std::vector<std::vector<bool>> no_fly_zones_;   // Rectangular grid needed for the path planner algorithm. Elements with value of 0 (false) are part of the free space, and elements with value of 1 (true) contains obstacles.
+    std::vector< std::pair<double,double> > calculateIntersectionsOfSegmentWithGrid (double first_absolute_point_of_segment_x, double first_absolute_point_of_segment_y, double last_absolute_point_of_segment_x, double last_absolute_point_of_segment_y) const;
+    void fillCellsWithObstacles (const std::vector< std::pair<double,double> >& points_intersections_of_segment_with_grid);
+    bool visibilityCheck (const std::vector< std::pair<double,double> >& points_intersections_of_segment_with_grid) const;
+
+    std::vector< std::vector<bool> > no_fly_zones_;   // Rectangular grid needed for the path planner algorithm. Elements with value of 0 (false) are part of the free space, and elements with value of 1 (true) contains obstacles.
+
+    std::vector<geometry_msgs::Polygon> no_fly_zones_cartesian_;  // Vector of polygons (vector of point32) that represent the obstacles. Polygons MUST be CLOSED, meaning that the first and end points are coincident (the same).
+    geometry_msgs::Polygon              geofence_cartesian_;      // Polygon (vector of point32) that represent the geofence or limits of the fly area. Polygons MUST be CLOSED, meaning that the first and end points are coincident (the same).
 
     double x_cell_width_;    // Width in meters of each cell in the x axis.
     double y_cell_width_;    // Width in meters of each cell in the y axis.
 
-    double path_distance_;                          // Sum of norms between waypoints, initialized in getPath.
-    double path_flat_distance_;                     // Sum of norms between waypoints supposed flat path, initialized in getPath.
+    double path_distance_      = std::numeric_limits<double>::max();   // Distance sum of norms between waypoints. Initialized to "infinity" (maximum value possible for double).
+    double path_flat_distance_ = std::numeric_limits<double>::max();   // Distance sum of norms between waypoints supposed flat path. Initialized to "infinity" (maximum value possible for double).
 
-    // TODO: update the no_fly_zones_ with dynamic changes in the enviroment.
-
-    std::vector< std::pair<double,double> > calculateIntersectionsOfSegmentWithGrid (double first_absolute_point_of_segment_x, double first_absolute_point_of_segment_y, double last_absolute_point_of_segment_x, double last_absolute_point_of_segment_y);
-    void fillCellsWithObstacles (const std::vector< std::pair<double,double> >& points_intersections_of_segment_with_grid);
-    bool visibilityCheck (const std::vector< std::pair<double,double> >& points_intersections_of_segment_with_grid);
+    // Minimum and maximum values x and y in Cartesian coordinates (initialized to zero):
+    double min_x_ = 0;
+    double max_x_ = 0;
+    double min_y_ = 0;
+    double max_y_ = 0;
 
     bool trivial_path_planner_ = false;
 

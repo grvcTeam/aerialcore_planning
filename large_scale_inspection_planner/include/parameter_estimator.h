@@ -33,8 +33,8 @@ public:
     void updateMatrices(/*poses, batteries, plan, wind sensor?*/);
 
     // Getters that the Mission Controller will use for the Planner and Plan Monitor:
-    std::vector< std::vector<float> > getTimeCostMatrix() { return time_cost_matrix_; };
-    std::vector< std::vector<float> > getBatteryDropMatrix() { return battery_drop_matrix_; };
+    std::vector< std::vector<float> > getTimeCostMatrix()    const { return time_cost_matrix_; }
+    std::vector< std::vector<float> > getBatteryDropMatrix() const { return battery_drop_matrix_; }
 
 private:
     std::vector< std::vector<float> > time_cost_matrix_;    // Square non-symetrical matrix, one row and column for each pylon and land station. The elements represent the time (in seconds) to cover that edge if exist, if not the value is -1.
