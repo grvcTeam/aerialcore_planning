@@ -18,9 +18,12 @@
 #include <time.h>
 #include <algorithm>
 
-// #define DEBUG_MODE       // UNCOMMENT FOR VISUALIZATION OF RESULTS
+#define VERBOSE                   // Uncoment for outputting in the terminal warnings when the path couldn't be found or other situations.
+#define WRITE_RESULTS_IN_TERMINAL // Uncoment for outputting in the terminal the path of points, path distance, computation time and other useful information.
+#define DRAW_IN_TERMINAL          // Uncoment for drawing in the terminal the path with the geofence and map of obstacles. Draw both in the constructor and in the getPath method, in this one with the path.
+#define PLOT_GRAPH                // Uncoment for plotting a graphic (using matplotlib-cpp) of the path (grid path and real path), geofence and map of obstacles. Plot both in the constructor and in the getPath method, in this one with the path.
 
-#ifdef DEBUG_MODE
+#ifdef PLOT_GRAPH
 #include "matplotlibcpp/matplotlibcpp.h"    // matplotlib-cpp has a MIT License (MIT), Copyright (c) 2014 Benno Evers. The full license description of matplotlib, matplotlib-cpp and its README can be found at its root.
 namespace plt = matplotlibcpp;              // namespace-alias-definition: makes a synonym of another namespace: see namespace alias
 #endif
@@ -54,7 +57,7 @@ PathPlanner::PathPlanner(const std::vector< std::vector<bool> >& _no_fly_zones, 
     x_cell_width_ = x_side_size_meters/x_side_size_cells_in_grid;   // Width in meters of each cell in the x axis.
     y_cell_width_ = y_side_size_meters/y_side_size_cells_in_grid;   // Width in meters of each cell in the y axis.
 
-#ifdef DEBUG_MODE
+#ifdef DRAW_IN_TERMINAL
     // Show the map in the terminal.
     for (int i=no_fly_zones_.size()-1; i>=0; i--) {         // IMPORTANT: visual matrix represented upside-down!! That's because the y axis is backwards when treated as matrix.
         for (int j=0; j<no_fly_zones_[0].size(); j++) {
@@ -62,6 +65,47 @@ PathPlanner::PathPlanner(const std::vector< std::vector<bool> >& _no_fly_zones, 
         }
         std::cout << std::endl;
     }
+#endif
+
+#ifdef PLOT_GRAPH
+    // Plot grid and obstacles (not the path, not yet calculated).
+
+    // plot vertical lines of the grid:
+    for (int k=0; k<=no_fly_zones_[0].size(); k++) {
+        std::vector<double> x_plot, y_plot;
+        x_plot.push_back(k*x_cell_width_); x_plot.push_back(k*x_cell_width_);
+        y_plot.push_back(0); y_plot.push_back(no_fly_zones_.size()*y_cell_width_);
+        plt::plot(x_plot,y_plot,"b");
+    }
+
+    // plot horizontal lines of the grid:
+    for (int k=0; k<=no_fly_zones_.size(); k++) {
+        std::vector<double> x_plot, y_plot;
+        x_plot.push_back(0); x_plot.push_back(no_fly_zones_[0].size()*x_cell_width_);
+        y_plot.push_back(k*y_cell_width_); y_plot.push_back(k*y_cell_width_);
+        plt::plot(x_plot,y_plot,"b");
+    }
+
+    // fill the inside of the cells with obstacles with a cross:
+    for (int i=0; i<no_fly_zones_.size(); i++) {
+        for (int j=0; j<no_fly_zones_[0].size(); j++) {
+            if (no_fly_zones_[i][j]==1) {
+                double x_1=j*x_cell_width_;     double x_2=(j+1)*x_cell_width_;
+                double y_1=i*y_cell_width_;     double y_2=(i+1)*y_cell_width_;
+                std::vector<double> x_plot, y_plot;
+                x_plot.push_back(x_1);          x_plot.push_back(x_2);
+                y_plot.push_back(y_1);          y_plot.push_back(y_2);
+                plt::plot(x_plot, y_plot, "r");
+                x_plot.clear(), y_plot.clear();
+                x_plot.push_back(x_1);          x_plot.push_back(x_2);
+                y_plot.push_back(y_2);          y_plot.push_back(y_1);
+                plt::plot(x_plot, y_plot, "r");
+            }
+        }
+    }
+
+    // Draw (show) everything:
+    plt::show();
 #endif
 
 }   // end constructor "PathPlanner" given the _no_fly_zones matrix.
@@ -129,7 +173,7 @@ PathPlanner::PathPlanner(const std::vector<geometry_msgs::Polygon>& _obstacle_po
             std::vector< std::pair<double,double> > points_intersections_of_segment_with_grid = calculateIntersectionsOfSegmentWithGrid (no_fly_zones_cartesian_[i].points[j].x - min_x_, no_fly_zones_cartesian_[i].points[j].y - min_y_, no_fly_zones_cartesian_[i].points[j+1].x - min_x_, no_fly_zones_cartesian_[i].points[j+1].y - min_y_);
             fillCellsWithObstacles (points_intersections_of_segment_with_grid);
 
-#ifdef DEBUG_MODE
+#ifdef PLOT_GRAPH
             // Plot points_intersections_of_segment_with_grid for no_fly_zones_. 
             std::vector<double> x_plot, y_plot;
             for (int k=0; k<points_intersections_of_segment_with_grid.size(); k++) {
@@ -146,7 +190,7 @@ PathPlanner::PathPlanner(const std::vector<geometry_msgs::Polygon>& _obstacle_po
         std::vector< std::pair<double,double> > points_intersections_of_segment_with_grid = calculateIntersectionsOfSegmentWithGrid (geofence_cartesian_.points[j].x - min_x_, geofence_cartesian_.points[j].y - min_y_, geofence_cartesian_.points[j+1].x - min_x_, geofence_cartesian_.points[j+1].y - min_y_);
         fillCellsWithObstacles (points_intersections_of_segment_with_grid);
 
-#ifdef DEBUG_MODE
+#ifdef PLOT_GRAPH
         // Plot points_intersections_of_segment_with_grid.
         std::vector<double> x_plot, y_plot;
         for (int k=0; k<points_intersections_of_segment_with_grid.size(); k++) {
@@ -157,17 +201,19 @@ PathPlanner::PathPlanner(const std::vector<geometry_msgs::Polygon>& _obstacle_po
 #endif
     }
 
-#ifdef DEBUG_MODE
-    /////////////////// Show the map in the terminal. ///////////////////
+#ifdef DRAW_IN_TERMINAL
+    // Show the map in the terminal.
     for (int i=no_fly_zones_.size()-1; i>=0; i--) {       // IMPORTANT: visual matrix represented upside-down!! Thats because the y axis is backwards when treated as matrix.
         for (int j=0; j<no_fly_zones_[0].size(); j++) {
             std::cout << no_fly_zones_[i][j] << ' ';
         }
         std::cout << std::endl;
     }
-    /////////////////// Show the map in the terminal. ///////////////////
+#endif
 
-    /////////////////////// Plot grid and obstacles (not the path). ///////////////////////
+#ifdef PLOT_GRAPH
+    // Plot grid and obstacles (not the path, not yet calculated).
+
     // plot vertical lines of the grid:
     for (int k=0; k<=x_side_size_cells_in_grid; k++) {
         std::vector<double> x_plot, y_plot;
@@ -204,7 +250,6 @@ PathPlanner::PathPlanner(const std::vector<geometry_msgs::Polygon>& _obstacle_po
 
     // Draw (show) everything:
     plt::show();
-    /////////////////////// Plot grid and obstacles (not the path). ///////////////////////
 #endif
 
 }   // end constructor "PathPlanner" with polygon's vector of obstacles.
@@ -212,15 +257,11 @@ PathPlanner::PathPlanner(const std::vector<geometry_msgs::Polygon>& _obstacle_po
 
 
 // "getPath" method: A* algorithm implementation that returns a path for one robot from its initial position to the end position. All the waypoints returned at the height (z) of the final point (CAUTION).
-std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msgs::PointStamped& _initial_point_stamped, const geometry_msgs::PointStamped& _final_point_stamped, bool _movement_pattern, bool _show_results) {
-#ifdef DEBUG_MODE
-    _show_results = true;
-#endif
+std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msgs::PointStamped& _initial_point_stamped, const geometry_msgs::PointStamped& _final_point_stamped, bool _movement_pattern) {
 
     // The input of getPath are the initial and final points in cartesian coordinates. IMPORTANT: the origin of coordinates of these points and the origin of coordinates of the obstacles (no-fly zone matrix) must be the same.
     // Also, the function has two optional bool arguments:
     //      _movement_pattern:  if 0 (default) the movement of the agent can be in any direction, and if 1 the agent can only move in angles multiple of 45º (faster to compute if the grid is big, doesn't do visibility-loops).
-    //      _show_results:      if 0 (default) no results are shown, and if 1 the map of obstacles and the path is plotted (usiing matplotlib-cpp), and also the path is shown in the terminal, with its cost and computation time.
 
     std::vector<geometry_msgs::PointStamped> path;            // The output of this method.
 
@@ -231,15 +272,12 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
         return path;
     }
 
+#ifdef WRITE_RESULTS_IN_TERMINAL
+    // Calculate time:
     clock_t t_begin;
     clock_t t_end;
-    if ( _show_results ) {
-        ////////////////// Testing, calculate time //////////////////
-        t_begin = clock();
-        ////////////////// Testing, calculate time //////////////////
-    }
-
-    std::vector<geometry_msgs::PointStamped> path_cells;      // The path expressed in cells, e.g. path_cells[i].point.x contains the x value of the cell number i of the path.
+    t_begin = clock();
+#endif
 
     path_distance_      = std::numeric_limits<double>::max(); // Distance initialized to "infinity" (maximum value possible for double).
     path_flat_distance_ = std::numeric_limits<double>::max(); // Distance initialized to "infinity" (maximum value possible for double).
@@ -247,16 +285,22 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
     // If the initial and/or final points are outside of the map, finish the algorithm and return an empty path. 
     if ( (_initial_point_stamped.point.x<min_x_) || (_initial_point_stamped.point.y<min_y_) || (_initial_point_stamped.point.x>max_x_) || (_initial_point_stamped.point.y>max_y_) || (_final_point_stamped.point.x<min_x_) || (_final_point_stamped.point.y<min_y_) || (_final_point_stamped.point.x>max_x_) || (_final_point_stamped.point.y>max_y_) ) {
         if ( ( (_initial_point_stamped.point.x<min_x_) || (_initial_point_stamped.point.y<min_y_) || (_initial_point_stamped.point.x>max_x_) || (_initial_point_stamped.point.y>max_y_) ) && ( (_final_point_stamped.point.x<min_x_) || (_final_point_stamped.point.y<min_y_) || (_final_point_stamped.point.x>max_x_) || (_final_point_stamped.point.y>max_y_) ) ) {
+#ifdef VERBOSE
             ROS_WARN("Path Planner: initial and final points out of the map. Returning empty path.");
             std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
+#endif
             ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_AND_END_OUTSIDE_MAP;
         } else if ( (_initial_point_stamped.point.x<min_x_) || (_initial_point_stamped.point.y<min_y_) || (_initial_point_stamped.point.x>max_x_) || (_initial_point_stamped.point.y>max_y_) ) {
+#ifdef VERBOSE
             ROS_WARN("Path Planner: initial point out of the map. Returning empty path.");
             std::cout << "Printing initial point: " << _initial_point_stamped << std::endl;
+#endif
             ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_OUTSIDE_MAP;
         } else if ( (_final_point_stamped.point.x<min_x_) || (_final_point_stamped.point.y<min_y_) || (_final_point_stamped.point.x>max_x_) || (_final_point_stamped.point.y>max_y_) ) {
+#ifdef VERBOSE
             ROS_WARN("Path Planner: final point out of the map. Returning empty path.");
             std::cout << "Printing final point: " << _final_point_stamped << std::endl;
+#endif
             ResultLastPath result_last_path_ = ResultLastPath::ERROR_END_OUTSIDE_MAP;
         }
         return path;
@@ -266,16 +310,22 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
         // If the initial and/or final points are outside of the geofence, finish the algorithm and return an empty path. 
         if ( !checkIfPointInsideGeofence(_initial_point_stamped) || !checkIfPointInsideGeofence(_final_point_stamped) ) {
             if ( !checkIfPointInsideGeofence(_initial_point_stamped) && !checkIfPointInsideGeofence(_final_point_stamped) ) {
+#ifdef VERBOSE
                 ROS_WARN("Path Planner: initial and final points out of the geofencing. Returning empty path.");
                 std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
+#endif
                 ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_AND_END_OUTSIDE_GEOFENCE;
             } else if ( !checkIfPointInsideGeofence(_initial_point_stamped) ) {
+#ifdef VERBOSE
                 ROS_WARN("Path Planner: initial point out of the geofencing. Returning empty path.");
                 std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
+#endif
                 ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_OUTSIDE_GEOFENCE;
             } else if ( !checkIfPointInsideGeofence(_final_point_stamped) ) {
+#ifdef VERBOSE
                 ROS_WARN("Path Planner: final point out of the geofencing. Returning empty path.");
                 std::cout << "Printing final point: " << _final_point_stamped << std::endl;
+#endif
                 ResultLastPath result_last_path_ = ResultLastPath::ERROR_END_OUTSIDE_GEOFENCE;
             }
             return path;
@@ -285,16 +335,22 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
     // If the initial and/or final points are inside an obstacle, finish the algorithm and return an empty path. 
     if ( checkIfPointInsideObstacles(_initial_point_stamped) || checkIfPointInsideObstacles(_final_point_stamped) ) {
         if ( checkIfPointInsideObstacles(_initial_point_stamped) && checkIfPointInsideObstacles(_final_point_stamped) ) {
+#ifdef VERBOSE
             ROS_WARN("Path Planner: initial and final points inside polygon obstacles. Returning empty path.");
             std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
+#endif
             ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_AND_END_INSIDE_OBSTACLE_POLYGON;
         } else if ( checkIfPointInsideObstacles(_initial_point_stamped) ) {
+#ifdef VERBOSE
             ROS_WARN("Path Planner: initial point inside a polygon obstacle. Returning empty path.");
             std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
+#endif
             ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_INSIDE_OBSTACLE_POLYGON;
         } else if ( checkIfPointInsideObstacles(_final_point_stamped) ) {
+#ifdef VERBOSE
             ROS_WARN("Path Planner: final point inside a polygon obstacle. Returning empty path.");
             std::cout << "Printing final point: " << _final_point_stamped << std::endl;
+#endif
             ResultLastPath result_last_path_ = ResultLastPath::ERROR_END_INSIDE_OBSTACLE_POLYGON;
         }
         return path;
@@ -314,16 +370,22 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
     // Check again if the points are inside an obstacle, but this time according to the no-fly zones grid map.
     if ( (no_fly_zones_[initial_point_in_grid_y][initial_point_in_grid_x]==1)||(no_fly_zones_[final_point_in_grid_y][final_point_in_grid_x]==1) ) {
         if ( (no_fly_zones_[initial_point_in_grid_y][initial_point_in_grid_x]==1)&&(no_fly_zones_[final_point_in_grid_y][final_point_in_grid_x]==1) ) {
+#ifdef VERBOSE
             ROS_WARN("Path Planner: initial and final points inside obstacle cells, even though they aren't inside polygon obstacles. You might need to increase the grid resolution. Returning empty path.");
             std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
+#endif
             ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_AND_END_INSIDE_GRID_OBSTACLE_LOW_RES;
         } else if ( no_fly_zones_[initial_point_in_grid_y][initial_point_in_grid_x]==1 ) {
+#ifdef VERBOSE
             ROS_WARN("Path Planner: initial point inside an obstacle cell, even though it isn't inside a polygon obstacle. You might need to increase the grid resolution. Returning empty path.");
             std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
+#endif
             ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_INSIDE_GRID_OBSTACLE_LOW_RES;
         } else if ( no_fly_zones_[final_point_in_grid_y][final_point_in_grid_x]==1 ) {
+#ifdef VERBOSE
             ROS_WARN("Path Planner: final point inside an obstacle cell, even though it isn't inside a polygon obstacle. You might need to increase the grid resolution. Returning empty path.");
             std::cout << "Printing final point: " << _final_point_stamped << std::endl;
+#endif
             ResultLastPath result_last_path_ = ResultLastPath::ERROR_END_INSIDE_GRID_OBSTACLE_LOW_RES;
         }
         return path;    // if the initial or final point is inside an obstacle, finish the algorithm as no possible path can be found (return empty path).
@@ -339,6 +401,8 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
     // A* algorithm implemented with a grid of no-fly zones. Each cell has a value of 0 or 1 if it's free space or no-fly zone, respectively.
     unsigned int rows_no_fly_zone = no_fly_zones_.size();                  // Number of rows of the grid.
     unsigned int columns_no_fly_zone = no_fly_zones_[0].size();            // NMumber of columns of the grid.
+
+    std::vector<geometry_msgs::PointStamped> path_cells;      // The path expressed in cells, e.g. path_cells[i].point.x contains the x value of the cell number i of the path.
 
     std::map<unsigned int,CellInfo> cell;   // Map whose keys are the cell identifiers and values are "CellInfo" classes (which contains necessary info for the A* algorithm) 
     unsigned int open_set_counter = 0 ;
@@ -418,14 +482,9 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
                 final_path_elements.push_back(change_of_direction_elements[current]);   // Insert the first point always in "final_path_elements"
                 unsigned int test_cell;
                 while ( current < change_of_direction_elements.size()-1 ) {             // Visibility loop
-                    // std::cout << "current: " << current << std::endl;
-                    // std::cout << "change_of_direction_elements: "; for (int h=0; h<change_of_direction_elements.size(); h++) std::cout << change_of_direction_elements[h] << " "; std::cout << std::endl;
-                    // std::cout << "final_path_elements: "; for (int h=0; h<final_path_elements.size(); h++) std::cout << final_path_elements[h] << " "; std::cout << std::endl;
                     if ( current < change_of_direction_elements.size()-2 ) {
                         bool collision_flag;
                         for ( test_cell=change_of_direction_elements[current+2]; test_cell>change_of_direction_elements[current+1]; test_cell-- ) {      // change_of_direction_elements[test_cell] is contained between change_of_direction_elements[current+2] and change_of_direction_elements[current+1]. A visibility loop is done in the segment between change_of_direction_elements[test_cell] and change_of_direction_elements[current].
-                            // std::cout << "test_cell: " << test_cell << std::endl;
-
                             unsigned int first_x_segment_cell = (unsigned int) path_cells[change_of_direction_elements[current]].point.x;
                             unsigned int first_y_segment_cell = (unsigned int) path_cells[change_of_direction_elements[current]].point.y;
                             unsigned int last_x_segment_cell = (unsigned int) path_cells[test_cell].point.x;
@@ -590,37 +649,40 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
         }
     }
 
-    if ( _show_results ) {
-        /////////////////////////////// Show results in the terminal. ///////////////////////////////
+#ifdef WRITE_RESULTS_IN_TERMINAL
         t_end = clock();
         double seconds = ((float)(t_end-t_begin))/CLOCKS_PER_SEC;
+#endif
 
-        std::vector< std::vector<char> > visual_matrix_for_debug;
+#ifdef DRAW_IN_TERMINAL
+        std::vector< std::vector<char> > visual_matrix;
         for (unsigned int i=0; i<rows_no_fly_zone; i++) {
             std::vector<char> row;
             for (unsigned int j=0; j<columns_no_fly_zone; j++) {
                 if ( no_fly_zones_[i][j] ) row.push_back('1');
                 else                       row.push_back(' ');
             }
-            visual_matrix_for_debug.push_back(row);
+            visual_matrix.push_back(row);
         }
-        visual_matrix_for_debug[initial_point_in_grid_y][initial_point_in_grid_x]='A';    // Should be overwritten by the path (but same leter, would look the same)
-        visual_matrix_for_debug[final_point_in_grid_y][final_point_in_grid_x]='Z';
+        visual_matrix[initial_point_in_grid_y][initial_point_in_grid_x]='A';    // Should be overwritten by the path (but same leter, would look the same)
+        visual_matrix[final_point_in_grid_y][final_point_in_grid_x]='Z';
 
         for (unsigned int i=0; i<path_cells.size(); i++) {
             if ( not(((unsigned int)path_cells[i].point.y == final_point_in_grid_y ) && ((unsigned int)path_cells[i].point.x == final_point_in_grid_x ) ) ) {
-                visual_matrix_for_debug[(unsigned int)path_cells[i].point.y][(unsigned int)path_cells[i].point.x]=i+'A';
+                visual_matrix[(unsigned int)path_cells[i].point.y][(unsigned int)path_cells[i].point.x]=i+'A';
             }
         }
 
-        std::cout << std::endl << "Representation of the obstacles (no-fly zones) and trajectory:" << std::endl;
+        std::cout << std::endl << "Representation of the obstacles (no-fly zones) and trajectory (A, B, ..., Z):" << std::endl;
         for (int i=rows_no_fly_zone-1; i>=0; i--) {    // IMPORTANT: visual matrix represented upside-down!! Thats because the y axis is backwards when treated as matrix.
             for (int j=0; j<columns_no_fly_zone; j++) {
-                std::cout << visual_matrix_for_debug[i][j] << ' ';
+                std::cout << visual_matrix[i][j] << ' ';
             }
             std::cout << std::endl;
         }
+#endif
 
+#ifdef WRITE_RESULTS_IN_TERMINAL
         std::cout << std::endl  << "no_fly_zones_ size: " << no_fly_zones_.size() << " x " << no_fly_zones_[0].size() << std::endl;
         std::cout << "x_cell_width_: " << x_cell_width_ << "  y_cell_width_: " << y_cell_width_ << std::endl << std::endl;
 
@@ -630,10 +692,11 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
 
         std::cout << "Real trajectory: " << std::endl; for (int i=0; i<path.size(); i++)       std::cout << path[i]       << std::endl; std::cout << std::endl;
         std::cout << "Grid trajectory: " << std::endl; for (int i=0; i<path_cells.size(); i++) std::cout << path_cells[i] << std::endl; std::cout << std::endl;  // << std::setprecision(10)
-        /////////////////////////////// Show results in the terminal. ///////////////////////////////
+#endif
 
-        ///////////////////////////// DEBUG, plot grid, obstacles and path. /////////////////////////////
-#ifdef DEBUG_MODE
+#ifdef PLOT_GRAPH
+        // Plot grid, obstacles and path.
+
         // plot the intersections of the sides of the obstacle's polygons with the grid:
         for (int i=0; i<no_fly_zones_cartesian_.size(); i++) {           // for every no-fly zone polygon...
             for (int j=0; j<no_fly_zones_cartesian_[i].points.size()-1; j++) {  // The pairs of points [j] to [j+1] from the polygon are checked forming a segment. The intersection of that segment with the lines of the grid will indicate the cells with obstacles.
@@ -707,12 +770,12 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
         // Draw (show) everything:
         plt::show();
 #endif
-        ///////////////////////////// DEBUG, plot grid, obstacles and path. /////////////////////////////
-    }
 
     if ( path.size()==0 ) {
+#ifdef VERBOSE
         ROS_WARN("Path Planner: No path possible between the initial and final points, even though those two are obstacle-free and inside the map and/or geofence. Returning empty path. If you are certain that a path has to exist, it may be a problem of obstacles expanded because too low grid resolution.");
         std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
+#endif
         ResultLastPath result_last_path_ = ResultLastPath::ERROR_PATH_NOT_POSSIBLE;
     } else {
         ResultLastPath result_last_path_ = ResultLastPath::OK;
@@ -724,7 +787,7 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
 
 
 // "getPath" method overloaded with Point32 instead of PointStamped: A* algorithm implementation that returns a path for one robot from its initial position to the end position.
-std::vector<geometry_msgs::Point32> PathPlanner::getPath(const geometry_msgs::Point32& _initial_point, const geometry_msgs::Point32& _final_point, bool _movement_pattern, bool _show_results) {
+std::vector<geometry_msgs::Point32> PathPlanner::getPath(const geometry_msgs::Point32& _initial_point, const geometry_msgs::Point32& _final_point, bool _movement_pattern) {
 
     std::vector<geometry_msgs::Point32> path_to_return;
 
@@ -736,7 +799,7 @@ std::vector<geometry_msgs::Point32> PathPlanner::getPath(const geometry_msgs::Po
     _final_point_stamped.point.y = _final_point.y;
     _final_point_stamped.point.z = _final_point.z;
     
-    std::vector<geometry_msgs::PointStamped> path_stamped = getPath(_initial_point_stamped, _final_point_stamped, _movement_pattern, _show_results);
+    std::vector<geometry_msgs::PointStamped> path_stamped = getPath(_initial_point_stamped, _final_point_stamped, _movement_pattern);
 
     for (int i=0; i<path_stamped.size(); i++) {
         geometry_msgs::Point32 current_point_32;
@@ -753,7 +816,7 @@ std::vector<geometry_msgs::Point32> PathPlanner::getPath(const geometry_msgs::Po
 
 
 // "getPath" method but overloaded with Point instead of PointStamped: A* algorithm implementation that returns a path for one robot from its initial position to the end position.
-std::vector<geometry_msgs::Point> PathPlanner::getPath(const geometry_msgs::Point& _initial_point, const geometry_msgs::Point& _final_point, bool _movement_pattern, bool _show_results) {
+std::vector<geometry_msgs::Point> PathPlanner::getPath(const geometry_msgs::Point& _initial_point, const geometry_msgs::Point& _final_point, bool _movement_pattern) {
 
     std::vector<geometry_msgs::Point> path_to_return;
 
@@ -765,7 +828,7 @@ std::vector<geometry_msgs::Point> PathPlanner::getPath(const geometry_msgs::Poin
     _final_point_stamped.point.y = _final_point.y;
     _final_point_stamped.point.z = _final_point.z;
     
-    std::vector<geometry_msgs::PointStamped> path_stamped = getPath(_initial_point_stamped, _final_point_stamped, _movement_pattern, _show_results);
+    std::vector<geometry_msgs::PointStamped> path_stamped = getPath(_initial_point_stamped, _final_point_stamped, _movement_pattern);
 
     for (int i=0; i<path_stamped.size(); i++) {
         geometry_msgs::Point current_point;
@@ -782,12 +845,12 @@ std::vector<geometry_msgs::Point> PathPlanner::getPath(const geometry_msgs::Poin
 
 
 // "getPath" method that estimates the time in each waypoint given the speed of the drone: A* algorithm implementation that returns a path for one robot from its initial position to the end position.
-std::vector<geometry_msgs::PointStamped> PathPlanner::getPathWithTimePredictions(const geometry_msgs::PointStamped& _initial_point_stamped, const geometry_msgs::PointStamped& _final_point_stamped, int _full_speed_xy, int _full_speed_z_down, int _full_speed_z_up, bool _movement_pattern, bool _show_results) {
+std::vector<geometry_msgs::PointStamped> PathPlanner::getPathWithTimePredictions(const geometry_msgs::PointStamped& _initial_point_stamped, const geometry_msgs::PointStamped& _final_point_stamped, int _full_speed_xy, int _full_speed_z_down, int _full_speed_z_up, bool _movement_pattern) {
 
-    std::vector<geometry_msgs::PointStamped> path_stamped = getPath(_initial_point_stamped, _final_point_stamped, _movement_pattern, _show_results);
+    std::vector<geometry_msgs::PointStamped> path_stamped = getPath(_initial_point_stamped, _final_point_stamped, _movement_pattern);
 
     if ( _final_point_stamped.header.stamp.sec < _initial_point_stamped.header.stamp.sec ) {
-        std::cout << "PathPlanner, getPathWithTimePredictions. Error: final point time before than initial point time." << std::endl;
+        ROS_ERROR("PathPlanner, getPathWithTimePredictions: time of the final point stamped before the time of the initial point stamped.");
     } else if ( path_stamped.size() > 1 ) {    // If size==0 the path already has the time at the final (only) waypoint becayse the final point stamped is directly inserted.
 
         // All the waypoints of the path has the height (z) of the final point. If the two points (initial and final) have different heights, that height difference will be travelled between the initial point and the first waypoint.
@@ -836,9 +899,9 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPathWithTimePredictions
 
 
 // "getPathWithTimePredictionsAndInitialPoint" method, exactly the same as the one before but including the initial point with its time.
-std::vector<geometry_msgs::PointStamped> PathPlanner::getPathWithTimePredictionsAndInitialPoint(const geometry_msgs::PointStamped& _initial_point_stamped, const geometry_msgs::PointStamped& _final_point_stamped, int _full_speed_xy, int _full_speed_z_down, int _full_speed_z_up, bool _movement_pattern, bool _show_results) {
+std::vector<geometry_msgs::PointStamped> PathPlanner::getPathWithTimePredictionsAndInitialPoint(const geometry_msgs::PointStamped& _initial_point_stamped, const geometry_msgs::PointStamped& _final_point_stamped, int _full_speed_xy, int _full_speed_z_down, int _full_speed_z_up, bool _movement_pattern) {
 
-    std::vector<geometry_msgs::PointStamped> path_stamped = getPathWithTimePredictions(_initial_point_stamped, _final_point_stamped, _full_speed_xy, _full_speed_z_down, _full_speed_z_up, _movement_pattern, _show_results);
+    std::vector<geometry_msgs::PointStamped> path_stamped = getPathWithTimePredictions(_initial_point_stamped, _final_point_stamped, _full_speed_xy, _full_speed_z_down, _full_speed_z_up, _movement_pattern);
 
     path_stamped.insert(path_stamped.begin(), _initial_point_stamped);
 
