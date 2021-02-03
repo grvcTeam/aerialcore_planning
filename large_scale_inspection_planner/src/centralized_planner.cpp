@@ -266,7 +266,6 @@ void CentralizedPlanner::mostRewardedPylon(int _initial_pylon_index, int& _index
     if (!graph_[_initial_pylon_index].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
         return;
     }
-std::cout << _initial_pylon_index << std::endl;
 
     for (const int& current_connection_index : graph_[_initial_pylon_index].connections_indexes) {
 

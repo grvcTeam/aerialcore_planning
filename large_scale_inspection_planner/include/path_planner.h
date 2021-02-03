@@ -22,6 +22,8 @@
 
 namespace multidrone {
 
+enum struct ResultLastPath {OK, ERROR_INI_AND_END_OUTSIDE_MAP, ERROR_INI_OUTSIDE_MAP, ERROR_END_OUTSIDE_MAP, ERROR_INI_AND_END_OUTSIDE_GEOFENCE, ERROR_INI_OUTSIDE_GEOFENCE, ERROR_END_OUTSIDE_GEOFENCE, ERROR_INI_AND_END_INSIDE_OBSTACLE_POLYGON, ERROR_INI_INSIDE_OBSTACLE_POLYGON, ERROR_END_INSIDE_OBSTACLE_POLYGON, ERROR_INI_AND_END_INSIDE_GRID_OBSTACLE_LOW_RES, ERROR_INI_INSIDE_GRID_OBSTACLE_LOW_RES, ERROR_END_INSIDE_GRID_OBSTACLE_LOW_RES, ERROR_PATH_NOT_POSSIBLE, UNINITIATED};
+
 /// PathPlanner class that works as interface
 class PathPlanner {
 
@@ -47,6 +49,8 @@ public:
 
     // Return true if using trivial path planner, false if not:
     bool getTrivialPathPlannerOrNot() const { return trivial_path_planner_; }
+
+    ResultLastPath getResultLastPath() const { return result_last_path_; };
 
     bool checkIfPointInsidePolygon(const std::vector<geometry_msgs::Point32>& _polygon, const geometry_msgs::Point32& _test_point) const;
     bool checkIfPointInsidePolygon(const std::vector<geometry_msgs::Point32>& _polygon, const geometry_msgs::PointStamped& _test_point_stamped) const;
@@ -91,6 +95,8 @@ private:
     double max_x_ = 0;
     double min_y_ = 0;
     double max_y_ = 0;
+
+    ResultLastPath result_last_path_ = ResultLastPath::UNINITIATED;
 
     bool trivial_path_planner_ = false;
 

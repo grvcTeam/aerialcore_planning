@@ -213,6 +213,9 @@ PathPlanner::PathPlanner(const std::vector<geometry_msgs::Polygon>& _obstacle_po
 
 // "getPath" method: A* algorithm implementation that returns a path for one robot from its initial position to the end position. All the waypoints returned at the height (z) of the final point (CAUTION).
 std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msgs::PointStamped& _initial_point_stamped, const geometry_msgs::PointStamped& _final_point_stamped, bool _movement_pattern, bool _show_results) {
+#ifdef DEBUG_MODE
+    _show_results = true;
+#endif
 
     // The input of getPath are the initial and final points in cartesian coordinates. IMPORTANT: the origin of coordinates of these points and the origin of coordinates of the obstacles (no-fly zone matrix) must be the same.
     // Also, the function has two optional bool arguments:
@@ -246,12 +249,15 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
         if ( ( (_initial_point_stamped.point.x<min_x_) || (_initial_point_stamped.point.y<min_y_) || (_initial_point_stamped.point.x>max_x_) || (_initial_point_stamped.point.y>max_y_) ) && ( (_final_point_stamped.point.x<min_x_) || (_final_point_stamped.point.y<min_y_) || (_final_point_stamped.point.x>max_x_) || (_final_point_stamped.point.y>max_y_) ) ) {
             ROS_WARN("Path Planner: initial and final points out of the map. Returning empty path.");
             std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
+            ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_AND_END_OUTSIDE_MAP;
         } else if ( (_initial_point_stamped.point.x<min_x_) || (_initial_point_stamped.point.y<min_y_) || (_initial_point_stamped.point.x>max_x_) || (_initial_point_stamped.point.y>max_y_) ) {
             ROS_WARN("Path Planner: initial point out of the map. Returning empty path.");
             std::cout << "Printing initial point: " << _initial_point_stamped << std::endl;
+            ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_OUTSIDE_MAP;
         } else if ( (_final_point_stamped.point.x<min_x_) || (_final_point_stamped.point.y<min_y_) || (_final_point_stamped.point.x>max_x_) || (_final_point_stamped.point.y>max_y_) ) {
             ROS_WARN("Path Planner: final point out of the map. Returning empty path.");
             std::cout << "Printing final point: " << _final_point_stamped << std::endl;
+            ResultLastPath result_last_path_ = ResultLastPath::ERROR_END_OUTSIDE_MAP;
         }
         return path;
     }
@@ -262,12 +268,15 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
             if ( !checkIfPointInsideGeofence(_initial_point_stamped) && !checkIfPointInsideGeofence(_final_point_stamped) ) {
                 ROS_WARN("Path Planner: initial and final points out of the geofencing. Returning empty path.");
                 std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
+                ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_AND_END_OUTSIDE_GEOFENCE;
             } else if ( !checkIfPointInsideGeofence(_initial_point_stamped) ) {
                 ROS_WARN("Path Planner: initial point out of the geofencing. Returning empty path.");
                 std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
+                ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_OUTSIDE_GEOFENCE;
             } else if ( !checkIfPointInsideGeofence(_final_point_stamped) ) {
                 ROS_WARN("Path Planner: final point out of the geofencing. Returning empty path.");
                 std::cout << "Printing final point: " << _final_point_stamped << std::endl;
+                ResultLastPath result_last_path_ = ResultLastPath::ERROR_END_OUTSIDE_GEOFENCE;
             }
             return path;
         }
@@ -278,12 +287,15 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
         if ( checkIfPointInsideObstacles(_initial_point_stamped) && checkIfPointInsideObstacles(_final_point_stamped) ) {
             ROS_WARN("Path Planner: initial and final points inside polygon obstacles. Returning empty path.");
             std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
+            ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_AND_END_INSIDE_OBSTACLE_POLYGON;
         } else if ( checkIfPointInsideObstacles(_initial_point_stamped) ) {
             ROS_WARN("Path Planner: initial point inside a polygon obstacle. Returning empty path.");
             std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
+            ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_INSIDE_OBSTACLE_POLYGON;
         } else if ( checkIfPointInsideObstacles(_final_point_stamped) ) {
             ROS_WARN("Path Planner: final point inside a polygon obstacle. Returning empty path.");
             std::cout << "Printing final point: " << _final_point_stamped << std::endl;
+            ResultLastPath result_last_path_ = ResultLastPath::ERROR_END_INSIDE_OBSTACLE_POLYGON;
         }
         return path;
     }
@@ -304,12 +316,15 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
         if ( (no_fly_zones_[initial_point_in_grid_y][initial_point_in_grid_x]==1)&&(no_fly_zones_[final_point_in_grid_y][final_point_in_grid_x]==1) ) {
             ROS_WARN("Path Planner: initial and final points inside obstacle cells, even though they aren't inside polygon obstacles. You might need to increase the grid resolution. Returning empty path.");
             std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
+            ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_AND_END_INSIDE_GRID_OBSTACLE_LOW_RES;
         } else if ( no_fly_zones_[initial_point_in_grid_y][initial_point_in_grid_x]==1 ) {
             ROS_WARN("Path Planner: initial point inside an obstacle cell, even though it isn't inside a polygon obstacle. You might need to increase the grid resolution. Returning empty path.");
             std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
+            ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_INSIDE_GRID_OBSTACLE_LOW_RES;
         } else if ( no_fly_zones_[final_point_in_grid_y][final_point_in_grid_x]==1 ) {
             ROS_WARN("Path Planner: final point inside an obstacle cell, even though it isn't inside a polygon obstacle. You might need to increase the grid resolution. Returning empty path.");
             std::cout << "Printing final point: " << _final_point_stamped << std::endl;
+            ResultLastPath result_last_path_ = ResultLastPath::ERROR_END_INSIDE_GRID_OBSTACLE_LOW_RES;
         }
         return path;    // if the initial or final point is inside an obstacle, finish the algorithm as no possible path can be found (return empty path).
     }
@@ -698,6 +713,9 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
     if ( path.size()==0 ) {
         ROS_WARN("Path Planner: No path possible between the initial and final points, even though those two are obstacle-free and inside the map and/or geofence. Returning empty path. If you are certain that a path has to exist, it may be a problem of obstacles expanded because too low grid resolution.");
         std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
+        ResultLastPath result_last_path_ = ResultLastPath::ERROR_PATH_NOT_POSSIBLE;
+    } else {
+        ResultLastPath result_last_path_ = ResultLastPath::OK;
     }
 
     return path;
