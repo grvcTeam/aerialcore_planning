@@ -65,6 +65,9 @@ public:
     bool checkIfPointIsValid(const geometry_msgs::Point32& _test_point) const;
     bool checkIfPointIsValid(const geometry_msgs::PointStamped& _test_point_stamped) const;
 
+    bool checkIfTwoPointsAreVisible(const geometry_msgs::Point32& _initial_point, const geometry_msgs::Point32& _final_point) const;
+    bool checkIfTwoPointsAreVisible(const geometry_msgs::PointStamped& _initial_point_stamped, const geometry_msgs::PointStamped& _final_point_stamped) const;
+
 private:
 
     // Struct that will be initialized for each cell explored in the A* algorithm. The algorithm will construct a map of "CellInfo" (with a cell identifier as key) in order to reach the solution.
@@ -80,7 +83,7 @@ private:
 
     std::vector< std::pair<double,double> > calculateIntersectionsOfSegmentWithGrid (double first_absolute_point_of_segment_x, double first_absolute_point_of_segment_y, double last_absolute_point_of_segment_x, double last_absolute_point_of_segment_y) const;
     void fillCellsWithObstacles (const std::vector< std::pair<double,double> >& points_intersections_of_segment_with_grid);
-    bool visibilityCheck (const std::vector< std::pair<double,double> >& points_intersections_of_segment_with_grid) const;
+    bool checkCollisionByVisibility (const std::vector< std::pair<double,double> >& points_intersections_of_segment_with_grid) const;
 
     std::vector< std::vector<bool> > no_fly_zones_;   // Rectangular grid needed for the path planner algorithm. Elements with value of 0 (false) are part of the free space, and elements with value of 1 (true) contains obstacles.
 

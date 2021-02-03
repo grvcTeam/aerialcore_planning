@@ -18,10 +18,10 @@
 #include <time.h>
 #include <algorithm>
 
-#define VERBOSE                   // Uncoment for outputting in the terminal warnings when the path couldn't be found or other situations.
-#define WRITE_RESULTS_IN_TERMINAL // Uncoment for outputting in the terminal the path of points, path distance, computation time and other useful information.
-#define DRAW_IN_TERMINAL          // Uncoment for drawing in the terminal the path with the geofence and map of obstacles. Draw both in the constructor and in the getPath method, in this one with the path.
-#define PLOT_GRAPH                // Uncoment for plotting a graphic (using matplotlib-cpp) of the path (grid path and real path), geofence and map of obstacles. Plot both in the constructor and in the getPath method, in this one with the path.
+// #define VERBOSE                   // Uncoment for outputting in the terminal warnings when the path couldn't be found or other situations.
+// #define WRITE_RESULTS_IN_TERMINAL // Uncoment for outputting in the terminal the path of points, path distance, computation time and other useful information.
+// #define DRAW_IN_TERMINAL          // Uncoment for drawing in the terminal the path with the geofence and map of obstacles. Draw both in the constructor and in the getPath method, in this one with the path.
+// #define PLOT_GRAPH                // Uncoment for plotting a graphic (using matplotlib-cpp) of the path (grid path and real path), geofence and map of obstacles. Plot both in the constructor and in the getPath method, in this one with the path.
 
 #ifdef PLOT_GRAPH
 #include "matplotlibcpp/matplotlibcpp.h"    // matplotlib-cpp has a MIT License (MIT), Copyright (c) 2014 Benno Evers. The full license description of matplotlib, matplotlib-cpp and its README can be found at its root.
@@ -285,19 +285,19 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
     // If the initial and/or final points are outside of the map, finish the algorithm and return an empty path. 
     if ( (_initial_point_stamped.point.x<min_x_) || (_initial_point_stamped.point.y<min_y_) || (_initial_point_stamped.point.x>max_x_) || (_initial_point_stamped.point.y>max_y_) || (_final_point_stamped.point.x<min_x_) || (_final_point_stamped.point.y<min_y_) || (_final_point_stamped.point.x>max_x_) || (_final_point_stamped.point.y>max_y_) ) {
         if ( ( (_initial_point_stamped.point.x<min_x_) || (_initial_point_stamped.point.y<min_y_) || (_initial_point_stamped.point.x>max_x_) || (_initial_point_stamped.point.y>max_y_) ) && ( (_final_point_stamped.point.x<min_x_) || (_final_point_stamped.point.y<min_y_) || (_final_point_stamped.point.x>max_x_) || (_final_point_stamped.point.y>max_y_) ) ) {
-#ifdef VERBOSE
+#if defined(VERBOSE) || defined(WRITE_RESULTS_IN_TERMINAL) || defined(DRAW_IN_TERMINAL) || defined(PLOT_GRAPH)
             ROS_WARN("Path Planner: initial and final points out of the map. Returning empty path.");
             std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
 #endif
             ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_AND_END_OUTSIDE_MAP;
         } else if ( (_initial_point_stamped.point.x<min_x_) || (_initial_point_stamped.point.y<min_y_) || (_initial_point_stamped.point.x>max_x_) || (_initial_point_stamped.point.y>max_y_) ) {
-#ifdef VERBOSE
+#if defined(VERBOSE) || defined(WRITE_RESULTS_IN_TERMINAL) || defined(DRAW_IN_TERMINAL) || defined(PLOT_GRAPH)
             ROS_WARN("Path Planner: initial point out of the map. Returning empty path.");
             std::cout << "Printing initial point: " << _initial_point_stamped << std::endl;
 #endif
             ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_OUTSIDE_MAP;
         } else if ( (_final_point_stamped.point.x<min_x_) || (_final_point_stamped.point.y<min_y_) || (_final_point_stamped.point.x>max_x_) || (_final_point_stamped.point.y>max_y_) ) {
-#ifdef VERBOSE
+#if defined(VERBOSE) || defined(WRITE_RESULTS_IN_TERMINAL) || defined(DRAW_IN_TERMINAL) || defined(PLOT_GRAPH)
             ROS_WARN("Path Planner: final point out of the map. Returning empty path.");
             std::cout << "Printing final point: " << _final_point_stamped << std::endl;
 #endif
@@ -310,19 +310,19 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
         // If the initial and/or final points are outside of the geofence, finish the algorithm and return an empty path. 
         if ( !checkIfPointInsideGeofence(_initial_point_stamped) || !checkIfPointInsideGeofence(_final_point_stamped) ) {
             if ( !checkIfPointInsideGeofence(_initial_point_stamped) && !checkIfPointInsideGeofence(_final_point_stamped) ) {
-#ifdef VERBOSE
+#if defined(VERBOSE) || defined(WRITE_RESULTS_IN_TERMINAL) || defined(DRAW_IN_TERMINAL) || defined(PLOT_GRAPH)
                 ROS_WARN("Path Planner: initial and final points out of the geofencing. Returning empty path.");
                 std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
 #endif
                 ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_AND_END_OUTSIDE_GEOFENCE;
             } else if ( !checkIfPointInsideGeofence(_initial_point_stamped) ) {
-#ifdef VERBOSE
+#if defined(VERBOSE) || defined(WRITE_RESULTS_IN_TERMINAL) || defined(DRAW_IN_TERMINAL) || defined(PLOT_GRAPH)
                 ROS_WARN("Path Planner: initial point out of the geofencing. Returning empty path.");
                 std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
 #endif
                 ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_OUTSIDE_GEOFENCE;
             } else if ( !checkIfPointInsideGeofence(_final_point_stamped) ) {
-#ifdef VERBOSE
+#if defined(VERBOSE) || defined(WRITE_RESULTS_IN_TERMINAL) || defined(DRAW_IN_TERMINAL) || defined(PLOT_GRAPH)
                 ROS_WARN("Path Planner: final point out of the geofencing. Returning empty path.");
                 std::cout << "Printing final point: " << _final_point_stamped << std::endl;
 #endif
@@ -335,19 +335,19 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
     // If the initial and/or final points are inside an obstacle, finish the algorithm and return an empty path. 
     if ( checkIfPointInsideObstacles(_initial_point_stamped) || checkIfPointInsideObstacles(_final_point_stamped) ) {
         if ( checkIfPointInsideObstacles(_initial_point_stamped) && checkIfPointInsideObstacles(_final_point_stamped) ) {
-#ifdef VERBOSE
+#if defined(VERBOSE) || defined(WRITE_RESULTS_IN_TERMINAL) || defined(DRAW_IN_TERMINAL) || defined(PLOT_GRAPH)
             ROS_WARN("Path Planner: initial and final points inside polygon obstacles. Returning empty path.");
             std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
 #endif
             ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_AND_END_INSIDE_OBSTACLE_POLYGON;
         } else if ( checkIfPointInsideObstacles(_initial_point_stamped) ) {
-#ifdef VERBOSE
+#if defined(VERBOSE) || defined(WRITE_RESULTS_IN_TERMINAL) || defined(DRAW_IN_TERMINAL) || defined(PLOT_GRAPH)
             ROS_WARN("Path Planner: initial point inside a polygon obstacle. Returning empty path.");
             std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
 #endif
             ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_INSIDE_OBSTACLE_POLYGON;
         } else if ( checkIfPointInsideObstacles(_final_point_stamped) ) {
-#ifdef VERBOSE
+#if defined(VERBOSE) || defined(WRITE_RESULTS_IN_TERMINAL) || defined(DRAW_IN_TERMINAL) || defined(PLOT_GRAPH)
             ROS_WARN("Path Planner: final point inside a polygon obstacle. Returning empty path.");
             std::cout << "Printing final point: " << _final_point_stamped << std::endl;
 #endif
@@ -370,19 +370,19 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
     // Check again if the points are inside an obstacle, but this time according to the no-fly zones grid map.
     if ( (no_fly_zones_[initial_point_in_grid_y][initial_point_in_grid_x]==1)||(no_fly_zones_[final_point_in_grid_y][final_point_in_grid_x]==1) ) {
         if ( (no_fly_zones_[initial_point_in_grid_y][initial_point_in_grid_x]==1)&&(no_fly_zones_[final_point_in_grid_y][final_point_in_grid_x]==1) ) {
-#ifdef VERBOSE
+#if defined(VERBOSE) || defined(WRITE_RESULTS_IN_TERMINAL) || defined(DRAW_IN_TERMINAL) || defined(PLOT_GRAPH)
             ROS_WARN("Path Planner: initial and final points inside obstacle cells, even though they aren't inside polygon obstacles. You might need to increase the grid resolution. Returning empty path.");
             std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
 #endif
             ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_AND_END_INSIDE_GRID_OBSTACLE_LOW_RES;
         } else if ( no_fly_zones_[initial_point_in_grid_y][initial_point_in_grid_x]==1 ) {
-#ifdef VERBOSE
+#if defined(VERBOSE) || defined(WRITE_RESULTS_IN_TERMINAL) || defined(DRAW_IN_TERMINAL) || defined(PLOT_GRAPH)
             ROS_WARN("Path Planner: initial point inside an obstacle cell, even though it isn't inside a polygon obstacle. You might need to increase the grid resolution. Returning empty path.");
             std::cout << "Printing initial point: " << _initial_point_stamped << std::endl << "Printing final point: " << _final_point_stamped << std::endl;
 #endif
             ResultLastPath result_last_path_ = ResultLastPath::ERROR_INI_INSIDE_GRID_OBSTACLE_LOW_RES;
         } else if ( no_fly_zones_[final_point_in_grid_y][final_point_in_grid_x]==1 ) {
-#ifdef VERBOSE
+#if defined(VERBOSE) || defined(WRITE_RESULTS_IN_TERMINAL) || defined(DRAW_IN_TERMINAL) || defined(PLOT_GRAPH)
             ROS_WARN("Path Planner: final point inside an obstacle cell, even though it isn't inside a polygon obstacle. You might need to increase the grid resolution. Returning empty path.");
             std::cout << "Printing final point: " << _final_point_stamped << std::endl;
 #endif
@@ -491,7 +491,7 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
                             unsigned int last_y_segment_cell = (unsigned int) path_cells[test_cell].point.y;
                             std::vector< std::pair<double,double> > points_intersections_of_segment_with_grid = calculateIntersectionsOfSegmentWithGrid ( (first_x_segment_cell+0.5)*x_cell_width_ , (first_y_segment_cell+0.5)*y_cell_width_ , (last_x_segment_cell+0.5)*x_cell_width_ , (last_y_segment_cell+0.5)*y_cell_width_ );
 
-                            collision_flag = visibilityCheck (points_intersections_of_segment_with_grid);
+                            collision_flag = checkCollisionByVisibility (points_intersections_of_segment_with_grid);
 
                             if ( collision_flag == 0 ) break;    // If the actual segment is valid, break the loop.
                         }
@@ -529,7 +529,7 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
 
                 points_intersections_of_segment_with_grid = calculateIntersectionsOfSegmentWithGrid ( _initial_point_stamped.point.x-min_x_, _initial_point_stamped.point.y-min_y_, (((unsigned int) path_cells[1].point.x)+0.5)*x_cell_width_ , (((unsigned int) path_cells[1].point.y)+0.5)*y_cell_width_ );
 
-                collision_flag = visibilityCheck (points_intersections_of_segment_with_grid);  // Check if the initial point of the UAV and the second waypoint are visible.
+                collision_flag = checkCollisionByVisibility (points_intersections_of_segment_with_grid);  // Check if the initial point of the UAV and the second waypoint are visible.
 
                 if ( collision_flag ) {       // If there isn't a direct (visible) path between the initial point of the UAV and path_cells[1] then an intermediate auxiliar point is inserted between them. This point will be the closest intersection of the segment with the vertical or horizontal from the initial point (the one that reduces most the distance).
                     geometry_msgs::PointStamped first_point_from_path;
@@ -562,7 +562,7 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
 
                 points_intersections_of_segment_with_grid = calculateIntersectionsOfSegmentWithGrid ( _final_point_stamped.point.x-min_x_, _final_point_stamped.point.y-min_y_, (((unsigned int) path_cells[path_cells.size()-2].point.x)+0.5)*x_cell_width_ , (((unsigned int) path_cells[path_cells.size()-2].point.y)+0.5)*y_cell_width_ );
 
-                bool collision_flag = visibilityCheck (points_intersections_of_segment_with_grid);
+                bool collision_flag = checkCollisionByVisibility (points_intersections_of_segment_with_grid);
 
                 if ( collision_flag ) {       // If there isn't a direct (visible) path between the final point and path_cells[path_cells.size()-2] then an intermediate point is inserted between them. This point will be the closest intersection of the segment with the vertical or horizontal from the final point (the one that reduces most the distance).
                     geometry_msgs::PointStamped second_last_point_from_path;
@@ -1018,12 +1018,12 @@ void PathPlanner::fillCellsWithObstacles (const std::vector< std::pair<double,do
 
 
 
-bool PathPlanner::visibilityCheck (const std::vector< std::pair<double,double> >& points_intersections_of_segment_with_grid) const {    // This method return true if there are obstacles in the cells between points of interesection of a segment with the grid, and returns false if those cells doesn't have any obstacles.
+bool PathPlanner::checkCollisionByVisibility (const std::vector< std::pair<double,double> >& points_intersections_of_segment_with_grid) const {    // This method return true if there are obstacles in the cells between points of interesection of a segment with the grid, and returns false if those cells doesn't have any obstacles.
     // "points_intersections_of_segment_with_grid" contains in a sorted way all the intersections of the segment with the grid and the beginning and the end of the segment.
     // Now the middle point between pairs of points in "points_intersections_of_segment_with_grid" are calculated. This middle points will represent points inside each cell of the segment.
     // Then, the cell of each "point_inside_cell" is calculated. If only one cell has an obstacle, break the loop and return collision_flag=1, else return 0.
     bool collision_flag = 0;
-    for (int k=1; k<points_intersections_of_segment_with_grid.size()-2; k++) {
+    for (int k=0; k<points_intersections_of_segment_with_grid.size()-1; k++) {
         double point_inside_cell_x = (points_intersections_of_segment_with_grid[k].first + points_intersections_of_segment_with_grid[k+1].first)/2;   // Middle point (x axis) in double
         double point_inside_cell_y = (points_intersections_of_segment_with_grid[k].second + points_intersections_of_segment_with_grid[k+1].second)/2; // Middle point (y axis) in double
 
@@ -1043,7 +1043,7 @@ bool PathPlanner::visibilityCheck (const std::vector< std::pair<double,double> >
         }
     }
     return collision_flag;
-}   // end method "visibilityCheck"
+}   // end method "checkCollisionByVisibility"
 
 
 
@@ -1152,6 +1152,28 @@ bool PathPlanner::checkIfPointIsValid(const geometry_msgs::PointStamped& _test_p
     return checkIfPointIsValid(test_point32);
 
 }   // end "checkIfPointInsideObstacles" overloaded for PointStamped.
+
+
+
+bool PathPlanner::checkIfTwoPointsAreVisible(const geometry_msgs::Point32& _initial_point, const geometry_msgs::Point32& _final_point) const {
+
+    std::vector< std::pair<double,double> > points_intersections_of_segment_with_grid = calculateIntersectionsOfSegmentWithGrid ( _initial_point.x-min_x_, _initial_point.y-min_y_, _final_point.x-min_x_, _final_point.y-min_y_);
+    return !(checkCollisionByVisibility(points_intersections_of_segment_with_grid));
+
+}   // end "checkIfTwoPointsAreVisible"
+
+
+
+bool PathPlanner::checkIfTwoPointsAreVisible(const geometry_msgs::PointStamped& _initial_point_stamped, const geometry_msgs::PointStamped& _final_point_stamped) const {
+
+    geometry_msgs::Point32 initial_point32, final_point32;
+    initial_point32.x = _initial_point_stamped.point.x;     final_point32.x = _final_point_stamped.point.x;
+    initial_point32.y = _initial_point_stamped.point.y;     final_point32.y = _final_point_stamped.point.y;
+    initial_point32.z = _initial_point_stamped.point.z;     final_point32.z = _final_point_stamped.point.z;
+
+    return checkIfTwoPointsAreVisible(initial_point32, final_point32);
+
+}   // end "checkIfTwoPointsAreVisible" overloaded for PointStamped.
 
 
 }   // end namespace multidrone

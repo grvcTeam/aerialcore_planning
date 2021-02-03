@@ -129,7 +129,6 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(std::vector
                 else {  // Pylon has edges unserved connected.
                     mostRewardedPylon(index_graph_of_next_pylon, index_pylon_connected_with_unserved_edge, distance_pylon_connected_with_unserved_edge, index_edge_to_erase);
                     nearestGraphNodeLandStation(index_pylon_connected_with_unserved_edge, index_graph_land_station_from_next_pylon, distance_land_station_from_next_pylon);
-                    // TODO: check if points are inside obstacles before calculating paths.
                     if ( (index_pylon_connected_with_unserved_edge!=-1) && (index_graph_land_station_from_next_pylon!=-1) && (battery - batteryDrop( (distance_of_next_pylon+distance_pylon_connected_with_unserved_edge+distance_land_station_from_next_pylon)/current_uav.speed_xy , current_uav.time_max_flying) > current_uav.minimum_battery) ) {
                         current_flight_plan.nodes.push_back(index_graph_of_next_pylon);
                         battery -= batteryDrop( distance_of_next_pylon/current_uav.speed_xy , current_uav.time_max_flying);

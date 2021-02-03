@@ -344,6 +344,7 @@ void MissionController::planThread(void) {
 
             flight_plan_ = centralized_planner_.getPlan(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_);
 
+            // TODO: check if points are inside obstacles before passing graph to planner, modifying the graph.
             // TODO: actually add TYPE_PASS_WP_AVOIDING_NO_FLY_ZONE to the plan.
 
 #ifdef DEBUG
@@ -661,6 +662,10 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
 
     return true;
 } // end startSpecificSupervisionPlanServiceCallback
+
+
+void MissionController::removeGraphNodesAndConnectionsAboveNoFlyZones(std::vector<aerialcore_msgs::GraphNode>& _graph_to_edit) {
+} // end removeGraphNodesAndConnectionsAboveNoFlyZones
 
 
 int MissionController::findUavIndexById(int _UAV_id) {
