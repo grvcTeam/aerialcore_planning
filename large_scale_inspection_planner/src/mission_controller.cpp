@@ -665,6 +665,54 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
 
 
 void MissionController::removeGraphNodesAndConnectionsAboveNoFlyZones(std::vector<aerialcore_msgs::GraphNode>& _graph_to_edit) {
+
+    for (int i=0; i<_graph_to_edit.size(); i++) {
+        geometry_msgs::Point32 test_point;
+        test_point.x = _graph_to_edit[i].x;
+        test_point.y = _graph_to_edit[i].y;
+        test_point.z = _graph_to_edit[i].z;
+
+        // If this node is unvalid (inside obstacles or outside the geofence), remove the node and its connections:
+        if (!centralized_planner_.path_planner_.checkIfPointIsValid(test_point)) {
+            if (_graph_to_edit[i].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
+                for (int j=0; j<_graph_to_edit.size(); j++) {
+                    if (_graph_to_edit[j].type==aerialcore_msgs::GraphNode::TYPE_PYLON && i!=j) {
+                        for (int k=_graph_to_edit[j].connections_indexes.size()-1; k>=0; k--) {
+                            if (_graph_to_edit[j].connections_indexes[k] == i) {
+                                _graph_to_edit[j].connections_indexes.erase(_graph_to_edit[j].connections_indexes.begin()+k);
+                            }
+                        }
+                    }
+                }
+            }
+            _graph_to_edit[i].type = aerialcore_msgs::GraphNode::TYPE_NO_FLY_ZONE;
+            // TODO: check that the new type TYPE_NO_FLY_ZONE don't make bugs in other parts (conditionals).
+            // TODO: MAKE MC ROBUST TO NOT HAVING NO-FLY ZONES NOR GEOFENCE AT ALL.
+        }
+    }
+
+    // Check if there are edges above no-fly zones, and in that cases remove the connections:
+    for (int i=0; i<_graph_to_edit.size(); i++) {
+        if (_graph_to_edit[i].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
+            for (int j=_graph_to_edit[i].connections_indexes.size()-1; j>=0; j--) {
+                geometry_msgs::Point32 test_point_1, test_point_2;
+                test_point_1.x = _graph_to_edit[i].x;       test_point_2.x = _graph_to_edit[ _graph_to_edit[i].connections_indexes[j] ].x;
+                test_point_1.y = _graph_to_edit[i].y;       test_point_2.y = _graph_to_edit[ _graph_to_edit[i].connections_indexes[j] ].y;
+                test_point_1.z = _graph_to_edit[i].z;       test_point_2.z = _graph_to_edit[ _graph_to_edit[i].connections_indexes[j] ].z;
+                if (!centralized_planner_.path_planner_.checkIfTwoPointsAreVisible(test_point_1, test_point_2)) {
+                    _graph_to_edit[i].connections_indexes.erase(_graph_to_edit[i].connections_indexes.begin()+j);
+                }
+            }
+        }
+    }
+
+    // Check if after removing nodes and connections some nodes are now alone without connections. In that case remove them:
+    for (int i=0; i<_graph_to_edit.size(); i++) {
+        if (_graph_to_edit[i].type==aerialcore_msgs::GraphNode::TYPE_PYLON && _graph_to_edit[i].connections_indexes.size()==0) {
+            _graph_to_edit[i].type = aerialcore_msgs::GraphNode::TYPE_NO_FLY_ZONE;
+        }
+    }
+
 } // end removeGraphNodesAndConnectionsAboveNoFlyZones
 
 

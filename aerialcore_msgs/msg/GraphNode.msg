@@ -3,6 +3,7 @@ uint8 TYPE_RECHARGE_LAND_STATION = 1
 uint8 TYPE_REGULAR_LAND_STATION = 2
 uint8 TYPE_UAV_INITIAL_POSITION = 3
 uint8 TYPE_PASS_WP_AVOIDING_NO_FLY_ZONE = 4
+uint8 TYPE_NO_FLY_ZONE = 5               # Can be any pylon, land station or UAV initial position, but once categorized this it will be ignored.
 
 uint8 type
 

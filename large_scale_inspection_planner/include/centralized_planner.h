@@ -38,9 +38,9 @@ public:
 
     void printPlan();
 
-private:
-
     multidrone::PathPlanner path_planner_;
+
+private:
 
     std::vector<aerialcore_msgs::GraphNode> graph_;
 
