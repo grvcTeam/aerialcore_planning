@@ -57,7 +57,7 @@ private:
   bool startSpecificSupervisionPlanServiceCallback(aerialcore_msgs::PostString::Request& _req, aerialcore_msgs::PostString::Response& _res);
 
   int findUavIndexById(int _UAV_id);
-  void removeGraphNodesAndConnectionsAboveNoFlyZones(std::vector<aerialcore_msgs::GraphNode>& _graph_to_edit);
+  void removeGraphNodesAndEdgesAboveNoFlyZones(std::vector<aerialcore_msgs::GraphNode>& _graph_to_edit);
 
   void parameterEstimatorThread(void);
   void planThread(void);

@@ -29,7 +29,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(std::vector
 
     graph_ = _graph;
 
-    if (_no_fly_zones.size()>0) {
+    if (_geofence.points.size()>0 && _no_fly_zones.size()>0) {
         path_planner_ = multidrone::PathPlanner(_no_fly_zones, _geofence);
     }
 

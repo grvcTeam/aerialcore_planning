@@ -89,6 +89,19 @@ MissionController::MissionController() {
         }
     }
 
+#ifdef DEBUG
+    for (int i=0; i<geofence_.points.size(); i++) {
+        std::cout << "geofence_.points[ " << i << " ].x = " << geofence_.points[i].x << std::endl;
+        std::cout << "geofence_.points[ " << i << " ].y = " << geofence_.points[i].y << std::endl;
+    }
+    for (int i=0; i<no_fly_zones_.size(); i++) {
+        for (int j=0; j<no_fly_zones_[i].points.size(); j++) {
+            std::cout << "no_fly_zones_[ " << i << " ].points[ " << j << " ].x = " << no_fly_zones_[i].points[j].x << std::endl;
+            std::cout << "no_fly_zones_[ " << i << " ].points[ " << j << " ].y = " << no_fly_zones_[i].points[j].y << std::endl;
+        }
+    }
+#endif
+
     // Read parameters of the complete graph (from the yaml). Numeric parameters extracted from a string, so some steps are needed:
     // Note: the no_fly_zones_geo and geofence way of anidating waypoints in yaml lists may be more simple to implement and nicer to see than the one below parsing manually strings,
     // but with the XmlRpcValue parser for lists ALL numbers must be of the same type, meaning that an int has to have ".0" if int so that the parser recognize it as a double (also, no float type).
@@ -193,7 +206,10 @@ MissionController::MissionController() {
         regular_land_stations_geo_string = regular_land_stations_geo_string.substr(sz);
         complete_graph_.push_back(current_graph_node);
     }
+
     current_graph_ = complete_graph_;
+    removeGraphNodesAndEdgesAboveNoFlyZones(current_graph_);
+
 #ifdef DEBUG
     for (int i=0; i<complete_graph_.size(); i++) {      // Print complete_graph_ to check that the yaml file was parsed correctly:
         std::cout << "graph_node[ " << i << " ].type                     = " << (int) complete_graph_[i].type << std::endl;
@@ -344,7 +360,6 @@ void MissionController::planThread(void) {
 
             flight_plan_ = centralized_planner_.getPlan(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_);
 
-            // TODO: check if points are inside obstacles before passing graph to planner, modifying the graph.
             // TODO: actually add TYPE_PASS_WP_AVOIDING_NO_FLY_ZONE to the plan.
 
 #ifdef DEBUG
@@ -400,7 +415,7 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
             current_pose_stamped.pose.position.y = current_graph_[ flight_plan_for_current_uav.nodes[i] ].y;
             current_pose_stamped.pose.position.z = current_graph_[ flight_plan_for_current_uav.nodes[i] ].altitude == 0 ? current_graph_[ flight_plan_for_current_uav.nodes[i] ].z : current_graph_[ flight_plan_for_current_uav.nodes[i] ].z + (current_graph_[ flight_plan_for_current_uav.nodes[i] ].altitude - map_origin_geo_.altitude);
 
-            if ( (current_graph_[ flight_plan_for_current_uav.nodes[i] ].type != aerialcore_msgs::GraphNode::TYPE_PYLON) && (current_graph_[ flight_plan_for_current_uav.nodes[i] ].type != aerialcore_msgs::GraphNode::TYPE_PASS_WP_AVOIDING_NO_FLY_ZONE) ) {
+            if ( current_graph_[ flight_plan_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION || current_graph_[ flight_plan_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION || current_graph_[ flight_plan_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION ) {
 
                 if (pass_poses.size()>0) {
                     UAVs_[current_uav_index].mission->addPassWpList(pass_poses);
@@ -429,7 +444,7 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
                     }
                 }
                 pass_poses.clear();
-            } else {
+            } else if ( current_graph_[ flight_plan_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_PYLON || current_graph_[ flight_plan_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_PASS_WP_AVOIDING_NO_FLY_ZONE ) {
                 pass_poses.push_back(current_pose_stamped);
                 flying_or_landed = true;
                 if (first_iteration) {
@@ -508,6 +523,7 @@ bool MissionController::doSpecificSupervisionServiceCallback(aerialcore_msgs::Do
     }
     current_graph_.clear();
     current_graph_ = specific_subgraph_;
+    removeGraphNodesAndEdgesAboveNoFlyZones(current_graph_);
     _res.success=true;
     return true;
 } // end doSpecificSupervisionServiceCallback
@@ -517,6 +533,7 @@ bool MissionController::doContinuousSupervisionServiceCallback(std_srvs::Trigger
     continuous_or_specific_supervision_ = true;
     current_graph_.clear();
     current_graph_ = complete_graph_;
+    removeGraphNodesAndEdgesAboveNoFlyZones(current_graph_);
     _res.success=true;
     return true;
 } // end doContinuousSupervisionServiceCallback
@@ -664,15 +681,20 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
 } // end startSpecificSupervisionPlanServiceCallback
 
 
-void MissionController::removeGraphNodesAndConnectionsAboveNoFlyZones(std::vector<aerialcore_msgs::GraphNode>& _graph_to_edit) {
+void MissionController::removeGraphNodesAndEdgesAboveNoFlyZones(std::vector<aerialcore_msgs::GraphNode>& _graph_to_edit) {
 
+    // Check before if there is a geofence and no-fly zones, if not do nothing:
+    if (geofence_.points.size()==0 && no_fly_zones_.size()==0) {
+        return;
+    }
+
+    // If any node is unvalid (inside obstacles or outside the geofence), remove the node and its connections:
     for (int i=0; i<_graph_to_edit.size(); i++) {
         geometry_msgs::Point32 test_point;
         test_point.x = _graph_to_edit[i].x;
         test_point.y = _graph_to_edit[i].y;
         test_point.z = _graph_to_edit[i].z;
 
-        // If this node is unvalid (inside obstacles or outside the geofence), remove the node and its connections:
         if (!centralized_planner_.path_planner_.checkIfPointIsValid(test_point)) {
             if (_graph_to_edit[i].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
                 for (int j=0; j<_graph_to_edit.size(); j++) {
@@ -685,13 +707,11 @@ void MissionController::removeGraphNodesAndConnectionsAboveNoFlyZones(std::vecto
                     }
                 }
             }
-            _graph_to_edit[i].type = aerialcore_msgs::GraphNode::TYPE_NO_FLY_ZONE;
-            // TODO: check that the new type TYPE_NO_FLY_ZONE don't make bugs in other parts (conditionals).
-            // TODO: MAKE MC ROBUST TO NOT HAVING NO-FLY ZONES NOR GEOFENCE AT ALL.
+            _graph_to_edit[i].type = aerialcore_msgs::GraphNode::TYPE_NO_FLY_ZONE;  // Nodes marked as TYPE_NO_FLY_ZONE will be considered removed. 
         }
     }
 
-    // Check if there are edges above no-fly zones, and in that cases remove the connections:
+    // Check if there are edges above no-fly zones, and in that cases remove those connections:
     for (int i=0; i<_graph_to_edit.size(); i++) {
         if (_graph_to_edit[i].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
             for (int j=_graph_to_edit[i].connections_indexes.size()-1; j>=0; j--) {
@@ -713,7 +733,7 @@ void MissionController::removeGraphNodesAndConnectionsAboveNoFlyZones(std::vecto
         }
     }
 
-} // end removeGraphNodesAndConnectionsAboveNoFlyZones
+} // end removeGraphNodesAndEdgesAboveNoFlyZones
 
 
 int MissionController::findUavIndexById(int _UAV_id) {

@@ -35,6 +35,7 @@ public:
 private:
 
     // Deviation metrics if needed.
+    bool dummy_replan_only_once = true;
 
 };  // end PlanMonitor class
 
