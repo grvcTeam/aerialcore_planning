@@ -60,8 +60,15 @@ MissionController::MissionController() {
                 geometry_msgs::Polygon current_polygon_obstacle;
                 for (int j=0; j<no_fly_zones_geo[i].size(); j++) {
                     geographic_msgs::GeoPoint current_geo_point;
-                    current_geo_point.latitude =  no_fly_zones_geo[i][j][0];
-                    current_geo_point.longitude = no_fly_zones_geo[i][j][1];
+                    std::string::size_type sz;
+
+                    std::stringstream latitude_stringstream;
+                    latitude_stringstream << no_fly_zones_geo[i][j][0];
+                    current_geo_point.latitude = (float) std::stod ( latitude_stringstream.str() , &sz);
+
+                    std::stringstream longitude_stringstream;
+                    longitude_stringstream << no_fly_zones_geo[i][j][1];
+                    current_geo_point.longitude = (float) std::stod ( longitude_stringstream.str() , &sz);
 
                     geometry_msgs::Point32 current_cartesian_point = geographic_to_cartesian(current_geo_point, map_origin_geo_);
                     current_cartesian_point.z = 0;
@@ -79,8 +86,15 @@ MissionController::MissionController() {
         for (int i=0; i<geofence.size(); i++) {
             if (geofence[i].getType() == XmlRpc::XmlRpcValue::TypeArray) {
                 geographic_msgs::GeoPoint current_geo_point;
-                current_geo_point.latitude =  geofence[i][0];
-                current_geo_point.longitude = geofence[i][1];
+                std::string::size_type sz;
+
+                std::stringstream latitude_stringstream;
+                latitude_stringstream << geofence[i][0];
+                current_geo_point.latitude = (float) std::stod ( latitude_stringstream.str() , &sz);
+
+                std::stringstream longitude_stringstream;
+                longitude_stringstream << geofence[i][1];
+                current_geo_point.longitude = (float) std::stod ( longitude_stringstream.str() , &sz);
 
                 geometry_msgs::Point32 current_cartesian_point = geographic_to_cartesian(current_geo_point, map_origin_geo_);
                 current_cartesian_point.z = 0;
@@ -103,108 +117,129 @@ MissionController::MissionController() {
 #endif
 
     // Read parameters of the complete graph (from the yaml). Numeric parameters extracted from a string, so some steps are needed:
-    // Note: the no_fly_zones_geo and geofence way of anidating waypoints in yaml lists may be more simple to implement and nicer to see than the one below parsing manually strings,
-    // but with the XmlRpcValue parser for lists ALL numbers must be of the same type, meaning that an int has to have ".0" if int so that the parser recognize it as a double (also, no float type).
-    // TODO: if found how to parse numbers without point to dobule, adapt thes with XmlRpcValue. Less verbose and more flexible.
-    std::string pylons_position_string;
-    std::string pylons_position_geo_string;
-    std::string connections_indexes_string;
-    std::string recharge_land_stations_string;
-    std::string recharge_land_stations_geo_string;
-    std::string regular_land_stations_string;
-    std::string regular_land_stations_geo_string;
-    n_.getParam("pylons_position_cartesian", pylons_position_string);
-    n_.getParam("pylons_position_geographic", pylons_position_geo_string);
-    n_.getParam("pylons_connections_indexes", connections_indexes_string);
-    n_.getParam("recharge_land_stations_cartesian", recharge_land_stations_string);
-    n_.getParam("recharge_land_stations_geographic", recharge_land_stations_geo_string);
-    n_.getParam("regular_land_stations_cartesian", regular_land_stations_string);
-    n_.getParam("regular_land_stations_geographic", regular_land_stations_geo_string);
-    // Remove new lines if exist in the strings for all strings and semicolons in all but connection_indexes:
-    pylons_position_string.erase(std::remove(pylons_position_string.begin(), pylons_position_string.end(), '\n'), pylons_position_string.end());
-    pylons_position_string.erase(std::remove(pylons_position_string.begin(), pylons_position_string.end(), '\r'), pylons_position_string.end());
-    pylons_position_string.erase(std::remove(pylons_position_string.begin(), pylons_position_string.end(), ';'), pylons_position_string.end());
-    pylons_position_geo_string.erase(std::remove(pylons_position_geo_string.begin(), pylons_position_geo_string.end(), '\n'), pylons_position_geo_string.end());
-    pylons_position_geo_string.erase(std::remove(pylons_position_geo_string.begin(), pylons_position_geo_string.end(), '\r'), pylons_position_geo_string.end());
-    pylons_position_geo_string.erase(std::remove(pylons_position_geo_string.begin(), pylons_position_geo_string.end(), ';'), pylons_position_geo_string.end());
-    connections_indexes_string.erase(std::remove(connections_indexes_string.begin(), connections_indexes_string.end(), '\n'), connections_indexes_string.end());
-    connections_indexes_string.erase(std::remove(connections_indexes_string.begin(), connections_indexes_string.end(), '\r'), connections_indexes_string.end());
-    recharge_land_stations_string.erase(std::remove(recharge_land_stations_string.begin(), recharge_land_stations_string.end(), '\n'), recharge_land_stations_string.end());
-    recharge_land_stations_string.erase(std::remove(recharge_land_stations_string.begin(), recharge_land_stations_string.end(), '\r'), recharge_land_stations_string.end());
-    recharge_land_stations_string.erase(std::remove(recharge_land_stations_string.begin(), recharge_land_stations_string.end(), ';'), recharge_land_stations_string.end());
-    recharge_land_stations_geo_string.erase(std::remove(recharge_land_stations_geo_string.begin(), recharge_land_stations_geo_string.end(), '\n'), recharge_land_stations_geo_string.end());
-    recharge_land_stations_geo_string.erase(std::remove(recharge_land_stations_geo_string.begin(), recharge_land_stations_geo_string.end(), '\r'), recharge_land_stations_geo_string.end());
-    recharge_land_stations_geo_string.erase(std::remove(recharge_land_stations_geo_string.begin(), recharge_land_stations_geo_string.end(), ';'), recharge_land_stations_geo_string.end());
-    regular_land_stations_string.erase(std::remove(regular_land_stations_string.begin(), regular_land_stations_string.end(), '\n'), regular_land_stations_string.end());
-    regular_land_stations_string.erase(std::remove(regular_land_stations_string.begin(), regular_land_stations_string.end(), '\r'), regular_land_stations_string.end());
-    regular_land_stations_string.erase(std::remove(regular_land_stations_string.begin(), regular_land_stations_string.end(), ';'), regular_land_stations_string.end());
-    regular_land_stations_geo_string.erase(std::remove(regular_land_stations_geo_string.begin(), regular_land_stations_geo_string.end(), '\n'), regular_land_stations_geo_string.end());
-    regular_land_stations_geo_string.erase(std::remove(regular_land_stations_geo_string.begin(), regular_land_stations_geo_string.end(), '\r'), regular_land_stations_geo_string.end());
-    regular_land_stations_geo_string.erase(std::remove(regular_land_stations_geo_string.begin(), regular_land_stations_geo_string.end(), ';'), regular_land_stations_geo_string.end());
-    // For strings with point information, convert the string data, clean and ready, to double (float64 because of point) with stod.
-    // Each time a number is converted (numbers separated by space ' '), the string is overwriten with the rest of the string using substr.
-    // The quantity of numbers have to be multiple of 3.
-    // For connection_indexes do that but separating previously strings by semicolons:
-    std::string::size_type sz;
+    XmlRpc::XmlRpcValue pylons_position_cartesian;          n_.getParam("pylons_position_cartesian",         pylons_position_cartesian);
+    XmlRpc::XmlRpcValue pylons_position_geographic;         n_.getParam("pylons_position_geographic",        pylons_position_geographic);
+    XmlRpc::XmlRpcValue pylons_connections_indexes;         n_.getParam("pylons_connections_indexes",        pylons_connections_indexes);
+    XmlRpc::XmlRpcValue recharge_land_stations_cartesian;   n_.getParam("recharge_land_stations_cartesian",  recharge_land_stations_cartesian);
+    XmlRpc::XmlRpcValue recharge_land_stations_geographic;  n_.getParam("recharge_land_stations_geographic", recharge_land_stations_geographic);
+    XmlRpc::XmlRpcValue regular_land_stations_cartesian;    n_.getParam("regular_land_stations_cartesian",   regular_land_stations_cartesian);
+    XmlRpc::XmlRpcValue regular_land_stations_geographic;   n_.getParam("regular_land_stations_geographic",  regular_land_stations_geographic);
+
     aerialcore_msgs::GraphNode current_graph_node;
+
     current_graph_node.type = aerialcore_msgs::GraphNode::TYPE_PYLON;
-    while ( pylons_position_string.size()>0 && pylons_position_string!=" " ) {
-        current_graph_node.x = (float) std::stod (pylons_position_string,&sz);
-        pylons_position_string = pylons_position_string.substr(sz);
-        current_graph_node.y = (float) std::stod (pylons_position_string,&sz);
-        pylons_position_string = pylons_position_string.substr(sz);
-        current_graph_node.z = (float) std::stod (pylons_position_string,&sz);
-        pylons_position_string = pylons_position_string.substr(sz);
-        current_graph_node.latitude  = (float) std::stod (pylons_position_geo_string,&sz);
-        pylons_position_geo_string = pylons_position_geo_string.substr(sz);
-        current_graph_node.longitude = (float) std::stod (pylons_position_geo_string,&sz);
-        pylons_position_geo_string = pylons_position_geo_string.substr(sz);
-        current_graph_node.altitude  = (float) std::stod (pylons_position_geo_string,&sz);
-        pylons_position_geo_string = pylons_position_geo_string.substr(sz);
-        complete_graph_.push_back(current_graph_node);
-    }
-    for (int i=0; i<complete_graph_.size(); i++) {
-        std::string delimiter = ";";
-        std::string string_until_first_semicolon = connections_indexes_string.substr(0, connections_indexes_string.find(delimiter));
-        int current_connection_index;
-        while ( string_until_first_semicolon.size()>0 && string_until_first_semicolon!=" " ) {
-            current_connection_index = (int) std::stod (string_until_first_semicolon,&sz);
-            string_until_first_semicolon = string_until_first_semicolon.substr(sz);
-            complete_graph_[i].connections_indexes.push_back(current_connection_index-1);
+    if (pylons_position_cartesian.getType()==XmlRpc::XmlRpcValue::TypeArray && pylons_position_geographic.getType()==XmlRpc::XmlRpcValue::TypeArray && pylons_connections_indexes.getType()==XmlRpc::XmlRpcValue::TypeArray && pylons_position_cartesian.size()==pylons_position_geographic.size() && pylons_connections_indexes.size()==pylons_position_geographic.size()) {
+        for (int i=0; i<pylons_position_cartesian.size(); i++) {
+            if (pylons_position_cartesian[i].getType()==XmlRpc::XmlRpcValue::TypeArray && pylons_position_geographic[i].getType()==XmlRpc::XmlRpcValue::TypeArray) {
+                std::string::size_type sz;
+
+                std::stringstream x_stringstream;
+                x_stringstream << pylons_position_cartesian[i][0];
+                current_graph_node.x = (float) std::stod ( x_stringstream.str() , &sz);
+
+                std::stringstream y_stringstream;
+                y_stringstream << pylons_position_cartesian[i][1];
+                current_graph_node.y = (float) std::stod ( y_stringstream.str() , &sz);
+
+                std::stringstream z_stringstream;
+                z_stringstream << pylons_position_cartesian[i][2];
+                current_graph_node.z = (float) std::stod ( z_stringstream.str() , &sz);
+
+                std::stringstream latitude_stringstream;
+                latitude_stringstream << pylons_position_geographic[i][0];
+                current_graph_node.latitude = (float) std::stod ( latitude_stringstream.str() , &sz);
+
+                std::stringstream longitude_stringstream;
+                longitude_stringstream << pylons_position_geographic[i][1];
+                current_graph_node.longitude = (float) std::stod ( longitude_stringstream.str() , &sz);
+
+                std::stringstream altitude_stringstream;
+                altitude_stringstream << pylons_position_geographic[i][2];
+                current_graph_node.altitude = (float) std::stod ( altitude_stringstream.str() , &sz);
+
+                // NOTE: parsing with XmlRpc is tricky because it fails to parse numbers with and without comma in the same list.
+                // That's why stringstream is being used to parse, because it helps to pass it to string, and then it is parsed to float, not caring if it has .0 or not at the end of the number.
+                // For the connections_indexes, as it's always a list of ints, it's parsed directly.
+
+                current_graph_node.connections_indexes.clear();
+                for (int j=0; j<pylons_connections_indexes[i].size(); j++) {
+                    current_graph_node.connections_indexes.push_back((int) pylons_connections_indexes[i][j]-1);
+                }
+
+                complete_graph_.push_back(current_graph_node);
+            }
         }
-        connections_indexes_string.erase(0, connections_indexes_string.find(delimiter) + delimiter.length());
     }
+
     current_graph_node.type = aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION;
-    while ( recharge_land_stations_string.size()>0 && recharge_land_stations_string!=" " ) {
-        current_graph_node.x = (float) std::stod (recharge_land_stations_string,&sz);
-        recharge_land_stations_string = recharge_land_stations_string.substr(sz);
-        current_graph_node.y = (float) std::stod (recharge_land_stations_string,&sz);
-        recharge_land_stations_string = recharge_land_stations_string.substr(sz);
-        current_graph_node.z = (float) std::stod (recharge_land_stations_string,&sz);
-        recharge_land_stations_string = recharge_land_stations_string.substr(sz);
-        current_graph_node.latitude  = (float) std::stod (recharge_land_stations_geo_string,&sz);
-        recharge_land_stations_geo_string = recharge_land_stations_geo_string.substr(sz);
-        current_graph_node.longitude = (float) std::stod (recharge_land_stations_geo_string,&sz);
-        recharge_land_stations_geo_string = recharge_land_stations_geo_string.substr(sz);
-        current_graph_node.altitude  = (float) std::stod (recharge_land_stations_geo_string,&sz);
-        recharge_land_stations_geo_string = recharge_land_stations_geo_string.substr(sz);
-        complete_graph_.push_back(current_graph_node);
+    current_graph_node.connections_indexes.clear();
+    if (recharge_land_stations_cartesian.getType()==XmlRpc::XmlRpcValue::TypeArray && recharge_land_stations_geographic.getType()==XmlRpc::XmlRpcValue::TypeArray && recharge_land_stations_cartesian.size()==recharge_land_stations_geographic.size()) {
+        for (int i=0; i<recharge_land_stations_cartesian.size(); i++) {
+            if (recharge_land_stations_cartesian[i].getType()==XmlRpc::XmlRpcValue::TypeArray && recharge_land_stations_geographic[i].getType()==XmlRpc::XmlRpcValue::TypeArray) {
+                std::string::size_type sz;
+
+                std::stringstream x_stringstream;
+                x_stringstream << recharge_land_stations_cartesian[i][0];
+                current_graph_node.x = (float) std::stod ( x_stringstream.str() , &sz);
+
+                std::stringstream y_stringstream;
+                y_stringstream << recharge_land_stations_cartesian[i][1];
+                current_graph_node.y = (float) std::stod ( y_stringstream.str() , &sz);
+
+                std::stringstream z_stringstream;
+                z_stringstream << recharge_land_stations_cartesian[i][2];
+                current_graph_node.z = (float) std::stod ( z_stringstream.str() , &sz);
+
+                std::stringstream latitude_stringstream;
+                latitude_stringstream << recharge_land_stations_geographic[i][0];
+                current_graph_node.latitude = (float) std::stod ( latitude_stringstream.str() , &sz);
+
+                std::stringstream longitude_stringstream;
+                longitude_stringstream << recharge_land_stations_geographic[i][1];
+                current_graph_node.longitude = (float) std::stod ( longitude_stringstream.str() , &sz);
+
+                std::stringstream altitude_stringstream;
+                altitude_stringstream << recharge_land_stations_geographic[i][2];
+                current_graph_node.altitude = (float) std::stod ( altitude_stringstream.str() , &sz);
+
+                complete_graph_.push_back(current_graph_node);
+            }
+        }
     }
+
     current_graph_node.type = aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION;
-    while ( regular_land_stations_string.size()>0 && regular_land_stations_string!=" " ) {
-        current_graph_node.x = (float) std::stod (regular_land_stations_string,&sz);
-        regular_land_stations_string = regular_land_stations_string.substr(sz);
-        current_graph_node.y = (float) std::stod (regular_land_stations_string,&sz);
-        regular_land_stations_string = regular_land_stations_string.substr(sz);
-        current_graph_node.z = (float) std::stod (regular_land_stations_string,&sz);
-        regular_land_stations_string = regular_land_stations_string.substr(sz);
-        current_graph_node.latitude  = (float) std::stod (regular_land_stations_geo_string,&sz);
-        regular_land_stations_geo_string = regular_land_stations_geo_string.substr(sz);
-        current_graph_node.longitude = (float) std::stod (regular_land_stations_geo_string,&sz);
-        regular_land_stations_geo_string = regular_land_stations_geo_string.substr(sz);
-        current_graph_node.altitude  = (float) std::stod (regular_land_stations_geo_string,&sz);
-        regular_land_stations_geo_string = regular_land_stations_geo_string.substr(sz);
-        complete_graph_.push_back(current_graph_node);
+    if (regular_land_stations_cartesian.getType()==XmlRpc::XmlRpcValue::TypeArray && regular_land_stations_geographic.getType()==XmlRpc::XmlRpcValue::TypeArray && regular_land_stations_cartesian.size()==regular_land_stations_geographic.size()) {
+        for (int i=0; i<regular_land_stations_cartesian.size(); i++) {
+            if (regular_land_stations_cartesian[i].getType()==XmlRpc::XmlRpcValue::TypeArray && regular_land_stations_geographic[i].getType()==XmlRpc::XmlRpcValue::TypeArray) {
+                std::string::size_type sz;
+
+                std::stringstream x_stringstream;
+                x_stringstream << regular_land_stations_cartesian[i][0];
+                current_graph_node.x = (float) std::stod ( x_stringstream.str() , &sz);
+
+                std::stringstream y_stringstream;
+                y_stringstream << regular_land_stations_cartesian[i][1];
+                current_graph_node.y = (float) std::stod ( y_stringstream.str() , &sz);
+
+                std::stringstream z_stringstream;
+                z_stringstream << regular_land_stations_cartesian[i][2];
+                current_graph_node.z = (float) std::stod ( z_stringstream.str() , &sz);
+
+                std::stringstream latitude_stringstream;
+                latitude_stringstream << regular_land_stations_geographic[i][0];
+                current_graph_node.latitude = (float) std::stod ( latitude_stringstream.str() , &sz);
+
+                std::stringstream longitude_stringstream;
+                longitude_stringstream << regular_land_stations_geographic[i][1];
+                current_graph_node.longitude = (float) std::stod ( longitude_stringstream.str() , &sz);
+
+                std::stringstream altitude_stringstream;
+                altitude_stringstream << regular_land_stations_geographic[i][2];
+                current_graph_node.altitude = (float) std::stod ( altitude_stringstream.str() , &sz);
+
+                complete_graph_.push_back(current_graph_node);
+            }
+        }
     }
 
     current_graph_ = complete_graph_;
