@@ -412,8 +412,6 @@ void MissionController::planThread(void) {
 
             flight_plan_ = centralized_planner_.getPlan(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_);
 
-            // TODO: actually add TYPE_PASS_WP_AVOIDING_NO_FLY_ZONE to the plan.
-
 #ifdef DEBUG
             centralized_planner_.printPlan();
 #endif

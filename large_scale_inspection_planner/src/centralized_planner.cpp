@@ -151,7 +151,36 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(std::vector
         }
     }
 
-    // TODO: actually add TYPE_PASS_WP_AVOIDING_NO_FLY_ZONE to the graph.
+    // Postprocess to calculate the path free of obstacles between nodes:
+    // Up until now the flight plan didn't store the intermediate points to avoid flying above no-fly zones. Run the path planning between pair of nodes to calculate and store the waypoints of those paths in the solution:
+    // It should be a faster way of calculating this while the algorithm is running, but a lot should be changed to do that right now, easier to do it like this.
+    for (int i=0; i<flight_plan_.size(); i++) {
+        for (int j=0; j<flight_plan_[i].nodes.size()-1; j++) {
+            geometry_msgs::Point32 test_point_1, test_point_2;
+            test_point_1.x = _graph[ flight_plan_[i].nodes[j] ].x;       test_point_2.x = _graph[ flight_plan_[i].nodes[j+1] ].x;
+            test_point_1.y = _graph[ flight_plan_[i].nodes[j] ].y;       test_point_2.y = _graph[ flight_plan_[i].nodes[j+1] ].y;
+            test_point_1.z = _graph[ flight_plan_[i].nodes[j] ].z;       test_point_2.z = _graph[ flight_plan_[i].nodes[j+1] ].z;
+            if (!path_planner_.checkIfTwoPointsAreVisible(test_point_1, test_point_2)) {
+                auto path = path_planner_.getPath(test_point_1, test_point_2);
+
+                for (int k=0; k<path.size()-1; k++) {
+                    aerialcore_msgs::GraphNode graph_node;
+                    graph_node.type = aerialcore_msgs::GraphNode::TYPE_PASS_WP_AVOIDING_NO_FLY_ZONE;
+                    graph_node.x = path[k].x;
+                    graph_node.y = path[k].y;
+                    graph_node.z = path[k].z;
+                    // graph_node.latitude = // TODO, cartesian to geographic
+                    // graph_node.longitude = // TODO, cartesian to geographic
+                    // graph_node.altitude = // TODO, corregir altitud entorno
+                    _graph.push_back(graph_node);
+                    
+                    int last_inserted_node_index = _graph.size()-1;
+                    flight_plan_[i].nodes.insert(flight_plan_[i].nodes.begin()+j+1+k, last_inserted_node_index);
+                }
+
+            }
+        }
+    }
 
     return flight_plan_;
 
