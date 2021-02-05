@@ -33,7 +33,7 @@ namespace multidrone {
 // Brief Constructor for the simplest case of path planning: return the final point, straight line.
 PathPlanner::PathPlanner() {
     trivial_path_planner_ = true;
-}   // end constructor "PathPlanner" for trivial case
+}   // end constructor PathPlanner for trivial case
 
 
 
@@ -108,7 +108,7 @@ PathPlanner::PathPlanner(const std::vector< std::vector<bool> >& _no_fly_zones, 
     plt::show();
 #endif
 
-}   // end constructor "PathPlanner" given the _no_fly_zones matrix.
+}   // end constructor PathPlanner given the _no_fly_zones matrix.
 
 
 
@@ -252,7 +252,7 @@ PathPlanner::PathPlanner(const std::vector<geometry_msgs::Polygon>& _obstacle_po
     plt::show();
 #endif
 
-}   // end constructor "PathPlanner" with polygon's vector of obstacles.
+}   // end constructor PathPlanner with polygon's vector of obstacles.
 
 
 
@@ -782,7 +782,7 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
     }
 
     return path;
-}   // end method "getPath"
+}   // end getPath
 
 
 
@@ -973,7 +973,7 @@ std::vector< std::pair<double,double> > PathPlanner::calculateIntersectionsOfSeg
     }
 
     return points_intersections_of_segment_with_grid;
-}   // end method "calculateIntersectionsOfSegmentWithGrid"
+}   // end calculateIntersectionsOfSegmentWithGrid
 
 
 
@@ -1014,7 +1014,7 @@ void PathPlanner::fillCellsWithObstacles (const std::vector< std::pair<double,do
         // Finally, that cell is set to 1 in the no_fly_zones_ matrix.
         no_fly_zones_[y_cell][x_cell] = 1;
     }
-}   // end method "fillCellsWithObstacles"
+}   // end fillCellsWithObstacles
 
 
 
@@ -1043,7 +1043,7 @@ bool PathPlanner::checkCollisionByVisibility (const std::vector< std::pair<doubl
         }
     }
     return collision_flag;
-}   // end method "checkCollisionByVisibility"
+}   // end checkCollisionByVisibility
 
 
 
@@ -1063,7 +1063,7 @@ bool PathPlanner::checkIfPointInsidePolygon(const std::vector<geometry_msgs::Poi
     }
 
     return is_inside;   // Return false if _test_point is outside of _polygon, true if inside.
-}   // end "checkIfPointInsidePolygon"
+}   // end checkIfPointInsidePolygon
 
 
 
@@ -1076,7 +1076,7 @@ bool PathPlanner::checkIfPointInsidePolygon(const std::vector<geometry_msgs::Poi
 
     return checkIfPointInsidePolygon(_polygon, test_point32);
 
-}   // end "checkIfPointInsidePolygon" ovetloaded for geometry_msgs::PointStamped
+}   // end checkIfPointInsidePolygon ovetloaded for PointStamped.
 
 
 
@@ -1087,7 +1087,19 @@ bool PathPlanner::checkIfPointInsidePolygon(const geometry_msgs::Polygon& _polyg
 
     return checkIfPointInsidePolygon(polygon, _test_point);
 
-}   // end "checkIfPointInsidePolygon" ovetloaded for geometry_msgs::Polygon and geometry_msgs::Point32
+}   // end checkIfPointInsidePolygon ovetloaded for Polygon and Point32.
+
+
+
+bool PathPlanner::checkIfPointInsideGeofence (const geometry_msgs::Point32& _test_point) const {
+    if ( (_test_point.x<min_x_) || (_test_point.y<min_y_) || (_test_point.x>max_x_) || (_test_point.y>max_y_) ) {
+        return false;
+    } else if (geofence_cartesian_.points.size()>0) {
+        return checkIfPointInsidePolygon(geofence_cartesian_, _test_point);
+    } else {
+        return true;
+    }
+}   // end checkIfPointInsideGeofence
 
 
 
@@ -1100,7 +1112,7 @@ bool PathPlanner::checkIfPointInsideGeofence (const geometry_msgs::PointStamped&
 
     return checkIfPointInsideGeofence(test_point32);
 
-}   // end "checkIfPointInsideGeofence" overloaded for PointStamped.
+}   // end checkIfPointInsideGeofence overloaded for PointStamped.
 
 
 
@@ -1117,7 +1129,7 @@ bool PathPlanner::checkIfPointInsideObstacles(const geometry_msgs::Point32& _tes
 
     return point_inside_obstacle;
 
-}   // end "checkIfPointInsideObstacles"
+}   // end checkIfPointInsideObstacles
 
 
 
@@ -1130,7 +1142,7 @@ bool PathPlanner::checkIfPointInsideObstacles(const geometry_msgs::PointStamped&
 
     return checkIfPointInsideObstacles(test_point32);
 
-}   // end "checkIfPointInsideObstacles" overloaded for PointStamped.
+}   // end checkIfPointInsideObstacles overloaded for PointStamped.
 
 
 
@@ -1138,7 +1150,7 @@ bool PathPlanner::checkIfPointIsValid(const geometry_msgs::Point32& _test_point)
 
     return checkIfPointInsideGeofence(_test_point) && !checkIfPointInsideObstacles(_test_point);
 
-}   // end "checkIfPointInsideObstacles"
+}   // end checkIfPointIsValid
 
 
 
@@ -1151,7 +1163,7 @@ bool PathPlanner::checkIfPointIsValid(const geometry_msgs::PointStamped& _test_p
 
     return checkIfPointIsValid(test_point32);
 
-}   // end "checkIfPointInsideObstacles" overloaded for PointStamped.
+}   // end checkIfPointIsValid overloaded for PointStamped.
 
 
 
@@ -1160,7 +1172,7 @@ bool PathPlanner::checkIfTwoPointsAreVisible(const geometry_msgs::Point32& _init
     std::vector< std::pair<double,double> > points_intersections_of_segment_with_grid = calculateIntersectionsOfSegmentWithGrid ( _initial_point.x-min_x_, _initial_point.y-min_y_, _final_point.x-min_x_, _final_point.y-min_y_);
     return !(checkCollisionByVisibility(points_intersections_of_segment_with_grid));
 
-}   // end "checkIfTwoPointsAreVisible"
+}   // end checkIfTwoPointsAreVisible
 
 
 
@@ -1173,7 +1185,7 @@ bool PathPlanner::checkIfTwoPointsAreVisible(const geometry_msgs::PointStamped& 
 
     return checkIfTwoPointsAreVisible(initial_point32, final_point32);
 
-}   // end "checkIfTwoPointsAreVisible" overloaded for PointStamped.
+}   // end checkIfTwoPointsAreVisible overloaded for PointStamped.
 
 
 }   // end namespace multidrone

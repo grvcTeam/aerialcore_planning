@@ -127,6 +127,10 @@ regular_land_stations_cartesian: [
   [38.8, 65, 0],
   [32.5, 61, 0],
 ]
+regular_land_stations_geographic: [
+  [38.139309, -3.173386, 444],
+  [38.139272, -3.173451 ,444],
+]
 
 
 pylons_position_cartesian: [

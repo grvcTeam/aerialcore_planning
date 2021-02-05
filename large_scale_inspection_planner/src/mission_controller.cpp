@@ -103,6 +103,10 @@ MissionController::MissionController() {
         }
     }
 
+    if (geofence_.points.size()>0 && no_fly_zones_.size()>0) {
+        path_planner_ = multidrone::PathPlanner(no_fly_zones_, geofence_);
+    }
+
 #ifdef DEBUG
     for (int i=0; i<geofence_.points.size(); i++) {
         std::cout << "geofence_.points[ " << i << " ].x = " << geofence_.points[i].x << std::endl;
@@ -247,17 +251,30 @@ MissionController::MissionController() {
 
 #ifdef DEBUG
     for (int i=0; i<complete_graph_.size(); i++) {      // Print complete_graph_ to check that the yaml file was parsed correctly:
-        std::cout << "graph_node[ " << i << " ].type                     = " << (int) complete_graph_[i].type << std::endl;
-        std::cout << "graph_node[ " << i << " ].id                       = " << complete_graph_[i].id << std::endl;
+        std::cout << "complete_graph_node[ " << i << " ].type                     = " << (int) complete_graph_[i].type << std::endl;
+        std::cout << "complete_graph_node[ " << i << " ].id                       = " << complete_graph_[i].id << std::endl;
         for (int j=0; j<complete_graph_[i].connections_indexes.size(); j++) {
-            std::cout << "graph_node[ " << i << " ].connections_indexes[ " << j << " ] = " << complete_graph_[i].connections_indexes[j] << std::endl;
+            std::cout << "complete_graph_node[ " << i << " ].connections_indexes[ " << j << " ] = " << complete_graph_[i].connections_indexes[j] << std::endl;
         }
-        std::cout << "graph_node[ " << i << " ].x                        = " << complete_graph_[i].x << std::endl;
-        std::cout << "graph_node[ " << i << " ].y                        = " << complete_graph_[i].y << std::endl;
-        std::cout << "graph_node[ " << i << " ].z                        = " << complete_graph_[i].z << std::endl;
-        std::cout << "graph_node[ " << i << " ].latitude                 = " << complete_graph_[i].latitude << std::endl;
-        std::cout << "graph_node[ " << i << " ].longitude                = " << complete_graph_[i].longitude << std::endl;
-        std::cout << "graph_node[ " << i << " ].altitude                 = " << complete_graph_[i].altitude << std::endl;
+        std::cout << "complete_graph_node[ " << i << " ].x                        = " << complete_graph_[i].x << std::endl;
+        std::cout << "complete_graph_node[ " << i << " ].y                        = " << complete_graph_[i].y << std::endl;
+        std::cout << "complete_graph_node[ " << i << " ].z                        = " << complete_graph_[i].z << std::endl;
+        std::cout << "complete_graph_node[ " << i << " ].latitude                 = " << complete_graph_[i].latitude << std::endl;
+        std::cout << "complete_graph_node[ " << i << " ].longitude                = " << complete_graph_[i].longitude << std::endl;
+        std::cout << "complete_graph_node[ " << i << " ].altitude                 = " << complete_graph_[i].altitude << std::endl;
+    }
+    for (int i=0; i<current_graph_.size(); i++) {      // Print current_graph_ to check that the yaml file was parsed correctly:
+        std::cout << "current_graph_node[ " << i << " ].type                     = " << (int) current_graph_[i].type << std::endl;
+        std::cout << "current_graph_node[ " << i << " ].id                       = " << current_graph_[i].id << std::endl;
+        for (int j=0; j<current_graph_[i].connections_indexes.size(); j++) {
+            std::cout << "current_graph_node[ " << i << " ].connections_indexes[ " << j << " ] = " << current_graph_[i].connections_indexes[j] << std::endl;
+        }
+        std::cout << "current_graph_node[ " << i << " ].x                        = " << current_graph_[i].x << std::endl;
+        std::cout << "current_graph_node[ " << i << " ].y                        = " << current_graph_[i].y << std::endl;
+        std::cout << "current_graph_node[ " << i << " ].z                        = " << current_graph_[i].z << std::endl;
+        std::cout << "current_graph_node[ " << i << " ].latitude                 = " << current_graph_[i].latitude << std::endl;
+        std::cout << "current_graph_node[ " << i << " ].longitude                = " << current_graph_[i].longitude << std::endl;
+        std::cout << "current_graph_node[ " << i << " ].altitude                 = " << current_graph_[i].altitude << std::endl;
     }
 #endif
 
@@ -728,9 +745,8 @@ void MissionController::removeGraphNodesAndEdgesAboveNoFlyZones(std::vector<aeri
         geometry_msgs::Point32 test_point;
         test_point.x = _graph_to_edit[i].x;
         test_point.y = _graph_to_edit[i].y;
-        test_point.z = _graph_to_edit[i].z;
 
-        if (!centralized_planner_.path_planner_.checkIfPointIsValid(test_point)) {
+        if (!path_planner_.checkIfPointIsValid(test_point)) {
             if (_graph_to_edit[i].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
                 for (int j=0; j<_graph_to_edit.size(); j++) {
                     if (_graph_to_edit[j].type==aerialcore_msgs::GraphNode::TYPE_PYLON && i!=j) {
@@ -754,7 +770,7 @@ void MissionController::removeGraphNodesAndEdgesAboveNoFlyZones(std::vector<aeri
                 test_point_1.x = _graph_to_edit[i].x;       test_point_2.x = _graph_to_edit[ _graph_to_edit[i].connections_indexes[j] ].x;
                 test_point_1.y = _graph_to_edit[i].y;       test_point_2.y = _graph_to_edit[ _graph_to_edit[i].connections_indexes[j] ].y;
                 test_point_1.z = _graph_to_edit[i].z;       test_point_2.z = _graph_to_edit[ _graph_to_edit[i].connections_indexes[j] ].z;
-                if (!centralized_planner_.path_planner_.checkIfTwoPointsAreVisible(test_point_1, test_point_2)) {
+                if (!path_planner_.checkIfTwoPointsAreVisible(test_point_1, test_point_2)) {
                     _graph_to_edit[i].connections_indexes.erase(_graph_to_edit[i].connections_indexes.begin()+j);
                 }
             }

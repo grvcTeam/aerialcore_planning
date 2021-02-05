@@ -55,7 +55,7 @@ public:
     bool checkIfPointInsidePolygon(const std::vector<geometry_msgs::Point32>& _polygon, const geometry_msgs::PointStamped& _test_point_stamped) const;
     bool checkIfPointInsidePolygon(const geometry_msgs::Polygon& _polygon, const geometry_msgs::Point32& _test_point) const;
 
-    bool checkIfPointInsideGeofence (const geometry_msgs::Point32& _test_point) const { return checkIfPointInsidePolygon(geofence_cartesian_, _test_point); }
+    bool checkIfPointInsideGeofence (const geometry_msgs::Point32& _test_point) const;
     bool checkIfPointInsideGeofence (const geometry_msgs::PointStamped& _test_point_stamped) const;
 
     bool checkIfPointInsideObstacles(const geometry_msgs::Point32& _test_point) const;

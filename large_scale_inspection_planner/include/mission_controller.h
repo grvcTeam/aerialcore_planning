@@ -34,7 +34,7 @@
 #include <plan_monitor.h>
 #include <mission_lib.h>
 #include <geographic_to_cartesian.h>
-
+#include <path_planner.h>
 
 namespace aerialcore {
 
@@ -77,6 +77,7 @@ private:
   CentralizedPlanner centralized_planner_;  // Planner that assigns nodes to inspect of the electric grid graph for each UAV.
   ParameterEstimator parameter_estimator_;  // Module to estimate the time cost matrix and battery drop matrix between edges.
   PlanMonitor        plan_monitor_;         // Module to check if the drones are deviating enough to run the replanning.
+  multidrone::PathPlanner path_planner_;
 
   std::vector<aerialcore_msgs::FlightPlan> flight_plan_;
 
