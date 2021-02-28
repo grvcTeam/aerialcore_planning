@@ -2,7 +2,7 @@
  * MULTIDRONE Project:
  *
  * Path planner. Refactor for the project Aerial-Core.
- * 
+ *
  */
 
 #include <path_planner.h>
@@ -18,10 +18,10 @@
 #include <time.h>
 #include <algorithm>
 
-// #define VERBOSE                   // Uncoment for outputting in the terminal warnings when the path couldn't be found or other situations.
-// #define WRITE_RESULTS_IN_TERMINAL // Uncoment for outputting in the terminal the path of points, path distance, computation time and other useful information.
-// #define DRAW_IN_TERMINAL          // Uncoment for drawing in the terminal the path with the geofence and map of obstacles. Draw both in the constructor and in the getPath method, in this one with the path.
-// #define PLOT_GRAPH                // Uncoment for plotting a graphic (using matplotlib-cpp) of the path (grid path and real path), geofence and map of obstacles. Plot both in the constructor and in the getPath method, in this one with the path.
+// #define VERBOSE                      // Uncoment for outputting hints in the terminal warnings when the path couldn't be found.
+// #define WRITE_RESULTS_IN_TERMINAL    // Uncoment for outputting in the terminal the path of points, path distance, computation time and other useful information.
+// #define DRAW_IN_TERMINAL             // Uncoment for drawing in the terminal the path with the geofence and map of obstacles. Draw both in the constructor and in the getPath method, in this one with the path.
+// #define PLOT_GRAPH                   // Uncoment for plotting a graphic (using matplotlib-cpp) of the path (grid path and real path), geofence and map of obstacles. Plot both in the constructor and in the getPath method, in this one with the path.
 
 #ifdef PLOT_GRAPH
 #include "matplotlibcpp/matplotlibcpp.h"    // matplotlib-cpp has a MIT License (MIT), Copyright (c) 2014 Benno Evers. The full license description of matplotlib, matplotlib-cpp and its README can be found at its root.
@@ -33,6 +33,7 @@ namespace multidrone {
 // Brief Constructor for the simplest case of path planning: return the final point, straight line.
 PathPlanner::PathPlanner() {
     trivial_path_planner_ = true;
+    arbitrary_origin_geo_exist_ = false;
 }   // end constructor PathPlanner for trivial case
 
 
@@ -40,6 +41,7 @@ PathPlanner::PathPlanner() {
 // Brief Constructor that receives directly the no_fly_zones (rectangular boolean matrix) calculated out of the class. This obstacle map will be used by the A* algorithm.
 PathPlanner::PathPlanner(const std::vector< std::vector<bool> >& _no_fly_zones, double _min_x, double _max_x, double _min_y, double _max_y) { // _no_fly_zones is the received grid obstacle matrix. _min_x, _max_x, _min_y, _max_y are the x-y and coordinates of the limits of the grid.
     trivial_path_planner_ = false;
+    arbitrary_origin_geo_exist_ = false;
 
     no_fly_zones_ = _no_fly_zones;
 
@@ -113,7 +115,44 @@ PathPlanner::PathPlanner(const std::vector< std::vector<bool> >& _no_fly_zones, 
 
 
 // Constructor that generates the obstacle map (no-fly zones) for the A* algorithm from polygons as obstacles and geofence (polygons must be closed, meaning that they must start and end with the same point).
-PathPlanner::PathPlanner(const std::vector<geometry_msgs::Polygon>& _obstacle_polygon_vector, const geometry_msgs::Polygon& _geofence_cartesian, unsigned int _max_grid_side) { // _max_grid_side is the number of cells that the grid has in the bigger side of the rectangular map of obstacles (predefined in the header file).
+PathPlanner::PathPlanner(const std::vector<geometry_msgs::Polygon>& _obstacle_polygon_vector_cartesian, const geometry_msgs::Polygon& _geofence_polygon_cartesian, unsigned int _max_grid_side) { // _max_grid_side is the number of cells that the grid has in the bigger side of the rectangular map of obstacles (predefined in the header file).
+    arbitrary_origin_geo_exist_ = false;
+    polygonConstructorFunction(_obstacle_polygon_vector_cartesian, _geofence_polygon_cartesian, _max_grid_side);
+}
+
+
+
+// Constructor that generates the obstacle map (no-fly zones) for the A* algorithm from polygons as obstacles and geofence in geographic coordinates (polygons must be closed, meaning that they must start and end with the same point).
+PathPlanner::PathPlanner(const std::vector< std::vector<geographic_msgs::GeoPoint> >& _obstacle_polygon_vector_geo, const std::vector<geographic_msgs::GeoPoint>& _geofence_geo, unsigned int _max_grid_side) {
+    arbitrary_origin_geo_exist_ = false;
+    if (_geofence_geo.size()>0) {
+        arbitrary_origin_geo_ = _geofence_geo[0];
+        arbitrary_origin_geo_exist_ = true;
+    } else {
+        ROS_ERROR("Path Planner: empty geofence, exiting constructor.");
+        exit(EXIT_FAILURE);
+    }
+
+    geometry_msgs::Polygon geofence_polygon_cartesian;
+    for (int i=0; i<_geofence_geo.size(); i++) {
+        geofence_polygon_cartesian.points.push_back( geographic_to_cartesian(_geofence_geo[i], arbitrary_origin_geo_) );
+    }
+
+    std::vector<geometry_msgs::Polygon> obstacle_polygon_vector_cartesian;
+    for (int i=0; i<_obstacle_polygon_vector_geo.size(); i++) {
+        geometry_msgs::Polygon obstacle_polygon_cartesian;
+        for (int j=0; j<_obstacle_polygon_vector_geo[i].size(); j++) {
+            obstacle_polygon_cartesian.points.push_back( geographic_to_cartesian(_obstacle_polygon_vector_geo[i][j], arbitrary_origin_geo_) );
+        }
+        obstacle_polygon_vector_cartesian.push_back(obstacle_polygon_cartesian);
+    }
+
+    polygonConstructorFunction(obstacle_polygon_vector_cartesian, geofence_polygon_cartesian, _max_grid_side);
+}   // end constructor PathPlanner for GeoPoint.
+
+
+
+void PathPlanner::polygonConstructorFunction(const std::vector<geometry_msgs::Polygon>& _obstacle_polygon_vector_cartesian, const geometry_msgs::Polygon& _geofence_polygon_cartesian, unsigned int _max_grid_side) { // _max_grid_side is the number of cells that the grid has in the bigger side of the rectangular map of obstacles (predefined in the header file).
     trivial_path_planner_ = false;
 
     min_x_ =  std::numeric_limits<double>::max() ;   // Minimum coordinate initialized to "infinity" (maximum value possible for double).
@@ -121,7 +160,7 @@ PathPlanner::PathPlanner(const std::vector<geometry_msgs::Polygon>& _obstacle_po
     min_y_ =  std::numeric_limits<double>::max() ;   // Minimum coordinate initialized to "infinity" (maximum value possible for double).
     max_y_ = -std::numeric_limits<double>::max() ;   // Maximum coordinate initialized to minus "infinity" (minimum value possible for double).
 
-    geofence_cartesian_ = _geofence_cartesian;
+    geofence_cartesian_ = _geofence_polygon_cartesian;
     if (geofence_cartesian_.points.size()<4) {
         ROS_ERROR("Path Planner: empty geofence, exiting constructor.");
         exit(EXIT_FAILURE);
@@ -133,7 +172,7 @@ PathPlanner::PathPlanner(const std::vector<geometry_msgs::Polygon>& _obstacle_po
         if (geofence_cartesian_.points[i].y > max_y_)  max_y_ = geofence_cartesian_.points[i].y;
     }
 
-    no_fly_zones_cartesian_ = _obstacle_polygon_vector;
+    no_fly_zones_cartesian_ = _obstacle_polygon_vector_cartesian;
     if (no_fly_zones_cartesian_.size()==0) {
         ROS_WARN("Path Planner: empty polygon vector, no obstacles found.");
     } else {
@@ -174,7 +213,7 @@ PathPlanner::PathPlanner(const std::vector<geometry_msgs::Polygon>& _obstacle_po
             fillCellsWithObstacles (points_intersections_of_segment_with_grid);
 
 #ifdef PLOT_GRAPH
-            // Plot points_intersections_of_segment_with_grid for no_fly_zones_. 
+            // Plot points_intersections_of_segment_with_grid for no_fly_zones_.
             std::vector<double> x_plot, y_plot;
             for (int k=0; k<points_intersections_of_segment_with_grid.size(); k++) {
                 x_plot.push_back(points_intersections_of_segment_with_grid[k].first);
@@ -282,7 +321,7 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
     path_distance_      = std::numeric_limits<double>::max(); // Distance initialized to "infinity" (maximum value possible for double).
     path_flat_distance_ = std::numeric_limits<double>::max(); // Distance initialized to "infinity" (maximum value possible for double).
 
-    // If the initial and/or final points are outside of the map, finish the algorithm and return an empty path. 
+    // If the initial and/or final points are outside of the map, finish the algorithm and return an empty path.
     if ( (_initial_point_stamped.point.x<min_x_) || (_initial_point_stamped.point.y<min_y_) || (_initial_point_stamped.point.x>max_x_) || (_initial_point_stamped.point.y>max_y_) || (_final_point_stamped.point.x<min_x_) || (_final_point_stamped.point.y<min_y_) || (_final_point_stamped.point.x>max_x_) || (_final_point_stamped.point.y>max_y_) ) {
         if ( ( (_initial_point_stamped.point.x<min_x_) || (_initial_point_stamped.point.y<min_y_) || (_initial_point_stamped.point.x>max_x_) || (_initial_point_stamped.point.y>max_y_) ) && ( (_final_point_stamped.point.x<min_x_) || (_final_point_stamped.point.y<min_y_) || (_final_point_stamped.point.x>max_x_) || (_final_point_stamped.point.y>max_y_) ) ) {
 #if defined(VERBOSE) || defined(WRITE_RESULTS_IN_TERMINAL) || defined(DRAW_IN_TERMINAL) || defined(PLOT_GRAPH)
@@ -307,7 +346,7 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
     }
 
     if ( geofence_cartesian_.points.size()>3 ) {
-        // If the initial and/or final points are outside of the geofence, finish the algorithm and return an empty path. 
+        // If the initial and/or final points are outside of the geofence, finish the algorithm and return an empty path.
         if ( !checkIfPointInsideGeofence(_initial_point_stamped) || !checkIfPointInsideGeofence(_final_point_stamped) ) {
             if ( !checkIfPointInsideGeofence(_initial_point_stamped) && !checkIfPointInsideGeofence(_final_point_stamped) ) {
 #if defined(VERBOSE) || defined(WRITE_RESULTS_IN_TERMINAL) || defined(DRAW_IN_TERMINAL) || defined(PLOT_GRAPH)
@@ -332,7 +371,7 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
         }
     }
 
-    // If the initial and/or final points are inside an obstacle, finish the algorithm and return an empty path. 
+    // If the initial and/or final points are inside an obstacle, finish the algorithm and return an empty path.
     if ( checkIfPointInsideObstacles(_initial_point_stamped) || checkIfPointInsideObstacles(_final_point_stamped) ) {
         if ( checkIfPointInsideObstacles(_initial_point_stamped) && checkIfPointInsideObstacles(_final_point_stamped) ) {
 #if defined(VERBOSE) || defined(WRITE_RESULTS_IN_TERMINAL) || defined(DRAW_IN_TERMINAL) || defined(PLOT_GRAPH)
@@ -404,7 +443,7 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPath(const geometry_msg
 
     std::vector<geometry_msgs::PointStamped> path_cells;      // The path expressed in cells, e.g. path_cells[i].point.x contains the x value of the cell number i of the path.
 
-    std::map<unsigned int,CellInfo> cell;   // Map whose keys are the cell identifiers and values are "CellInfo" classes (which contains necessary info for the A* algorithm) 
+    std::map<unsigned int,CellInfo> cell;   // Map whose keys are the cell identifiers and values are "CellInfo" classes (which contains necessary info for the A* algorithm)
     unsigned int open_set_counter = 0 ;
 
     unsigned int current = (initial_point_in_grid_x +1) + initial_point_in_grid_y*columns_no_fly_zone; // Cell identifier of the initial position.
@@ -798,7 +837,7 @@ std::vector<geometry_msgs::Point32> PathPlanner::getPath(const geometry_msgs::Po
     _final_point_stamped.point.x = _final_point.x;
     _final_point_stamped.point.y = _final_point.y;
     _final_point_stamped.point.z = _final_point.z;
-    
+
     std::vector<geometry_msgs::PointStamped> path_stamped = getPath(_initial_point_stamped, _final_point_stamped, _movement_pattern);
 
     for (int i=0; i<path_stamped.size(); i++) {
@@ -827,7 +866,7 @@ std::vector<geometry_msgs::Point> PathPlanner::getPath(const geometry_msgs::Poin
     _final_point_stamped.point.x = _final_point.x;
     _final_point_stamped.point.y = _final_point.y;
     _final_point_stamped.point.z = _final_point.z;
-    
+
     std::vector<geometry_msgs::PointStamped> path_stamped = getPath(_initial_point_stamped, _final_point_stamped, _movement_pattern);
 
     for (int i=0; i<path_stamped.size(); i++) {
@@ -841,6 +880,26 @@ std::vector<geometry_msgs::Point> PathPlanner::getPath(const geometry_msgs::Poin
 
     return path_to_return;
 }   // end overloaded method "getPath"
+
+
+
+std::vector<geographic_msgs::GeoPoint> PathPlanner::getPath(const geographic_msgs::GeoPoint& _initial_geopoint, const geographic_msgs::GeoPoint& _final_geopoint, bool _movement_pattern) {
+    std::vector<geographic_msgs::GeoPoint> path_geo;
+
+    if (!arbitrary_origin_geo_exist_) return path_geo;
+
+    geometry_msgs::Point32 initial_point32 = geographic_to_cartesian(_initial_geopoint, arbitrary_origin_geo_);
+
+    geometry_msgs::Point32 final_point32 = geographic_to_cartesian(_final_geopoint, arbitrary_origin_geo_);
+
+    std::vector<geometry_msgs::Point32> path = getPath(initial_point32, final_point32, _movement_pattern);
+
+    for (int i=0; i<path.size(); i++) {
+        path_geo.push_back( cartesian_to_geographic(path[i], arbitrary_origin_geo_) );
+    }
+
+    return path_geo;
+}   // end getPath for GeoPoint.
 
 
 
@@ -859,7 +918,7 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPathWithTimePredictions
         float distance_xy = getFlatDistance();
         float first_distance_xy = sqrt(pow(path_stamped[0].point.x-_initial_point_stamped.point.x,2)+pow(path_stamped[0].point.y-_initial_point_stamped.point.y,2));  // Distance from the initial point to the first waypoint of the path.
 
-        int moving_time_xy = distance_xy/_full_speed_xy; 
+        int moving_time_xy = distance_xy/_full_speed_xy;
         int first_moving_time_xy = first_distance_xy/_full_speed_xy;
 
 
@@ -907,6 +966,21 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPathWithTimePredictions
 
     return path_stamped;
 }   // end overloaded method "getPathWithTimePredictionsAndInitialPoint"
+
+
+
+std::vector<geometry_msgs::PointStamped> PathPlanner::getPathCorrectingHeightFromOrigin(const geometry_msgs::PointStamped& _initial_point, const geometry_msgs::PointStamped& _final_point, bool _movement_pattern) {
+}   // end getPathCorrectingHeightFromOrigin.
+
+
+
+std::vector<geographic_msgs::GeoPoint> PathPlanner::getPathCorrectingHeightFromOrigin(const geographic_msgs::GeoPoint& _initial_point, const geographic_msgs::GeoPoint& _final_point, bool _movement_pattern) {
+}   // end getPathCorrectingHeightFromOrigin.
+
+
+
+std::vector<geographic_msgs::GeoPoint> PathPlanner::getPathWithAltitude(const geographic_msgs::GeoPoint& _initial_point, const geographic_msgs::GeoPoint& _final_point, bool _movement_pattern) {
+}   // end getPathWithAltitude.
 
 
 
@@ -1091,6 +1165,27 @@ bool PathPlanner::checkIfPointInsidePolygon(const geometry_msgs::Polygon& _polyg
 
 
 
+bool PathPlanner::checkIfPointInsidePolygon(const std::vector<geographic_msgs::GeoPoint>& _polygon, const geographic_msgs::GeoPoint& _test_geopoint) const {
+    geographic_msgs::GeoPoint arbitrary_origin;
+    if (_polygon.size()>0) {
+        arbitrary_origin = _polygon[0];
+    } else {
+        return false;
+    }
+
+    geometry_msgs::Polygon polygon_cartesian;
+    for (int i=0; i<_polygon.size(); i++) {
+        polygon_cartesian.points.push_back( geographic_to_cartesian(_polygon[i], arbitrary_origin) );
+    }
+
+    geometry_msgs::Point32 test_point_cartesian = geographic_to_cartesian(_test_geopoint, arbitrary_origin);
+
+    return checkIfPointInsidePolygon(polygon_cartesian, test_point_cartesian);
+
+}   // end checkIfPointInsidePolygon for GeoPoint.
+
+
+
 bool PathPlanner::checkIfPointInsideGeofence (const geometry_msgs::Point32& _test_point) const {
     if ( (_test_point.x<min_x_) || (_test_point.y<min_y_) || (_test_point.x>max_x_) || (_test_point.y>max_y_) ) {
         return false;
@@ -1113,6 +1208,17 @@ bool PathPlanner::checkIfPointInsideGeofence (const geometry_msgs::PointStamped&
     return checkIfPointInsideGeofence(test_point32);
 
 }   // end checkIfPointInsideGeofence overloaded for PointStamped.
+
+
+
+bool PathPlanner::checkIfPointInsideGeofence(const geographic_msgs::GeoPoint& _test_geopoint) const {
+    if (!arbitrary_origin_geo_exist_) return false;
+
+    geometry_msgs::Point32 test_point_cartesian = geographic_to_cartesian(_test_geopoint, arbitrary_origin_geo_);
+
+    return checkIfPointInsideGeofence(test_point_cartesian);
+
+}   // end checkIfPointInsideGeofence for GeoPoint.
 
 
 
@@ -1146,6 +1252,17 @@ bool PathPlanner::checkIfPointInsideObstacles(const geometry_msgs::PointStamped&
 
 
 
+bool PathPlanner::checkIfPointInsideObstacles(const geographic_msgs::GeoPoint& _test_geopoint) const {
+    if (!arbitrary_origin_geo_exist_) return false;
+
+    geometry_msgs::Point32 test_point_cartesian = geographic_to_cartesian(_test_geopoint, arbitrary_origin_geo_);
+
+    return checkIfPointInsideObstacles(test_point_cartesian);
+
+}   // end checkIfPointInsideObstacles for GeoPoint.
+
+
+
 bool PathPlanner::checkIfPointIsValid(const geometry_msgs::Point32& _test_point) const {
 
     return checkIfPointInsideGeofence(_test_point) && !checkIfPointInsideObstacles(_test_point);
@@ -1164,6 +1281,17 @@ bool PathPlanner::checkIfPointIsValid(const geometry_msgs::PointStamped& _test_p
     return checkIfPointIsValid(test_point32);
 
 }   // end checkIfPointIsValid overloaded for PointStamped.
+
+
+
+bool PathPlanner::checkIfPointIsValid(const geographic_msgs::GeoPoint& _test_geopoint) const {
+    if (!arbitrary_origin_geo_exist_) return false;
+
+    geometry_msgs::Point32 test_point_cartesian = geographic_to_cartesian(_test_geopoint, arbitrary_origin_geo_);
+
+    return checkIfPointIsValid(test_point_cartesian);
+
+}   // end checkIfPointIsValid for GeoPoint.
 
 
 
@@ -1186,6 +1314,19 @@ bool PathPlanner::checkIfTwoPointsAreVisible(const geometry_msgs::PointStamped& 
     return checkIfTwoPointsAreVisible(initial_point32, final_point32);
 
 }   // end checkIfTwoPointsAreVisible overloaded for PointStamped.
+
+
+
+bool PathPlanner::checkIfTwoPointsAreVisible(const geographic_msgs::GeoPoint& _initial_geopoint, const geographic_msgs::GeoPoint& _final_geopoint) const {
+    if (!arbitrary_origin_geo_exist_) return false;
+
+    geometry_msgs::Point32 initial_point32 = geographic_to_cartesian(_initial_geopoint, arbitrary_origin_geo_);
+
+    geometry_msgs::Point32 final_point32 = geographic_to_cartesian(_final_geopoint, arbitrary_origin_geo_);
+
+    return checkIfTwoPointsAreVisible(initial_point32, final_point32);
+
+}   // end checkIfTwoPointsAreVisible for GeoPoint.
 
 
 }   // end namespace multidrone
