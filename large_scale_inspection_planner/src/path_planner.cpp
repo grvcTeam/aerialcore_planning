@@ -1,8 +1,37 @@
 /**
- * MULTIDRONE Project:
+ * MULTIDRONE and AERIAL-CORE Projects:
  *
- * Path planner. Refactor for the project Aerial-Core.
+ * Path Planner.
  *
+ *
+ * This library can optionally use the following extra software for additional features (all with MIT Licenses):
+ *  - "ajnisbet/opentopodata", version 1.5.0. Open Topo Data is a REST API server for your elevation data. Copyright (c) 2020 Andrew Nisbet.
+ *  - "nlohmann/json" library, version 3.9.1. JSON parser used to extract the elevation data from Open Topo Data localhost responses. Copyright (c) Copyright (c) 2013-2021 Niels Lohmann.
+ *  - "lava/matplotlib-cpp". Plotting library that works by wrapping the popular python plotting library matplotlib. Needs a working python installation. Copyright (c) 2014 Benno Evers.
+ * 
+ * MIT License 
+ * 
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ * 
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ * 
  */
 
 #include <path_planner.h>
@@ -11,12 +40,12 @@
 #include <math.h>
 #include <cmath>
 #include <iterator>
-#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <typeinfo>
 #include <time.h>
 #include <algorithm>
+#include <curl/curl.h>
 
 // #define VERBOSE                      // Uncoment for outputting hints in the terminal warnings when the path couldn't be found.
 // #define WRITE_RESULTS_IN_TERMINAL    // Uncoment for outputting in the terminal the path of points, path distance, computation time and other useful information.
@@ -27,6 +56,8 @@
 #include "matplotlibcpp/matplotlibcpp.h"    // matplotlib-cpp has a MIT License (MIT), Copyright (c) 2014 Benno Evers. The full license description of matplotlib, matplotlib-cpp and its README can be found at its root.
 namespace plt = matplotlibcpp;              // namespace-alias-definition: makes a synonym of another namespace: see namespace alias
 #endif
+
+#include "json.hpp"
 
 namespace multidrone {
 
@@ -970,17 +1001,60 @@ std::vector<geometry_msgs::PointStamped> PathPlanner::getPathWithTimePredictions
 
 
 std::vector<geometry_msgs::PointStamped> PathPlanner::getPathCorrectingHeightFromOrigin(const geometry_msgs::PointStamped& _initial_point, const geometry_msgs::PointStamped& _final_point, bool _movement_pattern) {
+    std::vector<geometry_msgs::PointStamped> path_to_return;
+
+    if (!arbitrary_origin_geo_exist_) return path_to_return;
+
 }   // end getPathCorrectingHeightFromOrigin.
 
 
 
 std::vector<geographic_msgs::GeoPoint> PathPlanner::getPathCorrectingHeightFromOrigin(const geographic_msgs::GeoPoint& _initial_point, const geographic_msgs::GeoPoint& _final_point, bool _movement_pattern) {
+    std::vector<geographic_msgs::GeoPoint> path_to_return;
+
+    if (!arbitrary_origin_geo_exist_) return path_to_return;
+
 }   // end getPathCorrectingHeightFromOrigin.
 
 
 
 std::vector<geographic_msgs::GeoPoint> PathPlanner::getPathWithAltitude(const geographic_msgs::GeoPoint& _initial_point, const geographic_msgs::GeoPoint& _final_point, bool _movement_pattern) {
+    std::vector<geographic_msgs::GeoPoint> path_to_return;
+
+    if (!arbitrary_origin_geo_exist_) return path_to_return;
+
 }   // end getPathWithAltitude.
+
+
+
+size_t PathPlanner::writeCallback(void *contents, size_t size, size_t nmemb, void *userp) {
+    ((std::string*)userp)->append((char*)contents, size * nmemb);
+    return size * nmemb;
+}
+
+
+
+std::vector<float> PathPlanner::getElevations(const std::vector<geographic_msgs::GeoPoint>& _geopoints) {
+    std::vector<float> elevations;
+
+    CURL *curl;
+    CURLcode res;
+    std::string readBuffer;
+
+    curl = curl_easy_init();
+    if(curl) {
+        std::string url = "http://localhost:5000/v1/eudem25m?locations=37.37,-6|38.139309,-3.173386";
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+        res = curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
+
+        std::cout << readBuffer << std::endl;
+    }
+
+    return elevations;
+}
 
 
 

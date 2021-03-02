@@ -2,7 +2,7 @@
  * AERIALCORE Project:
  *
  * Mission controller.
- * 
+ *
  */
 
 #include <mission_controller.h>
@@ -756,7 +756,7 @@ void MissionController::removeGraphNodesAndEdgesAboveNoFlyZones(std::vector<aeri
                     }
                 }
             }
-            _graph_to_edit[i].type = aerialcore_msgs::GraphNode::TYPE_NO_FLY_ZONE;  // Nodes marked as TYPE_NO_FLY_ZONE will be considered removed. 
+            _graph_to_edit[i].type = aerialcore_msgs::GraphNode::TYPE_NO_FLY_ZONE;  // Nodes marked as TYPE_NO_FLY_ZONE will be considered removed.
         }
     }
 

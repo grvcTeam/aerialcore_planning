@@ -1,14 +1,44 @@
 /**
- * MULTIDRONE Project:
+ * MULTIDRONE and AERIAL-CORE Projects:
  *
- * Path planner. Refactor for the project Aerial-Core.
+ * Path Planner.
  *
+ *
+ * This library can optionally use the following extra software for additional features (all with MIT Licenses):
+ *  - "ajnisbet/opentopodata", version 1.5.0. Open Topo Data is a REST API server for your elevation data. Copyright (c) 2020 Andrew Nisbet.
+ *  - "nlohmann/json" library, version 3.9.1. JSON parser used to extract the elevation data from Open Topo Data localhost responses. Copyright (c) Copyright (c) 2013-2021 Niels Lohmann.
+ *  - "lava/matplotlib-cpp". Plotting library that works by wrapping the popular python plotting library matplotlib. Needs a working python installation. Copyright (c) 2014 Benno Evers.
+ * 
+ * MIT License 
+ * 
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ * 
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ * 
  */
 
 #ifndef PATH_PLANNER_H
 #define PATH_PLANNER_H
 
 #include <ros/ros.h>
+#include <iostream>
 #include <string>
 #include <vector>
 #include <limits>
@@ -86,6 +116,9 @@ public:
 private:
 
     void polygonConstructorFunction(const std::vector<geometry_msgs::Polygon>& _obstacle_polygon_vector_cartesian, const geometry_msgs::Polygon& _geofence_polygon_cartesian, unsigned int _max_grid_side);
+
+    std::vector<float> getElevations(const std::vector<geographic_msgs::GeoPoint>& _geopoints);
+    static size_t writeCallback(void *contents, size_t size, size_t nmemb, void *userp);
 
     // Struct that will be initialized for each cell explored in the A* algorithm. The algorithm will construct a map of "CellInfo" (with a cell identifier as key) in order to reach the solution.
     struct CellInfo {

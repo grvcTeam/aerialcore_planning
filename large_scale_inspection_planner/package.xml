@@ -18,6 +18,7 @@
   <build_depend>roscpp</build_depend>
   <build_depend>rospy</build_depend>
   <build_depend>roslib</build_depend>
+  <build_depend>curl</build_depend>
   <build_depend>tf</build_depend>
   <build_depend>mission_lib</build_depend>
   <build_depend>aerialcore_msgs</build_depend>
@@ -25,6 +26,7 @@
   <run_depend>roscpp</run_depend>
   <run_depend>rospy</run_depend>
   <run_depend>roslib</run_depend>
+  <run_depend>curl</run_depend>
   <run_depend>tf</run_depend>
   <run_depend>mission_lib</run_depend>
   <run_depend>aerialcore_msgs</run_depend>
