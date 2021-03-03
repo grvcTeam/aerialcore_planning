@@ -77,7 +77,7 @@ private:
   CentralizedPlanner centralized_planner_;  // Planner that assigns nodes to inspect of the electric grid graph for each UAV.
   ParameterEstimator parameter_estimator_;  // Module to estimate the time cost matrix and battery drop matrix between edges.
   PlanMonitor        plan_monitor_;         // Module to check if the drones are deviating enough to run the replanning.
-  multidrone::PathPlanner path_planner_;
+  grvc::PathPlanner path_planner_;
 
   std::vector<aerialcore_msgs::FlightPlan> flight_plan_;
 
@@ -93,7 +93,7 @@ private:
 
   // UAVs:
   struct UAV {
-    grvc::mission_ns::Mission * mission = nullptr;  // For simulation!!! In the real flights of november there will be no VTOL nor fixed wing, only DJI multicopters.
+    grvc::Mission * mission = nullptr;  // For simulation!!! In the real flights of november there will be no VTOL nor fixed wing, only DJI multicopters.
 
     float speed_xy;         // Maximum horizontal velocity (m/s) of this specific UAV (in AUTO mode, if higher speeds are commanded in a mission they will be capped to this velocity).
     float speed_z_down;     // Maximum vertical descent velocity (m/s) of this specific UAV (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)).

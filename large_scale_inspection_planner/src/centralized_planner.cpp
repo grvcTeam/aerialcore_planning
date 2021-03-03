@@ -30,7 +30,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(std::vector
     graph_ = _graph;
 
     if (_geofence.points.size()>0 && _no_fly_zones.size()>0) {
-        path_planner_ = multidrone::PathPlanner(_no_fly_zones, _geofence);
+        path_planner_ = grvc::PathPlanner(_no_fly_zones, _geofence);
     }
 
     // _drone_info it's a vector of tuples, each tuple with 10 elements. The first in the tuple is the initial battery, and so on with all the elements in the "UAV" structure defined here below.

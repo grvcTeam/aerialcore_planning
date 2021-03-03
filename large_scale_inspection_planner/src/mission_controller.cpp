@@ -41,7 +41,7 @@ MissionController::MissionController() {
     for (std::map<std::string, std::string>::iterator it = drones.begin(); it != drones.end(); it++) {
         UAV new_uav;
         new_uav.id = stoi(it->first);
-        new_uav.mission = new grvc::mission_ns::Mission(new_uav.id);
+        new_uav.mission = new grvc::Mission(new_uav.id);
         n_.getParam(it->second+"/time_max_flying", new_uav.time_max_flying);
         n_.getParam(it->second+"/speed_xy", new_uav.speed_xy);
         n_.getParam(it->second+"/speed_z_down", new_uav.speed_z_down);
@@ -104,7 +104,7 @@ MissionController::MissionController() {
     }
 
     if (geofence_.points.size()>0 && no_fly_zones_.size()>0) {
-        path_planner_ = multidrone::PathPlanner(no_fly_zones_, geofence_);
+        path_planner_ = grvc::PathPlanner(no_fly_zones_, geofence_);
     }
 
 #ifdef DEBUG
@@ -477,7 +477,7 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
                     first_iteration=false;
                 } else {
                     if (flying_or_landed) {
-                        if (UAVs_[current_uav_index].mission->airframeType() == grvc::mission_ns::AirframeType::FIXED_WING) {
+                        if (UAVs_[current_uav_index].mission->airframeType() == grvc::AirframeType::FIXED_WING) {
                             geometry_msgs::PoseStamped loiter_to_alt_start_landing_pose_pose_stamped;
                             loiter_to_alt_start_landing_pose_pose_stamped.pose.position.x = pass_poses.back().pose.position.x;
                             loiter_to_alt_start_landing_pose_pose_stamped.pose.position.y = pass_poses.back().pose.position.y;

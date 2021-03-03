@@ -40,7 +40,7 @@ public:
 
 private:
 
-    multidrone::PathPlanner path_planner_;
+    grvc::PathPlanner path_planner_;
 
     std::vector<aerialcore_msgs::GraphNode> graph_;
 
