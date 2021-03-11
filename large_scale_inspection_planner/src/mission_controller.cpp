@@ -364,7 +364,7 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
 void MissionController::parameterEstimatorThread(void) {
     ros::Rate loop_rate(1.0/parameter_estimator_time_); // [Hz, inverse of seconds]
     while (!stop_current_supervising_) {
-        parameter_estimator_.updateMatrices();
+        parameter_estimator_.updateMatrices(current_graph_, no_fly_zones_, geofence_);
         loop_rate.sleep();
     }
 } // end parameterEstimatorThread
@@ -375,7 +375,7 @@ void MissionController::planThread(void) {
     ros::Rate loop_rate(1.0/plan_monitor_time_);        // [Hz, inverse of seconds]
     while (!stop_current_supervising_) {
 
-        if (plan_monitor_.enoughDeviationToReplan(parameter_estimator_.getTimeCostMatrix(), parameter_estimator_.getBatteryDropMatrix())) {
+        if (plan_monitor_.enoughDeviationToReplan(parameter_estimator_.getDistanceCostMatrix(), parameter_estimator_.getBatteryDropMatrix())) {
 
             std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> > drone_info_for_planning;
             for (const UAV& current_uav : UAVs_) {
