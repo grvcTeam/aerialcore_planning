@@ -13,7 +13,7 @@
 #include <XmlRpcValue.h>
 #include <fstream>
 
-#define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
+// #define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
 
 namespace aerialcore {
 
@@ -202,7 +202,7 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
                 if (i==0 || j==0 || time_cost_matrices_[k][i][j]==-1) {
                     new_battery_drop_matrix[i][j] = time_cost_matrices_[k][i][j];
                 } else {
-                    new_battery_drop_matrix[i][j] = time_cost_matrices_[k][i][j] / UAVs_[k].time_max_flying;    // TODO: calculate BETTER (consider WIND).
+                    new_battery_drop_matrix[i][j] = time_cost_matrices_[k][i][j] / UAVs_[k].time_max_flying;    // TODO: calculate BETTER (consider WIND and BATTERY HEALTH, maybe also mAh?).
                 }
             }
         }
