@@ -13,6 +13,8 @@
 #include <XmlRpcValue.h>
 #include <fstream>
 
+#define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
+
 namespace aerialcore {
 
 
@@ -20,6 +22,26 @@ namespace aerialcore {
 ParameterEstimator::ParameterEstimator() {
     ros::param::get("~construct_distance_cost_matrix", construct_distance_cost_matrix_);
     ros::param::get("~distance_cost_matrix_yaml_path", distance_cost_matrix_yaml_path_);
+
+    // Read and construct parameters of the UAVs (from the yaml):
+    std::map<std::string, std::string> drones;
+    ros::param::get("drones", drones);              // Dictionary of the actual drones used in the simulation (key: UAV id, value: airframe type).
+    if (drones.size() == 0) {
+        ROS_ERROR("Parameter Estimator: error in the description of the UAVs (YAML file), no drones found. Are you sure you loaded to the server parameter the config YAML?");
+        exit(EXIT_FAILURE);
+    }
+    for (std::map<std::string, std::string>::iterator it = drones.begin(); it != drones.end(); it++) {
+        UAV new_uav;
+        new_uav.id = stoi(it->first);
+        new_uav.airframe_type = it->second;
+        ros::param::get(it->second+"/time_max_flying", new_uav.time_max_flying);
+        ros::param::get(it->second+"/speed_xy", new_uav.speed_xy);
+        ros::param::get(it->second+"/speed_z_down", new_uav.speed_z_down);
+        ros::param::get(it->second+"/speed_z_up", new_uav.speed_z_up);
+        ros::param::get(it->second+"/minimum_battery", new_uav.minimum_battery);
+        ros::param::get(it->second+"/time_until_fully_charged", new_uav.time_until_fully_charged);
+        UAVs_.push_back(new_uav);
+    }
 }
 
 
@@ -27,10 +49,31 @@ ParameterEstimator::ParameterEstimator() {
 ParameterEstimator::~ParameterEstimator() {}
 
 
+const std::vector< std::vector<float> >& ParameterEstimator::getDistanceCostMatrix() {
+    distance_cost_matrix_mutex_.lock(); // Wait here until the attribute is fully created before the getter returns the reference.
+    distance_cost_matrix_mutex_.unlock();
+    return distance_cost_matrix_;
+}
+
+
+const std::vector< std::vector< std::vector<float> > >& ParameterEstimator::getTimeCostMatrices() {
+    time_cost_matrices_mutex_.lock();     // Wait here until the attribute is fully created before the getter returns the reference.
+    time_cost_matrices_mutex_.unlock();
+    return time_cost_matrices_;
+}
+
+
+const std::vector< std::vector< std::vector<float> > >& ParameterEstimator::getBatteryDropMatrices() {
+    battery_drop_matrices_mutex_.lock();  // Wait here until the attribute is fully created before the getter returns the reference.
+    battery_drop_matrices_mutex_.unlock();
+    return battery_drop_matrices_;
+}
+
+
 // Method called periodically in an external thread, located in the Mission Controller, that will update both the cost and battery drop matrices with the last prediction:
 void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector<geometry_msgs::Polygon>& _no_fly_zones, const geometry_msgs::Polygon& _geofence /* poses, batteries, plan, wind sensor?*/) {
 
-    if (distance_cost_matrix_.size()==0) {  // Only enter the first time this function is called.
+    if (distance_cost_matrix_.size()==0) {  // Only enter the first time this method is called.
         std::vector< std::vector<float> > new_distance_cost_matrix;
         if (construct_distance_cost_matrix_) {
             // Construct the distance_cost_matrix and export it to a default yaml file.
@@ -81,8 +124,8 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
                     to_here.z =   _graph[ first_row_and_column[j] ].z;
                     auto path = path_planner_.getPath(from_here, to_here);
                     if (path.size() == 0) continue;         // No path found.
-                    new_distance_cost_matrix[i][j] = path_planner_.getDistance();
-                    new_distance_cost_matrix[j][i] = path_planner_.getDistance();
+                    new_distance_cost_matrix[i][j] = path_planner_.getFlatDistance();   // TODO: more precise path with also precise height distances?
+                    new_distance_cost_matrix[j][i] = path_planner_.getFlatDistance();
                 }
             }
 
@@ -126,15 +169,88 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
                 }
             }
         }
+        distance_cost_matrix_mutex_.lock();
         distance_cost_matrix_ = new_distance_cost_matrix;
+        distance_cost_matrix_mutex_.unlock();
+
+        // For that distance_cost_matrix, create the time_cost_matrices for each UAV (depending on its speed):
+        std::vector< std::vector< std::vector<float> > > new_time_cost_matrices;
+        for (int k=0; k<UAVs_.size(); k++) {    // The time is different for each UAV because of the different speed.
+            std::vector< std::vector<float> > new_time_cost_matrix(distance_cost_matrix_.size(), std::vector<float>(distance_cost_matrix_[0].size(), -1.0));
+            for (int i=0; i<distance_cost_matrix_.size(); i++) {
+                for (int j=0; j<distance_cost_matrix_[i].size(); j++) {
+                    if (i==0 || j==0 || distance_cost_matrix_[i][j]==-1) {
+                        new_time_cost_matrix[i][j] = distance_cost_matrix_[i][j];
+                    } else {
+                        new_time_cost_matrix[i][j] = distance_cost_matrix_[i][j] / UAVs_[k].speed_xy;   // TODO: more precise speed with also height speeds?
+                    }
+                }
+            }
+            new_time_cost_matrices.push_back(new_time_cost_matrix);
+        }
+        time_cost_matrices_mutex_.lock();
+        time_cost_matrices_ = new_time_cost_matrices;
+        time_cost_matrices_mutex_.unlock();
+    }   // End of building cost matrices the first time this method is called.
+
+    // Construct the battery_drop_matrices.
+    std::vector< std::vector< std::vector<float> > > new_battery_drop_matrices;
+    for (int k=0; k<UAVs_.size(); k++) {
+        std::vector< std::vector<float> > new_battery_drop_matrix(time_cost_matrices_[k].size(), std::vector<float>(time_cost_matrices_[k][0].size(), -1.0));
+        for (int i=0; i<time_cost_matrices_[k].size(); i++) {
+            for (int j=0; j<time_cost_matrices_[k][i].size(); j++) {
+                if (i==0 || j==0 || time_cost_matrices_[k][i][j]==-1) {
+                    new_battery_drop_matrix[i][j] = time_cost_matrices_[k][i][j];
+                } else {
+                    new_battery_drop_matrix[i][j] = time_cost_matrices_[k][i][j] / UAVs_[k].time_max_flying;    // TODO: calculate BETTER (consider WIND).
+                }
+            }
+        }
+        new_battery_drop_matrices.push_back(new_battery_drop_matrix);
     }
+    battery_drop_matrices_mutex_.lock();
+    battery_drop_matrices_ = new_battery_drop_matrices;
+    battery_drop_matrices_mutex_.unlock();
 
-    // Construct the battery_drop_matrix.
-    std::vector< std::vector<float> > new_battery_drop_matrix;
-    // ...
-    battery_drop_matrix_ = new_battery_drop_matrix;
+# ifdef DEBUG
+    std::string time_cost_matrices_string = "time_cost_matrices: [\n";
+    for (int k=0; k<time_cost_matrices_.size(); k++) {
+        time_cost_matrices_string.append("  [\n");
+        for (int i=0; i<time_cost_matrices_[k].size(); i++) {
+            time_cost_matrices_string.append("    [");
+            for (int j=0; j<time_cost_matrices_[k][i].size(); j++) {
+                if (j>0) {
+                    time_cost_matrices_string.append(", ");
+                }
+                time_cost_matrices_string.append(std::to_string(time_cost_matrices_[k][i][j]).c_str());
+            }
+            time_cost_matrices_string.append("],\n");
+        }
+        time_cost_matrices_string.append("  ],\n");
+    }
+    time_cost_matrices_string.append("]");
 
-    // Update matrices, atomic variables doesn't work for vectors.
+    std::string battery_drop_matrices_string = "battery_drop_matrices: [\n";
+    for (int k=0; k<battery_drop_matrices_.size(); k++) {
+        battery_drop_matrices_string.append("  [\n");
+        for (int i=0; i<battery_drop_matrices_[k].size(); i++) {
+            battery_drop_matrices_string.append("    [");
+            for (int j=0; j<battery_drop_matrices_[k][i].size(); j++) {
+                if (j>0) {
+                    battery_drop_matrices_string.append(", ");
+                }
+                battery_drop_matrices_string.append(std::to_string(battery_drop_matrices_[k][i][j]).c_str());
+            }
+            battery_drop_matrices_string.append("],\n");
+        }
+        battery_drop_matrices_string.append("  ],\n");
+    }
+    battery_drop_matrices_string.append("]");
+
+    std::cout << time_cost_matrices_string << std::endl << std::endl;
+    std::cout << battery_drop_matrices_string << std::endl << std::endl;
+#endif
+
 }
 
 

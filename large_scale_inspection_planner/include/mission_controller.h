@@ -56,11 +56,15 @@ private:
   bool doContinuousSupervisionServiceCallback(std_srvs::Trigger::Request& _req, std_srvs::Trigger::Response& _res);
   bool startSpecificSupervisionPlanServiceCallback(aerialcore_msgs::PostString::Request& _req, aerialcore_msgs::PostString::Response& _res);
 
-  int findUavIndexById(int _UAV_id);
-  void removeGraphNodesAndEdgesAboveNoFlyZones(std::vector<aerialcore_msgs::GraphNode>& _graph_to_edit);
-
   void parameterEstimatorThread(void);
   void planThread(void);
+
+  int findUavIndexById(int _UAV_id);
+
+  void removeGraphNodesAndEdgesAboveNoFlyZones(std::vector<aerialcore_msgs::GraphNode>& _graph_to_edit);
+
+  void translateFlightPlanIntoUAVMission(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plan);
+  std::string translateFlightPlanIntoDJIyaml(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plan);
 
   ros::ServiceServer start_supervising_srv_;
   ros::ServiceServer stop_supervising_srv_;
@@ -75,7 +79,7 @@ private:
   std::vector<aerialcore_msgs::GraphNode> specific_subgraph_;
 
   CentralizedPlanner centralized_planner_;  // Planner that assigns nodes to inspect of the electric grid graph for each UAV.
-  ParameterEstimator parameter_estimator_;  // Module to estimate the distance_cost_matrix and battery_drop_matrix between edges.
+  ParameterEstimator parameter_estimator_;  // Module to estimate the time_cost_matrices and battery_drop_matrices between edges.
   PlanMonitor        plan_monitor_;         // Module to check if the drones are deviating enough to run the replanning.
   grvc::PathPlanner path_planner_;
 
@@ -88,12 +92,11 @@ private:
   std::vector<geometry_msgs::Polygon> no_fly_zones_;
   geometry_msgs::Polygon geofence_;
 
-  void translateFlightPlanIntoUAVMission(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plan);
-  std::string translateFlightPlanIntoDJIyaml(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plan);
-
   // UAVs:
   struct UAV {
     grvc::Mission * mission = nullptr;  // For simulation!!! In the real flights of november there will be no VTOL nor fixed wing, only DJI multicopters.
+
+    std::string airframe_type;  // Not the one from the roslaunch (PX4), but the one in the yaml.
 
     float speed_xy;         // Maximum horizontal velocity (m/s) of this specific UAV (in AUTO mode, if higher speeds are commanded in a mission they will be capped to this velocity).
     float speed_z_down;     // Maximum vertical descent velocity (m/s) of this specific UAV (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)).

@@ -41,6 +41,7 @@ MissionController::MissionController() {
     for (std::map<std::string, std::string>::iterator it = drones.begin(); it != drones.end(); it++) {
         UAV new_uav;
         new_uav.id = stoi(it->first);
+        new_uav.airframe_type = it->second;
         new_uav.mission = new grvc::Mission(new_uav.id);
         n_.getParam(it->second+"/time_max_flying", new_uav.time_max_flying);
         n_.getParam(it->second+"/speed_xy", new_uav.speed_xy);
@@ -375,7 +376,7 @@ void MissionController::planThread(void) {
     ros::Rate loop_rate(1.0/plan_monitor_time_);        // [Hz, inverse of seconds]
     while (!stop_current_supervising_) {
 
-        if (plan_monitor_.enoughDeviationToReplan(parameter_estimator_.getDistanceCostMatrix(), parameter_estimator_.getBatteryDropMatrix())) {
+        if (plan_monitor_.enoughDeviationToReplan(parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices())) {
 
             std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> > drone_info_for_planning;
             for (const UAV& current_uav : UAVs_) {

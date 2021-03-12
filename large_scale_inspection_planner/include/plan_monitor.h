@@ -30,7 +30,7 @@ public:
     ~PlanMonitor();
 
     // Method called periodically in an external thread, located in the Mission Controller, that will call the planner (in the same thread) if it returns true:
-    bool enoughDeviationToReplan(/*plan, pose, battery, */const std::vector< std::vector<float> >& _distance_cost_matrix, const std::vector< std::vector<float> >& _battery_drop_matrix);
+    bool enoughDeviationToReplan(/*plan, pose, battery, */const std::vector< std::vector< std::vector<float> > >& _time_cost_matrices, const std::vector< std::vector< std::vector<float> > >& _battery_drop_matrices);
 
 private:
 
