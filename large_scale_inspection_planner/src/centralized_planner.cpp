@@ -9,6 +9,14 @@
 
 #include <math.h>
 
+#include "ortools/linear_solver/linear_solver.h"
+#include "ortools/base/logging.h"
+
+#include "ortools/constraint_solver/routing.h"
+#include "ortools/constraint_solver/routing_enums.pb.h"
+#include "ortools/constraint_solver/routing_index_manager.h"
+#include "ortools/constraint_solver/routing_parameters.h"
+
 namespace aerialcore {
 
 
@@ -20,7 +28,7 @@ CentralizedPlanner::CentralizedPlanner() : path_planner_() {}
 CentralizedPlanner::~CentralizedPlanner() {}
 
 
-std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence) {
+std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence) {
 
     graph_.clear();
     edges_.clear();
@@ -184,7 +192,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlan(std::vector
 
     return flight_plan_;
 
-} // end getPlan method
+} // end getPlanGreedy method
 
 
 // Brief method that returns the index and distance of the nearest land station graph node given an inital index.
@@ -347,6 +355,270 @@ void CentralizedPlanner::printPlan() {
     }
     std::cout << std::endl;
 } // end printPlan method
+
+
+std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::vector< std::vector< std::vector<float> > >& _time_cost_matrices, const std::vector< std::vector< std::vector<float> > >& _battery_drop_matrices) {
+
+    UAVs_.clear();
+    edges_MILP_.clear();
+    from_graph_index_to_matrix_index_.clear();
+    from_matrix_index_to_graph_index_.clear();
+    from_k_i_j_to_x_index_.clear();
+    from_k_i_j_to_y_and_f_index_.clear();
+    flight_plan_.clear();
+
+    // _drone_info it's a vector of tuples, each tuple with 10 elements. The first in the tuple is the initial battery, and so on with all the elements in the "UAV" structure defined here below.
+    for (const std::tuple<float, float, int, int, int, int, int, int, bool, bool>& current_drone : _drone_info) {
+        UAV actual_UAV;
+        actual_UAV.initial_battery = std::get<0>(current_drone);
+        actual_UAV.minimum_battery = std::get<1>(current_drone);
+        actual_UAV.time_until_fully_charged = std::get<2>(current_drone);
+        actual_UAV.time_max_flying = std::get<3>(current_drone);
+        actual_UAV.speed_xy = std::get<4>(current_drone);
+        actual_UAV.speed_z_down = std::get<5>(current_drone);
+        actual_UAV.speed_z_up = std::get<6>(current_drone);
+        actual_UAV.id = std::get<7>(current_drone);
+        actual_UAV.flying_or_landed_initially = std::get<8>(current_drone);
+        actual_UAV.recharging_initially = std::get<9>(current_drone);
+        UAVs_.push_back(actual_UAV);
+    }
+
+    // Construct edges_MILP_ that contain all the possible edges, with information of it it is a pure dead-heading edge (false) or both inspection and dead-heading edge (true):
+    int x_index = 0;
+    int y_and_f_index = 0;
+    for (int i=1; i<_time_cost_matrices[0].size(); i++) {
+        from_graph_index_to_matrix_index_[ (int) _time_cost_matrices[0][i][0] ] = i;
+        from_matrix_index_to_graph_index_[i] = (int) _time_cost_matrices[0][i][0];
+        for (int j=1; j<_time_cost_matrices[0][i].size(); j++) {
+            if (_time_cost_matrices[0][i][j]==-1) {
+                continue;
+            } else {
+                Edge new_edge;
+                new_edge.i = i;
+                new_edge.j = j;
+                new_edge.inspection_edge = false;
+                edges_MILP_.push_back(new_edge);
+
+                for (int k=0; k<_time_cost_matrices.size(); k++) {
+                    from_k_i_j_to_y_and_f_index_[k][i][j] = y_and_f_index++;
+                }
+            }
+        }
+    }
+    int inspection_edges_counter = 0;
+    for (int g_i=0; g_i<_graph.size(); g_i++) {
+        if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
+            for (int j=0; j<_graph[g_i].connections_indexes.size(); j++) {
+                for (Edge& current_edge_struct : edges_MILP_) {
+                    if (current_edge_struct.i == from_graph_index_to_matrix_index_[g_i] && current_edge_struct.j == from_graph_index_to_matrix_index_[ _graph[g_i].connections_indexes[j] ]) {
+                        current_edge_struct.inspection_edge = true;
+
+                        for (int k=0; k<_time_cost_matrices.size(); k++) {
+                            from_k_i_j_to_x_index_[k][current_edge_struct.i][current_edge_struct.j] = x_index++;
+                        }
+
+                        inspection_edges_counter++;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    std::cout << "Number of edges            = " << edges_MILP_.size() << std::endl;
+    std::cout << "Number of inspection edges = " << inspection_edges_counter << std::endl;
+
+
+    //////////////////// Start defining the MILP problem according to agarwal_icra20 and solve it using OR-Tools ////////////////////
+
+    // Create the mip solver with the SCIP backend:
+    std::unique_ptr<operations_research::MPSolver> solver(operations_research::MPSolver::CreateSolver("SCIP"));
+
+    const double infinity = solver->infinity();
+
+    // Variables:
+    // x[x_index]       is a vector of binary variables.
+    // y[y_and_f_index] is a vector of non-negative integer variables.
+    // f[y_and_f_index] is a vector of non-negative continuous variables.
+    std::vector<operations_research::MPVariable *> x;
+    std::vector<operations_research::MPVariable *> y;
+    std::vector<operations_research::MPVariable *> f;
+    for (auto it=from_k_i_j_to_x_index_.begin(); it!=from_k_i_j_to_x_index_.end(); ++it) {
+        x.push_back( solver->MakeBoolVar("") );
+    }
+    for (auto it=from_k_i_j_to_y_and_f_index_.begin(); it!=from_k_i_j_to_y_and_f_index_.end(); ++it) {
+        y.push_back( solver->MakeIntVar(0, infinity, "") );
+        f.push_back( solver->MakeNumVar(0.0, infinity, "") );
+    }
+    LOG(INFO) << "Number of variables = " << solver->NumVariables();
+
+    // Create the objective function:
+    // (1) Minimize all the inspection time (UAVs flying separately).
+    operations_research::MPObjective *const objective = solver->MutableObjective();
+    for (int k=0; k<_time_cost_matrices.size(); k++) {
+        for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+            if (edges_MILP_[e_i].inspection_edge) {
+                objective->SetCoefficient(x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], _time_cost_matrices[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ]);
+            }
+            objective->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], _time_cost_matrices[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ]);
+        }
+    }
+    objective->SetMinimization();
+
+
+    // Create the constraints:
+
+    // (2) For all nodes and tours-drones, Sum_all_j(x_ij_k) plus Sum_all_j(y_ij_k) minus Sum_all_j(x_ji_k) and minus Sum_all_j(x_ji_k) is equal to zero (inputs equal to outputs in each node):
+    for (int k=0; k<_time_cost_matrices.size(); k++) {
+        for (int i=1; i<_time_cost_matrices[k].size(); i++) {
+            operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0, 0, "");
+            for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+                if (i == edges_MILP_[e_i].i) {
+                    if (edges_MILP_[e_i].inspection_edge) {
+                        constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
+                        constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ], -1);
+                    }
+                    constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
+                    constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ], -1);
+                }
+            }
+        }
+    }
+
+    // (3) For all inspection edges, x_ij plus x_ji sums 1 (all inspection edges covered in any direction):
+    for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+        if (edges_MILP_[e_i].inspection_edge && edges_MILP_[e_i].i<edges_MILP_[e_i].j) {
+            operations_research::MPConstraint *constraint = solver->MakeRowConstraint(1, 1, "");
+            for (int k=0; k<_time_cost_matrices.size(); k++) {
+                constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
+                constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ], 1);
+            }
+        }
+    }
+
+    // (4) For all tours-drones, in edges coming from takeoff nodes, x_0j plus y_0j sums 0 or 1 (take off just once in each tour):
+    for (int k=0; k<_time_cost_matrices.size(); k++) {
+        operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0, 1, "");
+        for (int g_i=0; g_i<_graph.size(); g_i++) {
+            if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION || _graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION || _graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) {
+                for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+                    if (edges_MILP_[e_i].i == from_graph_index_to_matrix_index_[g_i]) {
+                        if (edges_MILP_[e_i].inspection_edge) {
+                            constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
+                        }
+                        constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
+                    }
+                }
+            }
+        }
+    }
+
+    // (5) For all tours-drones and pylon nodes, equation of flow consumed in node (flow in equals to flow destroyed in that node plus flow out):
+    for (int k=0; k<_time_cost_matrices.size(); k++) {
+        for (int g_i=0; g_i<_graph.size(); g_i++) {
+            if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
+                operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0.0, 0.0, "");
+                for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+                    if (edges_MILP_[e_i].i == from_graph_index_to_matrix_index_[g_i]) {
+                        constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ], 1);
+                        constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], -1);
+                        if (edges_MILP_[e_i].inspection_edge) {
+                            constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ], -_time_cost_matrices[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ]);
+                        }
+                        constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ], -_time_cost_matrices[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ]);
+                    }
+                }
+            }
+        }
+    }
+
+    // (6) For all tours-drones, all flow is created in the takeoff nodes:
+    for (int k=0; k<_time_cost_matrices.size(); k++) {
+        operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0.0, 0.0, "");
+        for (int g_i=0; g_i<_graph.size(); g_i++) {
+            if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION || _graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION || _graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) {
+                for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+                    if (edges_MILP_[e_i].i == from_graph_index_to_matrix_index_[g_i]) {
+                        constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
+                    }
+                }
+            }
+        }
+        for (int e_j=0; e_j<edges_MILP_.size(); e_j++) {
+            if (edges_MILP_[e_j].inspection_edge) {
+                constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_j].i ][ edges_MILP_[e_j].j ] ], -_time_cost_matrices[k][ edges_MILP_[e_j].i ][ edges_MILP_[e_j].j ]);
+            }
+            constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_j].i ][ edges_MILP_[e_j].j ] ], -_time_cost_matrices[k][ edges_MILP_[e_j].i ][ edges_MILP_[e_j].j ]);
+        }
+    }
+
+    // (7) For all tours-drones, land nodes receive all the remaining flow:
+    for (int k=0; k<_time_cost_matrices.size(); k++) {
+        operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0.0, 0.0, "");
+        for (int g_i=0; g_i<_graph.size(); g_i++) {
+            if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION || _graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION || _graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) {
+                for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+                    if (edges_MILP_[e_i].i == from_graph_index_to_matrix_index_[g_i]) {
+                        constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
+                        if (edges_MILP_[e_i].inspection_edge) {
+                            constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], -_time_cost_matrices[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ]);
+                        }
+                        constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], -_time_cost_matrices[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ]);
+                    }
+                }
+            }
+        }
+    }
+
+    // (8), (9) and (10) are assumed to be met in the dataset. Also, the robot capacity is assumed to be sufficiently large to service any edge.
+
+    LOG(INFO) << "Number of constraints = " << solver->NumConstraints();
+
+
+    // SOLVE THE PROBLEM:
+    const operations_research::MPSolver::ResultStatus result_status = solver->Solve();
+
+    // Check that the problem has an optimal solution.
+    if (result_status != operations_research::MPSolver::OPTIMAL) {
+        LOG(FATAL) << "The problem does not have an optimal solution.";
+    }
+    LOG(INFO) << "Solution:";
+    LOG(INFO) << "Optimal objective value = " << objective->Value();
+
+    // Print the variables of the solution:
+    // for (int k=0; k<x.size(); k++) {
+    //     for (int i=0; i<x[k].size(); i++) {
+    //         for (int j=0; j<x[k][i].size(); j++) {
+    //             LOG(INFO) << "x[" << k << "][" << i << "][" << j << "] = " << x[k][i][j]->solution_value();
+    //         }
+    //     }
+    // }
+    // for (int k=0; k<y.size(); k++) {
+    //     for (int i=0; i<y[k].size(); i++) {
+    //         for (int j=0; j<y[k][i].size(); j++) {
+    //             LOG(INFO) << "y[" << k << "][" << i << "][" << j << "] = " << y[k][i][j]->solution_value();
+    //         }
+    //     }
+    // }
+    // for (int k=0; k<f.size(); k++) {
+    //     for (int i=0; i<f[k].size(); i++) {
+    //         for (int j=0; j<f[k][i].size(); j++) {
+    //             LOG(INFO) << "f[" << k << "][" << i << "][" << j << "] = " << f[k][i][j]->solution_value();
+    //         }
+    //     }
+    // }
+
+    //////////////////// End defining the MILP problem according to agarwal_icra20 and solve it using OR-Tools ////////////////////
+
+
+    // // Assign flight_plan_ according to the edges in the solution:
+    // for (const UAV& current_uav : UAVs_) {
+    // }
+
+    // Calculate the path free of obstacles between nodes outside in the Mission Controller. There is a path warantied between the nodes.
+
+    return flight_plan_;
+
+} // end getPlanMILP method
 
 
 } // end namespace aerialcore

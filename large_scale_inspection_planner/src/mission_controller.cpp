@@ -8,6 +8,7 @@
 #include <mission_controller.h>
 
 #include <XmlRpcValue.h>
+#include <time.h>
 
 #define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
 
@@ -411,7 +412,26 @@ void MissionController::planThread(void) {
                 }
             }
 
-            flight_plan_ = centralized_planner_.getPlan(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_);
+            flight_plan_ = centralized_planner_.getPlanGreedy(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_);
+
+
+            // Calculate the MILP solution with computation time:
+
+            // Wait until the parameter_estimator_ calculate the matrices:
+            while (parameter_estimator_.getTimeCostMatrices().size()==0 && ros::ok()) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            }
+
+            std::cout << "Start the computation for the MILP planning with OR-Tools." << std::endl;
+            clock_t t_begin, t_end;
+            t_begin = clock();
+
+            centralized_planner_.getPlanMILP(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
+            t_end = clock();
+
+            double seconds = ((float)(t_end-t_begin))/CLOCKS_PER_SEC;
+            std::cout << "Computation time for the MILP planning with OR-Tools: " << seconds << " seconds." << std::endl << std::endl;
+
 
 #ifdef DEBUG
             centralized_planner_.printPlan();
