@@ -405,7 +405,6 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
             }
         }
     }
-    int inspection_edges_counter = 0;
     for (int g_i=0; g_i<_graph.size(); g_i++) {
         if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
             for (int j=0; j<_graph[g_i].connections_indexes.size(); j++) {
@@ -417,7 +416,6 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
                             from_k_i_j_to_x_index_[k][current_edge_struct.i][current_edge_struct.j] = x_index++;
                         }
 
-                        inspection_edges_counter++;
                         break;
                     }
                 }
@@ -425,7 +423,16 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
         }
     }
     std::cout << "Number of edges            = " << edges_MILP_.size() << std::endl;
-    std::cout << "Number of inspection edges = " << inspection_edges_counter << std::endl;
+    std::cout << "Number of inspection edges = " << x_index/_time_cost_matrices.size() << std::endl;
+    std::cout << "Number of k                = " << _time_cost_matrices.size() << std::endl;
+    std::cout << "Number of i and j          = " << _time_cost_matrices[0].size()-1 << std::endl;
+    int pylons_counter = 0;
+    for (int g_i=0; g_i<_graph.size(); g_i++) {
+        if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
+            pylons_counter++;
+        }
+    }
+    std::cout << "Number of pylons           = " << pylons_counter << std::endl;
 
 
     //////////////////// Start defining the MILP problem according to agarwal_icra20 and solve it using OR-Tools ////////////////////
@@ -442,10 +449,10 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
     std::vector<operations_research::MPVariable *> x;
     std::vector<operations_research::MPVariable *> y;
     std::vector<operations_research::MPVariable *> f;
-    for (auto it=from_k_i_j_to_x_index_.begin(); it!=from_k_i_j_to_x_index_.end(); ++it) {
+    for (int index=0; index<x_index; index++) {
         x.push_back( solver->MakeBoolVar("") );
     }
-    for (auto it=from_k_i_j_to_y_and_f_index_.begin(); it!=from_k_i_j_to_y_and_f_index_.end(); ++it) {
+    for (int index=0; index<y_and_f_index; index++) {
         y.push_back( solver->MakeIntVar(0, infinity, "") );
         f.push_back( solver->MakeNumVar(0.0, infinity, "") );
     }
@@ -499,7 +506,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
     for (int k=0; k<_time_cost_matrices.size(); k++) {
         operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0, 1, "");
         for (int g_i=0; g_i<_graph.size(); g_i++) {
-            if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION || _graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION || _graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) {
+            if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION) {
                 for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
                     if (edges_MILP_[e_i].i == from_graph_index_to_matrix_index_[g_i]) {
                         if (edges_MILP_[e_i].inspection_edge) {
@@ -535,7 +542,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
     for (int k=0; k<_time_cost_matrices.size(); k++) {
         operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0.0, 0.0, "");
         for (int g_i=0; g_i<_graph.size(); g_i++) {
-            if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION || _graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION || _graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) {
+            if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION) {
                 for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
                     if (edges_MILP_[e_i].i == from_graph_index_to_matrix_index_[g_i]) {
                         constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
@@ -555,7 +562,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
     for (int k=0; k<_time_cost_matrices.size(); k++) {
         operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0.0, 0.0, "");
         for (int g_i=0; g_i<_graph.size(); g_i++) {
-            if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION || _graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION || _graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) {
+            if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION || _graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) {
                 for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
                     if (edges_MILP_[e_i].i == from_graph_index_to_matrix_index_[g_i]) {
                         constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
@@ -585,27 +592,45 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
     LOG(INFO) << "Optimal objective value = " << objective->Value();
 
     // Print the variables of the solution:
-    // for (int k=0; k<x.size(); k++) {
-    //     for (int i=0; i<x[k].size(); i++) {
-    //         for (int j=0; j<x[k][i].size(); j++) {
-    //             LOG(INFO) << "x[" << k << "][" << i << "][" << j << "] = " << x[k][i][j]->solution_value();
-    //         }
-    //     }
-    // }
-    // for (int k=0; k<y.size(); k++) {
-    //     for (int i=0; i<y[k].size(); i++) {
-    //         for (int j=0; j<y[k][i].size(); j++) {
-    //             LOG(INFO) << "y[" << k << "][" << i << "][" << j << "] = " << y[k][i][j]->solution_value();
-    //         }
-    //     }
-    // }
-    // for (int k=0; k<f.size(); k++) {
-    //     for (int i=0; i<f[k].size(); i++) {
-    //         for (int j=0; j<f[k][i].size(); j++) {
-    //             LOG(INFO) << "f[" << k << "][" << i << "][" << j << "] = " << f[k][i][j]->solution_value();
-    //         }
-    //     }
-    // }
+    for (int k=0; k<_time_cost_matrices.size(); k++) {
+        for (int i=1; i<_time_cost_matrices[k].size(); i++) {
+            for (int j=1; j<_time_cost_matrices[k][i].size(); j++) {
+                bool inspection_edge_found = false;
+                for (Edge& current_edge_struct : edges_MILP_) {
+                    if (current_edge_struct.inspection_edge && current_edge_struct.i == i && current_edge_struct.j == j) {
+                        LOG(INFO) << "x[" << k << "][" << i << "][" << j << "] = " << x[ from_k_i_j_to_x_index_[k][i][j] ]->solution_value();
+                        inspection_edge_found = true;
+                        break;
+                    }
+                }
+                if (!inspection_edge_found) {
+                    LOG(INFO) << "x[" << k << "][" << i << "][" << j << "] = -1";
+                }
+            }
+        }
+    }
+    for (int k=0; k<_time_cost_matrices.size(); k++) {
+        for (int i=1; i<_time_cost_matrices[k].size(); i++) {
+            for (int j=1; j<_time_cost_matrices[k][i].size(); j++) {
+                if (_time_cost_matrices[0][i][j]==-1) {
+                    LOG(INFO) << "y[" << k << "][" << i << "][" << j << "] = -1";
+                } else {
+                    LOG(INFO) << "y[" << k << "][" << i << "][" << j << "] = " << y[ from_k_i_j_to_x_index_[k][i][j] ]->solution_value();
+                }
+            }
+        }
+    }
+    for (int k=0; k<_time_cost_matrices.size(); k++) {
+        for (int i=1; i<_time_cost_matrices[k].size(); i++) {
+            for (int j=1; j<_time_cost_matrices[k][i].size(); j++) {
+                if (_time_cost_matrices[0][i][j]==-1) {
+                    LOG(INFO) << "f[" << k << "][" << i << "][" << j << "] = -1";
+                } else {
+                    LOG(INFO) << "f[" << k << "][" << i << "][" << j << "] = " << f[ from_k_i_j_to_x_index_[k][i][j] ]->solution_value();
+                }
+            }
+        }
+    }
 
     //////////////////// End defining the MILP problem according to agarwal_icra20 and solve it using OR-Tools ////////////////////
 
