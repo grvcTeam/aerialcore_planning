@@ -44,6 +44,8 @@ private:
 
     grvc::PathPlanner path_planner_;
 
+    int findUavIndexById(int _UAV_id);
+
     std::vector<aerialcore_msgs::GraphNode> graph_;
 
     // UAVs:
@@ -68,10 +70,12 @@ private:
 
     std::vector< std::pair<int,int> > edges_;  // Edges or connections of the graph, being the pair of indexes of the graph nodes connected by wires. Always the first int index lower than the second of the pair.
 
+    enum struct EdgeType {INSPECTION, NAVIGATION, TAKEOFF_AND_NAVIGATION, NAVIGATION_AND_LANDING};
     struct Edge {
         int i;      // Refered to the time cost and battery drop matrices.
         int j;      // Refered to the time cost and battery drop matrices.
-        bool inspection_edge;
+        int k = -1; // Only different that -1 if TAKEOFF_AND_NAVIGATION, meaning that only that particular drone k can do that edge.
+        EdgeType edge_type = EdgeType::NAVIGATION;
     };
     std::vector<Edge> edges_MILP_;   // Vector of edges possible in which for each pair of nodes (i,j) there is information of whether it is an inspection edge or not. If it is, it still can be used for cross-heading.
 
