@@ -31,8 +31,8 @@ public:
     CentralizedPlanner();
     ~CentralizedPlanner();
 
-    std::vector<aerialcore_msgs::FlightPlan> getPlanGreedy() const { return flight_plan_; }     // Returns plan already calculated.
-    std::vector<aerialcore_msgs::FlightPlan> getPlanMILP() const { return flight_plan_; }       // Returns plan already calculated.
+    std::vector<aerialcore_msgs::FlightPlan> getPlanGreedy() const { return flight_plans_; }     // Returns plan already calculated.
+    std::vector<aerialcore_msgs::FlightPlan> getPlanMILP() const { return flight_plans_; }       // Returns plan already calculated.
 
     std::vector<aerialcore_msgs::FlightPlan> getPlanGreedy(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence); // Returns new plan.
     std::vector<aerialcore_msgs::FlightPlan> getPlanMILP(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::vector< std::vector< std::vector<float> > >& _time_cost_matrices, const std::vector< std::vector< std::vector<float> > >& _battery_drop_matrices);   // Returns new plan.
@@ -74,7 +74,7 @@ private:
     struct Edge {
         int i;      // Refered to the time cost and battery drop matrices.
         int j;      // Refered to the time cost and battery drop matrices.
-        int k = -1; // Only different that -1 if TAKEOFF_AND_NAVIGATION, meaning that only that particular drone k can do that edge.
+        int k = -1; // Only different that -1 if TAKEOFF_AND_NAVIGATION (and NAVIGATION_AND_LANDING if UAV only can land in its), meaning that only that particular drone k can do that edge.
         EdgeType edge_type = EdgeType::NAVIGATION;
     };
     std::vector<Edge> edges_MILP_;   // Vector of edges possible in which for each pair of nodes (i,j) there is information of whether it is an inspection edge or not. If it is, it still can be used for cross-heading.
@@ -84,7 +84,7 @@ private:
     std::map<int, std::map<int, std::map<int, int>>> from_k_i_j_to_x_index_;
     std::map<int, std::map<int, std::map<int, int>>> from_k_i_j_to_y_and_f_index_;
 
-    std::vector<aerialcore_msgs::FlightPlan> flight_plan_;  // Output.
+    std::vector<aerialcore_msgs::FlightPlan> flight_plans_;  // Output.
 
     void nearestGraphNodeLandStation(int _from_this_index_graph, int& _index_graph_node_to_return, float& _distance_to_return);
     void nearestGraphNodePylon(int _from_this_index_graph, int& _index_graph_node_to_return, float& _distance_to_return);

@@ -35,7 +35,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
     graph_.clear();
     edges_.clear();
     UAVs_.clear();
-    flight_plan_.clear();
+    flight_plans_.clear();
 
     graph_ = _graph;
 
@@ -157,19 +157,19 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
         current_flight_plan.nodes.push_back(index_graph_land_station_from_pylon_last);
 
         if (current_flight_plan.nodes.size()>3) {   // Consider the flight plan only if it visits two or more pylons.
-            flight_plan_.push_back(current_flight_plan);
+            flight_plans_.push_back(current_flight_plan);
         }
     }
 
     // Postprocess to calculate the path free of obstacles between nodes:
     // Up until now the flight plan didn't store the intermediate points to avoid flying above no-fly zones. Run the path planning between pair of nodes to calculate and store the waypoints of those paths in the solution:
     // It should be a faster way of calculating this while the algorithm is running, but a lot should be changed to do that right now, easier to do it like this.
-    for (int i=0; i<flight_plan_.size(); i++) {
-        for (int j=0; j<flight_plan_[i].nodes.size()-1; j++) {
+    for (int i=0; i<flight_plans_.size(); i++) {
+        for (int j=0; j<flight_plans_[i].nodes.size()-1; j++) {
             geometry_msgs::Point32 test_point_1, test_point_2;
-            test_point_1.x = _graph[ flight_plan_[i].nodes[j] ].x;       test_point_2.x = _graph[ flight_plan_[i].nodes[j+1] ].x;
-            test_point_1.y = _graph[ flight_plan_[i].nodes[j] ].y;       test_point_2.y = _graph[ flight_plan_[i].nodes[j+1] ].y;
-            test_point_1.z = _graph[ flight_plan_[i].nodes[j] ].z;       test_point_2.z = _graph[ flight_plan_[i].nodes[j+1] ].z;
+            test_point_1.x = _graph[ flight_plans_[i].nodes[j] ].x;       test_point_2.x = _graph[ flight_plans_[i].nodes[j+1] ].x;
+            test_point_1.y = _graph[ flight_plans_[i].nodes[j] ].y;       test_point_2.y = _graph[ flight_plans_[i].nodes[j+1] ].y;
+            test_point_1.z = _graph[ flight_plans_[i].nodes[j] ].z;       test_point_2.z = _graph[ flight_plans_[i].nodes[j+1] ].z;
             if (!path_planner_.checkIfTwoPointsAreVisible(test_point_1, test_point_2)) {
                 auto path = path_planner_.getPath(test_point_1, test_point_2);
 
@@ -185,14 +185,14 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
                     _graph.push_back(graph_node);
                     
                     int last_inserted_node_index = _graph.size()-1;
-                    flight_plan_[i].nodes.insert(flight_plan_[i].nodes.begin()+j+1+k, last_inserted_node_index);
+                    flight_plans_[i].nodes.insert(flight_plans_[i].nodes.begin()+j+1+k, last_inserted_node_index);
                 }
 
             }
         }
     }
 
-    return flight_plan_;
+    return flight_plans_;
 
 } // end getPlanGreedy method
 
@@ -349,10 +349,10 @@ void CentralizedPlanner::printPlan() {
     std::cout << std::endl;
     std::cout << "Printing flight plan from the planner:" << std::endl;
     std::cout << std::endl;
-    for (int i=0; i<flight_plan_.size(); i++) {
-        std::cout << "flight_plan[ " << i << " ].id = " << flight_plan_[i].uav_id << std::endl;
-        for (int j=0; j<flight_plan_[i].nodes.size(); j++) {
-            std::cout << "flight_plan[ " << i << " ].nodes[ " << j << " ] = " << flight_plan_[i].nodes[j] << std::endl;
+    for (int i=0; i<flight_plans_.size(); i++) {
+        std::cout << "flight_plans[ " << i << " ].id = " << flight_plans_[i].uav_id << std::endl;
+        for (int j=0; j<flight_plans_[i].nodes.size(); j++) {
+            std::cout << "flight_plans[ " << i << " ].nodes[ " << j << " ] = " << flight_plans_[i].nodes[j] << std::endl;
         }
     }
     std::cout << std::endl;
@@ -367,7 +367,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
     from_matrix_index_to_graph_index_.clear();
     from_k_i_j_to_x_index_.clear();
     from_k_i_j_to_y_and_f_index_.clear();
-    flight_plan_.clear();
+    flight_plans_.clear();
 
     // _drone_info it's a vector of tuples, each tuple with 10 elements. The first in the tuple is the initial battery, and so on with all the elements in the "UAV" structure defined here below.
     for (const std::tuple<float, float, int, int, int, int, int, int, bool, bool>& current_drone : _drone_info) {
@@ -385,7 +385,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
         UAVs_.push_back(actual_UAV);
     }
 
-    // Construct edges_MILP_ that contain all the possible edges, with information of it it is a pure dead-heading edge (false) or both inspection and dead-heading edge (true):
+    // Construct edges_MILP_ that contain all the possible edges, with information of if it is a pure dead-heading edge or both inspection and dead-heading edge:
     int x_index = 0;
     int y_and_f_index = 0;
     for (int i=1; i<_time_cost_matrices[0].size(); i++) {
@@ -423,11 +423,13 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 
             current_edge_struct.k = findUavIndexById( _graph[ from_matrix_index_to_graph_index_[current_edge_struct.i] ].id );
 
-        } else if ( _graph[ from_matrix_index_to_graph_index_[current_edge_struct.i] ].type==aerialcore_msgs::GraphNode::TYPE_PYLON && ( _graph[ from_matrix_index_to_graph_index_[current_edge_struct.j] ].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION || _graph[ from_matrix_index_to_graph_index_[current_edge_struct.j] ].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION ) ) {
+        } else if ( _graph[ from_matrix_index_to_graph_index_[current_edge_struct.i] ].type==aerialcore_msgs::GraphNode::TYPE_PYLON && ( _graph[ from_matrix_index_to_graph_index_[current_edge_struct.j] ].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION/*TYPE_REGULAR_LAND_STATION || _graph[ from_matrix_index_to_graph_index_[current_edge_struct.j] ].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION*/ ) ) {
             current_edge_struct.edge_type = EdgeType::NAVIGATION_AND_LANDING;
+
+            current_edge_struct.k = findUavIndexById( _graph[ from_matrix_index_to_graph_index_[current_edge_struct.j] ].id );
         }
 
-        if (current_edge_struct.edge_type == EdgeType::TAKEOFF_AND_NAVIGATION) {
+        if (current_edge_struct.edge_type == EdgeType::TAKEOFF_AND_NAVIGATION || current_edge_struct.edge_type == EdgeType::NAVIGATION_AND_LANDING) {
             from_k_i_j_to_y_and_f_index_[current_edge_struct.k][current_edge_struct.i][current_edge_struct.j] = y_and_f_index++;
         } else {
             for (int k=0; k<_time_cost_matrices.size(); k++) {
@@ -499,7 +501,9 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
             if (edges_MILP_[e_i].edge_type == EdgeType::INSPECTION) {
                 objective->SetCoefficient(x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], _time_cost_matrices[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ]);
             }
-            objective->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], _time_cost_matrices[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ]);
+            if ( (edges_MILP_[e_i].edge_type != EdgeType::TAKEOFF_AND_NAVIGATION && edges_MILP_[e_i].edge_type != EdgeType::NAVIGATION_AND_LANDING) || k==edges_MILP_[e_i].k) {
+                objective->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], _time_cost_matrices[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ]);
+            }
         }
     }
     objective->SetMinimization();
@@ -518,8 +522,20 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
                             constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
                             constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ], -1);
                         }
-                        constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
-                        constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ], -1);
+                        if (edges_MILP_[e_i].edge_type != EdgeType::TAKEOFF_AND_NAVIGATION && edges_MILP_[e_i].edge_type != EdgeType::NAVIGATION_AND_LANDING) {
+                            constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
+                            constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ], -1);
+                        }
+                    }
+                }
+            } else if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION) {
+                operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0, 0, "");
+                for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+                    if (edges_MILP_[e_i].i == from_graph_index_to_matrix_index_[g_i]) {
+                        if (k==edges_MILP_[e_i].k) {
+                            constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
+                            constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ], -1);
+                        }
                     }
                 }
             }
@@ -537,25 +553,25 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
         }
     }
 
-    // (4) For all tours-drones, in edges coming from takeoff nodes, y_0j is 0 or 1 (take off just once in each tour):
+    // (4) For all tours-drones, in edges coming from takeoff nodes, y_0j is 0 or 1 (take off just once or zero times in each tour):
     for (int k=0; k<_time_cost_matrices.size(); k++) {
         operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0, 1, "");
         for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
-            if (edges_MILP_[e_i].edge_type == EdgeType::TAKEOFF_AND_NAVIGATION) {
+            if (edges_MILP_[e_i].edge_type == EdgeType::TAKEOFF_AND_NAVIGATION && k==edges_MILP_[e_i].k) {
                 constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
             }
         }
     }
 
-    // (4.1) For all tours-drones, in edges going to land nodes, y_j0 is 0 or 1 (land just once in each tour):
-    for (int k=0; k<_time_cost_matrices.size(); k++) {
-        operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0, 1, "");
-        for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
-            if (edges_MILP_[e_i].edge_type == EdgeType::NAVIGATION_AND_LANDING) {
-                constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
-            }
-        }
-    }
+    // // (4.1) For all tours-drones, in edges going to land nodes, y_j0 is 0 or 1 (land just once in each tour):
+    // for (int k=0; k<_time_cost_matrices.size(); k++) {
+    //     operations_research::MPConstraint *constraint = solver->MakeRowConstraint(1, 1, "");
+    //     for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+    //         if (edges_MILP_[e_i].edge_type == EdgeType::NAVIGATION_AND_LANDING && k==edges_MILP_[e_i].k) {
+    //             constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
+    //         }
+    //     }
+    // }
 
     // (5) For all tours-drones and pylon nodes, equation of flow consumed in node (flow in equals to flow destroyed in that node plus flow out):
     for (int k=0; k<_battery_drop_matrices.size(); k++) {
@@ -569,7 +585,9 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
                         if (edges_MILP_[e_i].edge_type == EdgeType::INSPECTION) {
                             constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ], -_battery_drop_matrices[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ]);
                         }
-                        constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ], -_battery_drop_matrices[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ]);
+                        if ((edges_MILP_[e_i].edge_type != EdgeType::TAKEOFF_AND_NAVIGATION && edges_MILP_[e_i].edge_type != EdgeType::NAVIGATION_AND_LANDING) || k==edges_MILP_[e_i].k) {
+                            constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ], -_battery_drop_matrices[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ]);
+                        }
                     }
                 }
             }
@@ -580,12 +598,15 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
     for (int k=0; k<_battery_drop_matrices.size(); k++) {
         operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0.0, 0.0, "");
         for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
-            if (edges_MILP_[e_i].edge_type == EdgeType::TAKEOFF_AND_NAVIGATION) {
+            if (edges_MILP_[e_i].edge_type == EdgeType::TAKEOFF_AND_NAVIGATION && k==edges_MILP_[e_i].k) {
                 constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
-            } else if (edges_MILP_[e_i].edge_type == EdgeType::INSPECTION) {
+            }
+            if (edges_MILP_[e_i].edge_type == EdgeType::INSPECTION) {
                 constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], -_battery_drop_matrices[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ]);
             }
-            constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], -_battery_drop_matrices[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ]);
+            if ((edges_MILP_[e_i].edge_type != EdgeType::TAKEOFF_AND_NAVIGATION && edges_MILP_[e_i].edge_type != EdgeType::NAVIGATION_AND_LANDING) || k==edges_MILP_[e_i].k) {
+                constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], -_battery_drop_matrices[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ]);
+            }
         }
     }
 
@@ -593,26 +614,42 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
     for (int k=0; k<_battery_drop_matrices.size(); k++) {
         operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0.0, 0.0, "");
         for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
-            if (edges_MILP_[e_i].edge_type == EdgeType::NAVIGATION_AND_LANDING) {
+            if (edges_MILP_[e_i].edge_type == EdgeType::NAVIGATION_AND_LANDING && k==edges_MILP_[e_i].k) {
                 constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
                 constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], -_battery_drop_matrices[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ]);
             }
         }
     }
 
-    // // (8) For all tours-drones and edges, the flow must be lower than the maximum capacity of the UAV for each time the UAV covers that edge:
-    // for (int k=0; k<_battery_drop_matrices.size(); k++) {
-    //     for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
-    //         operations_research::MPConstraint *constraint = solver->MakeRowConstraint(-infinity, 0.0, "");
-    //         constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ], 1);
-    //         if (edges_MILP_[e_i].edge_type == EdgeType::INSPECTION) {
-    //             constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ], -1.0);
-    //         }
-    //         constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ], -1.0);
-    //     }
-    // }
+    // (8) For all tours-drones and edges, there is only flow if edge served:
+    for (int k=0; k<_battery_drop_matrices.size(); k++) {
+        for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+            operations_research::MPConstraint *constraint = solver->MakeRowConstraint(-infinity, 0.0, "");
+            constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
+            if (edges_MILP_[e_i].edge_type == EdgeType::INSPECTION) {
+                constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], -1.0);
+            }
+            if ((edges_MILP_[e_i].edge_type != EdgeType::TAKEOFF_AND_NAVIGATION && edges_MILP_[e_i].edge_type != EdgeType::NAVIGATION_AND_LANDING) || k==edges_MILP_[e_i].k) {
+                constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], -1.0);
+            }
+        }
+    }
 
-    // (8), (9) and (10) are assumed to be met in the dataset. Also, the robot capacity is assumed to be sufficiently large to service any edge.
+    // (8.1) For all tours-drones and edges, flow has a minimum value:
+    for (int k=0; k<_battery_drop_matrices.size(); k++) {
+        for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+            operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0, infinity, "");
+            constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], 1);
+            if (edges_MILP_[e_i].edge_type == EdgeType::INSPECTION) {
+                constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], -_battery_drop_matrices[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ]);
+            }
+            if ((edges_MILP_[e_i].edge_type != EdgeType::TAKEOFF_AND_NAVIGATION && edges_MILP_[e_i].edge_type != EdgeType::NAVIGATION_AND_LANDING) || k==edges_MILP_[e_i].k) {
+                constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ], -_battery_drop_matrices[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ]);
+            }
+        }
+    }
+
+    // (9) and (10) are assumed to be met in the dataset. Also, the robot capacity is assumed to be sufficiently large to service any edge.
 
     LOG(INFO) << "Number of constraints = " << solver->NumConstraints();
 
@@ -630,7 +667,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 #ifdef DEBUG
     // Print the variables of the solution:
     for (int k=0; k<_time_cost_matrices.size(); k++) {
-        std::cout << "x[" << k << "]" << std::endl;;
+        std::cout << "x[" << k << "]" << std::endl;
         for (int i=0; i<_time_cost_matrices[k].size(); i++) {
             for (int j=0; j<_time_cost_matrices[k][i].size(); j++) {
                 if (i==0 || j==0) {
@@ -640,7 +677,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
                 bool inspection_edge_found = false;
                 for (Edge& current_edge_struct : edges_MILP_) {
                     if (current_edge_struct.edge_type == EdgeType::INSPECTION && current_edge_struct.i == i && current_edge_struct.j == j) {
-                        std::cout << x[ from_k_i_j_to_x_index_[k][i][j] ]->solution_value() << " ";
+                        std::cout << std::setprecision(6) << x[ from_k_i_j_to_x_index_[k][i][j] ]->solution_value() << " ";
                         inspection_edge_found = true;
                         break;
                     }
@@ -653,7 +690,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
         }
     }
     for (int k=0; k<_time_cost_matrices.size(); k++) {
-        std::cout << "y[" << k << "]" << std::endl;;
+        std::cout << "y[" << k << "]" << std::endl;
         for (int i=0; i<_time_cost_matrices[k].size(); i++) {
             for (int j=0; j<_time_cost_matrices[k][i].size(); j++) {
                 if (i==0 || j==0) {
@@ -663,14 +700,14 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
                 if (_time_cost_matrices[0][i][j]==-1) {
                     std::cout << "- ";
                 } else {
-                    std::cout << y[ from_k_i_j_to_x_index_[k][i][j] ]->solution_value() << " ";
+                    std::cout << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[k][i][j] ]->solution_value() << " ";
                 }
             }
             std::cout << std::endl;
         }
     }
     for (int k=0; k<_time_cost_matrices.size(); k++) {
-        std::cout << "f[" << k << "]" << std::endl;;
+        std::cout << "f[" << k << "]" << std::endl;
         for (int i=0; i<_time_cost_matrices[k].size(); i++) {
             for (int j=0; j<_time_cost_matrices[k][i].size(); j++) {
                 if (i==0 || j==0) {
@@ -680,24 +717,228 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
                 if (_time_cost_matrices[0][i][j]==-1) {
                     std::cout << "- ";
                 } else {
-                    std::cout << f[ from_k_i_j_to_x_index_[k][i][j] ]->solution_value() << " ";
+                    std::cout << std::setprecision(6) << f[ from_k_i_j_to_y_and_f_index_[k][i][j] ]->solution_value() << " ";
                 }
             }
             std::cout << std::endl;
         }
     }
+
+
+    // Print the objective and restrictions for debug:
+    std::cout<< std::endl << "Print the objective and restrictions for debug:" << std::endl << std::endl;
+
+    // (1) Minimize all the inspection time (UAVs flying separately).
+    std::cout << "(1):" << std::endl;
+    for (int k=0; k<_time_cost_matrices.size(); k++) {
+        for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+            if (edges_MILP_[e_i].edge_type == EdgeType::INSPECTION) {
+                std::cout << "x[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "] " << std::setprecision(6) << x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ]->solution_value() << " · " << _time_cost_matrices[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] << " + ";
+                // std::cout << std::endl;
+                // std::cout << "e_i = " << e_i << std::endl;
+                // std::cout << "k = " << k << std::endl;
+                // std::cout << "edges_MILP_[e_i].i = " << edges_MILP_[e_i].i << std::endl;
+                // std::cout << "edges_MILP_[e_i].j = " << edges_MILP_[e_i].j << std::endl;
+                // std::cout << "from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] = " << from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] << std::endl;
+                // std::cout << "<< std::setprecision(6) << from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ] = " << "x " << x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ]->solution_value() << std::endl;
+            }
+            if ( (edges_MILP_[e_i].edge_type != EdgeType::TAKEOFF_AND_NAVIGATION && edges_MILP_[e_i].edge_type != EdgeType::NAVIGATION_AND_LANDING) || k==edges_MILP_[e_i].k) {
+                std::cout << "y[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ]->solution_value() << " · " << _time_cost_matrices[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] << " + ";
+                // std::cout << std::endl;
+                // std::cout << "e_i = " << e_i << std::endl;
+                // std::cout << "k = " << k << std::endl;
+                // std::cout << "edges_MILP_[e_i].i = " << edges_MILP_[e_i].i << std::endl;
+                // std::cout << "edges_MILP_[e_i].j = " << edges_MILP_[e_i].j << std::endl;
+                // std::cout << "from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] = " << from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] << std::endl;
+                // std::cout << "<< std::setprecision(6) << from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ] = " << "y " << y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ]->solution_value() << std::endl;
+            }
+        }
+    }
+    std::cout << std::endl << std::endl;
+
+    // (2) For all pylon nodes and tours-drones, Sum_all_j(x_ij_k) plus Sum_all_j(y_ij_k) minus Sum_all_j(x_ji_k) and minus Sum_all_j(x_ji_k) is equal to zero (inputs equal to outputs in each node):
+    std::cout << "(2):" << std::endl;
+    for (int k=0; k<_time_cost_matrices.size(); k++) {
+        for (int g_i=0; g_i<_graph.size(); g_i++) {
+            if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
+                std::cout << "node_" << g_i << " : ";
+                for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+                    if (edges_MILP_[e_i].i == from_graph_index_to_matrix_index_[g_i]) {
+                        if (edges_MILP_[e_i].edge_type == EdgeType::INSPECTION) {
+                            std::cout << "x[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "] " << std::setprecision(6) << x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ]->solution_value() << " · " << 1 << " + ";
+                            std::cout << "x[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "] " << std::setprecision(6) << x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ]->solution_value() << " · " << -1 << " + ";
+                        }
+                        if (edges_MILP_[e_i].edge_type != EdgeType::TAKEOFF_AND_NAVIGATION && edges_MILP_[e_i].edge_type != EdgeType::NAVIGATION_AND_LANDING) {
+                            std::cout << "y[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ]->solution_value() << " · " << 1 << " + ";
+                            std::cout << "y[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ]->solution_value() << " · " << -1 << " + ";
+                        }
+                    }
+                }
+                std::cout << std::endl;
+            } else if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION) {
+                std::cout << "node_" << g_i << " : ";
+                for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+                    if (edges_MILP_[e_i].i == from_graph_index_to_matrix_index_[g_i]) {
+                        if (k==edges_MILP_[e_i].k) {
+                            std::cout << "y[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ]->solution_value() << " · " << 1 << " + ";
+                        }
+                    } else if (edges_MILP_[e_i].j == from_graph_index_to_matrix_index_[g_i]) {
+                        if (k==edges_MILP_[e_i].k) {
+                            std::cout << "y[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ]->solution_value() << " · " << -1 << " + ";
+                        }
+                    }
+                }
+                std::cout << std::endl;
+            }
+        }
+    }
+    std::cout << std::endl;
+
+    // (3) For all inspection edges, x_ij plus x_ji sums 1 (all inspection edges covered in any direction):
+    std::cout << "(3):" << std::endl;
+    for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+        if (edges_MILP_[e_i].edge_type == EdgeType::INSPECTION && edges_MILP_[e_i].i<edges_MILP_[e_i].j) {
+        std::cout << "inspection_edge_" << e_i << " : ";
+            for (int k=0; k<_time_cost_matrices.size(); k++) {
+                std::cout << "x[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "] " << std::setprecision(6) << x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ]->solution_value() << " · " << 1 << " + ";
+                std::cout << "x[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "] " << std::setprecision(6) << x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ]->solution_value() << " · " << 1 << " + ";
+            }
+            std::cout << std::endl;
+        }
+    }
+    std::cout << std::endl;
+
+    // (4) For all tours-drones, in edges coming from takeoff nodes, y_0j is 0 or 1 (take off just once in each tour):
+    std::cout << "(4):" << std::endl;
+    for (int k=0; k<_time_cost_matrices.size(); k++) {
+        std::cout << "k_" << k << " : ";
+        for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+            if (edges_MILP_[e_i].edge_type == EdgeType::TAKEOFF_AND_NAVIGATION && k==edges_MILP_[e_i].k) {
+                std::cout << "y[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ]->solution_value() << " · " << 1 << " + ";
+            }
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+
+    // // (4.1) For all tours-drones, in edges going to land nodes, y_j0 is 0 or 1 (land just once in each tour):
+    // std::cout << "(4.1):" << std::endl;
+    // for (int k=0; k<_time_cost_matrices.size(); k++) {
+    //     std::cout << "k_" << k << " : ";
+    //     for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+    //         if (edges_MILP_[e_i].edge_type == EdgeType::NAVIGATION_AND_LANDING && k==edges_MILP_[e_i].k) {
+    //             std::cout << "y[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ]->solution_value() << " · " << 1 << " + ";
+    //         }
+    //     }
+    //     std::cout << std::endl;
+    // }
+    // std::cout << std::endl;
+
+    // (5) For all tours-drones and pylon nodes, equation of flow consumed in node (flow in equals to flow destroyed in that node plus flow out):
+    std::cout << "(5):" << std::endl;
+    for (int k=0; k<_battery_drop_matrices.size(); k++) {
+        for (int g_i=0; g_i<_graph.size(); g_i++) {
+            if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
+                std::cout << "pylon_node_" << g_i << " : ";
+                for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+                    if (edges_MILP_[e_i].i == from_graph_index_to_matrix_index_[g_i]) {
+                        std::cout << "f[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "] " << std::setprecision(6) << f[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ]->solution_value() << " · " << 1 << " + ";
+                        std::cout << "f[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "] " << std::setprecision(6) << f[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ]->solution_value() << " · " << -1 << " + ";
+                        if (edges_MILP_[e_i].edge_type == EdgeType::INSPECTION) {
+                            std::cout << "x[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "] " << std::setprecision(6) << x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ]->solution_value() << " · " << -_battery_drop_matrices[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] << " + ";
+                        }
+                        if ((edges_MILP_[e_i].edge_type != EdgeType::TAKEOFF_AND_NAVIGATION && edges_MILP_[e_i].edge_type != EdgeType::NAVIGATION_AND_LANDING) || k==edges_MILP_[e_i].k) {
+                            std::cout << "y[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] ]->solution_value() << " · " << -_battery_drop_matrices[k][ edges_MILP_[e_i].j ][ edges_MILP_[e_i].i ] << " + ";
+                        }
+                    }
+                }
+                std::cout << std::endl;
+            }
+        }
+    }
+    std::cout << std::endl;
+
+    // (6) For all tours-drones, all flow is created in the takeoff nodes:
+    std::cout << "(6):" << std::endl;
+    for (int k=0; k<_battery_drop_matrices.size(); k++) {
+        std::cout << "k_" << k << " : ";
+        for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+            if (edges_MILP_[e_i].edge_type == EdgeType::TAKEOFF_AND_NAVIGATION && k==edges_MILP_[e_i].k) {
+                std::cout << "f[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "] " << std::setprecision(6) << f[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ]->solution_value() << " · " << 1 << " + ";
+            }
+            if (edges_MILP_[e_i].edge_type == EdgeType::INSPECTION) {
+                std::cout << "x[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "] " << std::setprecision(6) << x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ]->solution_value() << " · " << -_battery_drop_matrices[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] << " + ";
+            }
+            if ((edges_MILP_[e_i].edge_type != EdgeType::TAKEOFF_AND_NAVIGATION && edges_MILP_[e_i].edge_type != EdgeType::NAVIGATION_AND_LANDING) || k==edges_MILP_[e_i].k) {
+                std::cout << "y[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ]->solution_value() << " · " << -_battery_drop_matrices[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] << " + ";
+            }
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+
+    // (7) For all tours-drones, land nodes receive all the remaining flow:
+    std::cout << "(7):" << std::endl;
+    for (int k=0; k<_battery_drop_matrices.size(); k++) {
+        std::cout << "k_" << k << " : ";
+        for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+            if (edges_MILP_[e_i].edge_type == EdgeType::NAVIGATION_AND_LANDING) {
+                std::cout << "f[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "] " << std::setprecision(6) << f[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ]->solution_value() << " · " << 1 << " + ";
+                std::cout << "y[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ]->solution_value() << " · " << -_battery_drop_matrices[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] << " + ";
+            }
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+
+
+    // (8) For all tours-drones and edges, there is only flow if edge served:
+    std::cout << "(8):" << std::endl;
+    for (int k=0; k<_battery_drop_matrices.size(); k++) {
+        for (int e_i=0; e_i<edges_MILP_.size(); e_i++) {
+            std::cout << "edge_" << e_i << " : ";
+            std::cout << "f[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "] " << std::setprecision(6) << f[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ]->solution_value() << " + ";
+            if (edges_MILP_[e_i].edge_type == EdgeType::INSPECTION) {
+                std::cout << "x[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "] " << std::setprecision(6) << x[ from_k_i_j_to_x_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ]->solution_value() << " + ";
+            }
+            if ((edges_MILP_[e_i].edge_type != EdgeType::TAKEOFF_AND_NAVIGATION && edges_MILP_[e_i].edge_type != EdgeType::NAVIGATION_AND_LANDING) || k==edges_MILP_[e_i].k) {
+                std::cout << "y[" << k << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_MILP_[e_i].j] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[k][ edges_MILP_[e_i].i ][ edges_MILP_[e_i].j ] ]->solution_value() << " + ";
+            }
+            std::cout << std::endl;
+        }
+    }
+    std::cout << std::endl;
+
+
+    /* Once printed the results, you can tidy up those terminal results copying them to VS Code and replace the following to just zero 0 (search using Regular Expressions):
+
+     -0 
+
+    -*\d*\.\d*e-\d* 
+
+
+    And deleting these:
+
+    [fxy]\[\d+?\]\[\d+?\]\[\d+?\] -*0 · -*\d\.*\d* \+ 
+
+    [xyf]\[\d+?\]\[\d+?\]\[\d+?\] 0 · \d*\.\d* \+ 
+
+    [fxy]\[\d+?\]\[\d+?\]\[\d+?\] 0 \+ 
+
+    */
+
 #endif
 
     //////////////////// End defining the MILP problem according to agarwal_icra20 and solve it using OR-Tools ////////////////////
 
 
-    // // Assign flight_plan_ according to the edges in the solution:
+    // // Assign flight_plans_ according to the edges in the solution:
     // for (const UAV& current_uav : UAVs_) {
     // }
 
     // Calculate the path free of obstacles between nodes outside in the Mission Controller. There is a path warantied between the nodes.
 
-    return flight_plan_;
+    return flight_plans_;
 
 } // end getPlanMILP method
 

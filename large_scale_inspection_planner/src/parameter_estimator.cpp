@@ -89,9 +89,9 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
                 if (_graph[i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION) {
                     uav_initial_positions_indexes.push_back(i);
                 } else if (_graph[i].type == aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION) {
-                    uav_regular_land_stations_indexes.push_back(i);
+                    // uav_regular_land_stations_indexes.push_back(i);
                 } else if (_graph[i].type == aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) {
-                    uav_recharging_land_stations_indexes.push_back(i);
+                    // uav_recharging_land_stations_indexes.push_back(i);
                 } else if (_graph[i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
                     pylons_indexes.push_back(i);
                 }
@@ -123,9 +123,13 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
                     to_here.y =   _graph[ first_row_and_column[j] ].y;
                     to_here.z =   _graph[ first_row_and_column[j] ].z;
                     auto path = path_planner_.getPath(from_here, to_here);
-                    if (path.size() == 0) continue;         // No path found.
-                    new_distance_cost_matrix[i][j] = path_planner_.getFlatDistance();   // TODO: more precise path with also precise height distances?
-                    new_distance_cost_matrix[j][i] = path_planner_.getFlatDistance();
+                    if (path.size() == 0) { // No path found.
+                        new_distance_cost_matrix[i][j] = -1;
+                        new_distance_cost_matrix[j][i] = -1;
+                    } else {
+                        new_distance_cost_matrix[i][j] = path_planner_.getFlatDistance();   // TODO: more precise path with also precise height distances?
+                        new_distance_cost_matrix[j][i] = path_planner_.getFlatDistance();
+                    }
                 }
             }
 
