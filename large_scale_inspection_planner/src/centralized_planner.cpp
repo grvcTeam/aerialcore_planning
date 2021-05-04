@@ -181,9 +181,9 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
                     graph_node.z = path[k].z;
                     // graph_node.latitude = // TODO, cartesian to geographic
                     // graph_node.longitude = // TODO, cartesian to geographic
-                    // graph_node.altitude = // TODO, corregir altitud entorno
+                    // graph_node.altitude = // TODO, correct environment altitude
                     _graph.push_back(graph_node);
-                    
+
                     int last_inserted_node_index = _graph.size()-1;
                     flight_plans_[i].nodes.insert(flight_plans_[i].nodes.begin()+j+1+k, last_inserted_node_index);
                 }
@@ -891,7 +891,6 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
     }
     std::cout << std::endl;
 
-
     // (8) For all tours-drones and edges, there is only flow if edge served:
     std::cout << "(8):" << std::endl;
     for (int k=0; k<_battery_drop_matrices.size(); k++) {
@@ -931,10 +930,71 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 
     //////////////////// End defining the MILP problem according to agarwal_icra20 and solve it using OR-Tools ////////////////////
 
+    // Assign flight_plans_ according to the edges in the solution:
+    for (int k=0; k<_battery_drop_matrices.size(); k++) {
 
-    // // Assign flight_plans_ according to the edges in the solution:
-    // for (const UAV& current_uav : UAVs_) {
-    // }
+        struct fStruct {
+            float f;
+            int x;
+            int y;
+            int k;
+            int i;
+            int j;
+        };
+        std::vector<fStruct> f_struct_vector;
+
+        for (int i=1; i<_battery_drop_matrices[k].size(); i++) {
+            for (int j=1; j<_battery_drop_matrices[k][i].size(); j++) {
+                if (f[ from_k_i_j_to_y_and_f_index_[k][i][j] ]->solution_value()>0.001) {
+                    fStruct new_f_struct;
+                    new_f_struct.f = f[ from_k_i_j_to_y_and_f_index_[k][i][j] ]->solution_value();
+                    new_f_struct.x = x[ from_k_i_j_to_x_index_[k][i][j] ]->solution_value();
+                    new_f_struct.y = y[ from_k_i_j_to_y_and_f_index_[k][i][j] ]->solution_value();
+                    new_f_struct.k = k;
+                    new_f_struct.i = from_matrix_index_to_graph_index_[i];
+                    new_f_struct.j = from_matrix_index_to_graph_index_[j];
+                    f_struct_vector.push_back(new_f_struct);
+                }
+            }
+        }
+
+        std::sort(f_struct_vector.begin(), f_struct_vector.end(), [](const fStruct& a, const fStruct& b) { 
+            return a.f > b.f; 
+        }); // Sort in descending order.
+
+        aerialcore_msgs::FlightPlan current_flight_plan;
+
+        for (const auto& f_struct : f_struct_vector) {
+            current_flight_plan.nodes.push_back(f_struct.i);
+        }
+        if (f_struct_vector.size()>0) {
+            current_flight_plan.uav_id = _graph[ f_struct_vector.front().i ].id;
+            current_flight_plan.nodes.push_back( f_struct_vector.back().j );
+        }
+
+        if (current_flight_plan.nodes.size()>3) {   // Consider the flight plan only if it visits two or more pylons.
+#ifdef DEBUG
+            std::cout << "current_flight_plan.uav_id: " << current_flight_plan.uav_id << std::endl;
+            std::cout << "current_flight_plan.nodes:" << std::endl;
+
+            for (int node : current_flight_plan.nodes) {
+                std::cout << node << std::endl;
+            }
+
+            bool milp_solution_coherent = f_struct_vector.front().i == f_struct_vector.back().j ? true : false;
+            for (int index = 0; index<f_struct_vector.size()-1; index++) {
+                if (milp_solution_coherent) {
+                    milp_solution_coherent = f_struct_vector[index].j == f_struct_vector[index + 1].i ? true : false;
+                } else if (!milp_solution_coherent) {
+                    break;
+                }
+            }
+            std::cout << "milp_solution_coherent = " << milp_solution_coherent << std::endl;
+#endif
+
+            flight_plans_.push_back(current_flight_plan);
+        }
+    }
 
     // Calculate the path free of obstacles between nodes outside in the Mission Controller. There is a path warantied between the nodes.
 

@@ -1,0 +1,296 @@
+# This file describes the settings for the planning problem for the ATLAS_power_lines.world
+
+
+# Dictionary of the actual drones used in the simulation or reality (key: UAV id, value: airframe type):
+drones: {"1": "multicopter", "2": "multicopter"} #, "3": "multicopter"}
+
+
+# Airframe types, each one with its own parameter values (time in seconds, speed in m/s, battery in in parts per unit):
+multicopter:
+  time_max_flying: 1800
+  speed_xy: 5.5
+  speed_z_down: 1.5
+  speed_z_up: 3.0
+  minimum_battery: 0.2
+  time_until_fully_charged: 1800
+
+fixed_wing:
+  time_max_flying: 5400
+  speed_xy: 20.0
+  speed_z_down: 1.5
+  speed_z_up: 3.0
+  minimum_battery: 0.2
+  time_until_fully_charged: 1800
+
+VTOL:
+  time_max_flying: 5400
+  speed_xy: 20.0
+  speed_z_down: 1.5
+  speed_z_up: 3.0
+  minimum_battery: 0.2
+  time_until_fully_charged: 1800
+
+
+# Time (in seconds) between iterations for the Parameter Estimator thread and Plan Monitor thread in the Mission Controller:
+parameter_estimator_time: 5.0
+plan_monitor_time: 5.0
+
+
+# Geographic coordinate (latitude, longitude, altitude) that makes (x,y,z) = (0,0,0) meters in cartesian coordinates:
+map_origin_geo: [38.138728, -3.173825, 444]
+
+
+# List of closed polygons (list of waypoints which first and end point must be the same) in geographic coordinates. Each polygon is an obstacle or no-fly zone:
+no_fly_zones_geo: [
+  [
+    [38.138621, -3.174005],
+    [38.138923, -3.172830],
+    [38.138652, -3.172695],
+    [38.138347, -3.173893],
+    [38.138621, -3.174005],
+  ],[
+    [38.136774, -3.179633],
+    [38.136911, -3.179653],
+    [38.137158, -3.180338],
+    [38.137120, -3.180940],
+    [38.136538, -3.180878],
+    [38.136774, -3.179633],
+  ],[
+    [38.135994, -3.179585],
+    [38.134940, -3.179584],
+    [38.134502, -3.181708],
+    [38.135402, -3.181809],
+    [38.136153, -3.180090],
+    [38.135994, -3.179585],
+  ]
+]
+
+
+# NOTE: this notation of anidating lists of numbers in the yaml is convenient, but you need to parse it with XmlRpc (or if you prefer other parser that you install),
+# and XmlRpc is tricky because it fails to parse directly numbers with and without comma in the same list. Parsing directly lists mixing int with doubles (no float in XmlRpc!!) are not allowed.
+# That's why stringstream is being used to parse inderecly, because it helps to pass the value to string, and then it is parsed to float, int, etc. not caring if the number has floating point or not.
+
+
+# Geofence in geographic coordinates, the planner won't calculate paths out of it:
+geofence: [
+  [38.132439, -3.184625],
+  [38.143406, -3.182860],
+  [38.143863, -3.164912],
+  [38.133770, -3.164140],
+  [38.132439, -3.184625],
+]
+
+
+# Three different types of graph elements: recharge land stations, regular land stations and pylons (electric towers).
+# Locations of graph elements provided by the following matrices in both cartesian coordinates (x,y,z) and geographic coordinates (latitude, longitude, altitude).
+# For each graph element matrix, the equivalent in the other coordinates system must have the same number of rows. Each row represent an element.
+# In cartesian coordinates, the z is the height of the electric tower or land station from the ground level.
+# In geographic coordinates, the altitude is the ground distance above sea level in that spot where the graph element is.
+# The electric graph is conformed with the positions of the pylons and their wire connections.
+# The vector of vectors "pylons_connection_indexes" must be of the same size of "pylons_position_cartesian" (and "pylons_position_geographic") and represents
+# the wire connections among electric towers. ATTENTION: indexes start at 1, so you may want to rest 1 at parsing to start by 0 (C++ or Python).
+
+# Consider the following simple power grid example of 3 pylons and 2 wires as an explanation for the electric graph structure:
+
+# O---O---O
+# 1   2   3
+
+# These 3 pylons would result into the following electric graph:
+
+# pylons_position_cartesian = [
+#   [0, 0, 20],                   # Pylon 1 with x=0m,  y=0m relative to the origin, pylon of 20 meters height.
+#   [10, 0, 20],                  # Pylon 2 with x=10m, y=0m relative to the origin, pylon of 20 meters height.
+#   [20, 0, 20],                  # Pylon 3 with x=20m, y=0m relative to the origin, pylon of 20 meters height.
+# ]
+
+# pylons_position_geographic = [
+#   [38.119002 -3.221949 444],    # Pylon 1 latitude, longitude and ground level altitude (above sea level).
+#   [38.119004 -3.220921 444],    # Pylon 2 latitude, longitude and ground level altitude (above sea level).
+#   [38.132953 -3.219796 444],    # Pylon 3 latitude, longitude and ground level altitude (above sea level).
+# ]
+
+# pylons_connections_indexes = [
+#   [2],                          # Pylon 1 connected to pylon 2.
+#   [1, 3],                       # Pylon 2 connected to pylons 1 and 3.
+#   [2],                          # Pylon 3 connected to pylon 2.
+# ]
+
+recharge_land_stations_cartesian: [
+  [28, 61, 0.32],
+]
+recharge_land_stations_geographic: [
+  [38.139275, -3.173516, 444],
+]
+
+
+regular_land_stations_cartesian: [
+  [38.8, 65, 0],
+  [32.5, 61, 0],
+]
+regular_land_stations_geographic: [
+  [38.139309, -3.173386, 444],
+  [38.139272, -3.173451 ,444],
+]
+
+
+pylons_position_cartesian: [
+  [-409.120, 449.015, 25],
+  [-430.169, 276.424, 25],
+  [-450.540, 108.275, 25],
+  [-470.078, -41.682, 25],
+  [-490.208, -215.834, 25],
+  [-492.875, -240.864, 25],
+  [-598.496, -281.095, 20],
+  [-633.009, -319.444, 20],
+  [-627.564, -283.028, 20],
+  [-611.221, -232.533, 20],
+  [-544.794, -296.507, 20],
+  [-413.182, -301.398, 20],
+  [-244.429, -290.325, 30],
+  [-32.435, -276.509, 30],
+  [119.719, -383.291, 30],
+  [276.420, -493.459, 30],
+  [-391.957, -202.912, 20],
+  [-301.302, -167.188, 20],
+  [-208.036, -131.632, 20],
+  [-118.176, -97.355, 20],
+  [-28.178, -63.028, 20],
+  [65.174, -27.481, 20],
+  [62.631, -21.742, 20],
+  [163.171, 6.176, 20],
+  [252.476, 37.164, 20],
+  [351.502, 70.480, 20],
+  [447.289, 103.004, 20],
+  [543.828, 136.838, 20],
+  [641.898, 170.080, 20],
+  [719.770, 208.398, 30],
+  [769.668, 108.103, 35],
+  [894.348, 293.824, 25],
+
+  [-759.132, -343.946, 20],
+  [-872.146, -370.019, 20],
+  [-1001.817, -398.388, 20],
+  [-1018.260, -381.933, 20],
+  [-1106.939, -421.478, 20],
+  [-1111.356, -395.394, 20],
+  [-1134.915, -257.319, 20],
+  [-1158.906, -116.024, 20],
+  [-1219.076, -445.884, 20],
+  [-1326.479, -469.410, 20],
+  [-1430.639, -492.165, 20],
+  [-1528.585, -519.037, 20],
+  [-1663.017, -559.146, 20],
+  [-1763.072, -587.453, 20],
+  [-1907.753, -624.320, 20],
+  [-1993.006, -656.316, 20],
+  [-2030.380, -675.100, 20],
+  [-2183.336, -727.699, 20],
+]
+pylons_position_geographic: [
+  [38.142767, -3.178503, 475],
+  [38.141211, -3.178739, 456],
+  [38.139696, -3.178968, 440],
+  [38.138344, -3.179188, 434],
+  [38.136774, -3.179414, 436],
+  [38.136548, -3.179444, 437],
+  [38.136184, -3.180648, 437],
+  [38.135838, -3.181041, 437],
+  [38.136166, -3.180980, 437],
+  [38.136621, -3.180794, 437],
+  [38.136046, -3.180035, 439],
+  [38.136004, -3.178533, 438],
+  [38.136107, -3.176607, 440],
+  [38.136235, -3.174189, 446],
+  [38.135275, -3.172450, 451],
+  [38.134285, -3.170660, 465],
+  [38.136892, -3.178293, 437],
+  [38.137216, -3.177259, 439],
+  [38.137538, -3.176196, 440],
+  [38.137848, -3.175171, 441],
+  [38.138159, -3.174145, 443],
+  [38.138481, -3.173080, 445],
+  [38.138533, -3.173109, 445],
+  [38.138786, -3.171963, 446],
+  [38.139067, -3.170944, 447],
+  [38.139369, -3.169815, 449],
+  [38.139663, -3.168722, 450],
+  [38.139970, -3.167622, 452],
+  [38.140271, -3.166503, 454],
+  [38.140618, -3.165615, 453],
+  [38.139714, -3.165044, 454],
+  [38.141390, -3.163625, 451],
+
+  [38.135613, -3.182480, 426],
+  [38.135376, -3.183769, 422],
+  [38.135118, -3.185248, 420],
+  [38.135266, -3.185436, 420],
+  [38.134908, -3.186447, 417],
+  [38.135143, -3.186498, 417],
+  [38.136387, -3.186770, 417],
+  [38.137660, -3.187047, 424],
+  [38.134686, -3.187726, 416],
+  [38.134472, -3.188951, 413],
+  [38.134265, -3.190139, 409],
+  [38.134021, -3.191256, 407],
+  [38.133657, -3.192789, 406],
+  [38.133400, -3.193930, 406],
+  [38.133065, -3.195580, 403],
+  [38.132775, -3.196552, 391],
+  [38.132605, -3.196978, 390],
+  [38.132128, -3.198722, 393],
+]
+
+
+pylons_connections_indexes: [
+  [2],
+  [1, 3],
+  [2, 4],
+  [3, 5],
+  [4, 6],
+  [5, 7, 17],
+  [6, 8],
+  [7, 9, 11, 33],
+  [8, 10],
+  [9],
+  [8, 12],
+  [11, 13],
+  [12, 14],
+  [13, 15],
+  [14, 16],
+  [15],
+  [6, 18],
+  [17, 19],
+  [18, 20],
+  [19, 21],
+  [20, 22],
+  [21, 23, 24],
+  [22],
+  [22, 25],
+  [24, 26],
+  [25, 27],
+  [26, 28],
+  [27, 29],
+  [28, 30],
+  [29, 31, 32],
+  [30],
+  [30],
+
+  [8, 34],
+  [33, 35],
+  [34, 36, 37],
+  [35],
+  [35, 38, 41],
+  [37, 39],
+  [38, 40],
+  [39],
+  [37, 42],
+  [41, 43],
+  [42, 44],
+  [43, 45],
+  [44, 46],
+  [45, 47],
+  [46, 48],
+  [47, 49],
+  [48, 50],
+  [49],
+]

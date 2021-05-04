@@ -412,7 +412,7 @@ void MissionController::planThread(void) {
                 }
             }
 
-            flight_plan_ = centralized_planner_.getPlanGreedy(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_);
+            // flight_plan_ = centralized_planner_.getPlanGreedy(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_);
 
 
             // Calculate the MILP solution with computation time:
@@ -426,7 +426,7 @@ void MissionController::planThread(void) {
             clock_t t_begin, t_end;
             t_begin = clock();
 
-            centralized_planner_.getPlanMILP(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
+            flight_plan_ =  centralized_planner_.getPlanMILP(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
             t_end = clock();
 
             double seconds = ((float)(t_end-t_begin))/CLOCKS_PER_SEC;
