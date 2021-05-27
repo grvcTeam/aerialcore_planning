@@ -41,26 +41,30 @@
         <arg name="id" value="2"/>
         <arg name="material" value="Orange"/>
         <arg name="mode" value="$(arg mode)"/>
-        <arg name="description_package" value="aerialcore_simulation"/>
+        <!-- <arg name="description_package" value="aerialcore_simulation"/> -->
+        <arg name="description_package" value="robots_description"/>
         <arg name="x" value="38.8"/>
         <arg name="y" value="65"/>
         <arg name="z" value="0"/>
         <arg name="yaw" value="0.3"/>
-        <arg name="robot_model" value="sensefly_ebee"/>
+        <!-- <arg name="robot_model" value="sensefly_ebee"/> -->
+        <arg name="robot_model" value="mbzirc"/>
     </include>
 
     <!-- Launch robot id=3 -->
-    <include file="$(find px4_bringup)/launch/spawn_robot.launch" ns="$(arg ns_uav_prefix)3">
+    <!-- <<include file="$(find px4_bringup)/launch/spawn_robot.launch" ns="$(arg ns_uav_prefix)3">
         <arg name="id" value="3"/>
         <arg name="material" value="Orange"/>
         <arg name="mode" value="$(arg mode)"/>
-        <arg name="description_package" value="aerialcore_simulation"/>
-        <arg name="x" value="32.5"/>
+        <arg name="description_package" value="aerialcore_simulation"/> -->
+        <!-- <arg name="description_package" value="robots_description"/> -->
+        <!-- <arg name="x" value="32.5"/>
         <arg name="y" value="61"/>
         <arg name="z" value="0"/>
-        <arg name="yaw" value="-1.261576"/>
-        <arg name="robot_model" value="standard_vtol"/>
-    </include>
+        <arg name="yaw" value="-1.261576"/> -->
+        <!-- <arg name="robot_model" value="standard_vtol"/> -->
+        <!-- <arg name="robot_model" value="mbzirc"/>
+    </include> -->
 
     <!-- Use mission_lib for commanding UAVs (true) or output a yaml string for using the DJI SDK (false). -->
     <arg name="commanding_UAV_with_mission_lib_or_DJI_SDK" default="true"/>

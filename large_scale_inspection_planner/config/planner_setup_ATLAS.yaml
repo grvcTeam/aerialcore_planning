@@ -2,7 +2,7 @@
 
 
 # Dictionary of the actual drones used in the simulation or reality (key: UAV id, value: airframe type):
-drones: {"1": "multicopter", "2": "fixed_wing", "3": "VTOL"}
+drones: {"1": "multicopter", "2": "multicopter"} #, "3": "multicopter"}
 
 
 # Airframe types, each one with its own parameter values (time in seconds, speed in m/s, battery in in parts per unit):

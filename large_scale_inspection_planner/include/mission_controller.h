@@ -63,8 +63,8 @@ private:
 
   void removeGraphNodesAndEdgesAboveNoFlyZones(std::vector<aerialcore_msgs::GraphNode>& _graph_to_edit);
 
-  void translateFlightPlanIntoUAVMission(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plan);
-  std::string translateFlightPlanIntoDJIyaml(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plan);
+  void translateFlightPlanIntoUAVMission(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
+  std::string translateFlightPlanIntoDJIyaml(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
 
   ros::ServiceServer start_supervising_srv_;
   ros::ServiceServer stop_supervising_srv_;
@@ -83,7 +83,7 @@ private:
   PlanMonitor        plan_monitor_;         // Module to check if the drones are deviating enough to run the replanning.
   grvc::PathPlanner path_planner_;
 
-  std::vector<aerialcore_msgs::FlightPlan> flight_plan_;
+  std::vector<aerialcore_msgs::FlightPlan> flight_plans_;
 
   bool commanding_UAV_with_mission_lib_or_DJI_SDK_ = true;  // Use mission_lib for commanding UAVs (true) or output a yaml string for using the DJI SDK (false).
   std::atomic<bool> stop_current_supervising_ = {false};

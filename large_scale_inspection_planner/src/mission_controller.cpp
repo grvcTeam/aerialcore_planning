@@ -412,39 +412,38 @@ void MissionController::planThread(void) {
                 }
             }
 
-            // flight_plan_ = centralized_planner_.getPlanGreedy(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_);
-
-
-            // Calculate the MILP solution with computation time:
+            // Calculate the solution with computation time:
 
             // Wait until the parameter_estimator_ calculate the matrices:
             while (parameter_estimator_.getTimeCostMatrices().size()==0 && ros::ok()) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
             }
 
-            std::cout << "Start the computation for the MILP planning with OR-Tools." << std::endl;
+            std::cout << "Start the computation of the plan." << std::endl;
             clock_t t_begin, t_end;
             t_begin = clock();
 
-            flight_plan_ =  centralized_planner_.getPlanMILP(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
+            flight_plans_ = centralized_planner_.getPlanGreedy(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_);
+            // flight_plans_ =  centralized_planner_.getPlanMILP(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
+            // flight_plans_ =  centralized_planner_.getPlanHeuristic(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
             t_end = clock();
 
             double seconds = ((float)(t_end-t_begin))/CLOCKS_PER_SEC;
-            std::cout << "Computation time for the MILP planning with OR-Tools: " << seconds << " seconds." << std::endl << std::endl;
-
+            // std::cout << "Computation time for the MILP planning with OR-Tools: " << seconds << " seconds." << std::endl << std::endl;
+            std::cout << "Computation time of the planning: " << seconds << " seconds." << std::endl << std::endl;
 
 #ifdef DEBUG
             centralized_planner_.printPlan();
 #endif
 
             if (commanding_UAV_with_mission_lib_or_DJI_SDK_) {
-                translateFlightPlanIntoUAVMission(flight_plan_);
+                translateFlightPlanIntoUAVMission(flight_plans_);
 
-                for (const aerialcore_msgs::FlightPlan& flight_plan_for_current_uav : flight_plan_) {
+                for (const aerialcore_msgs::FlightPlan& flight_plans_for_current_uav : flight_plans_) {
                     // // HARDCODED WAITS BETWEEN TAKEOFFS FOR NOVEMBER EXPERIMENTS:
-                    // if (flight_plan_for_current_uav.uav_id==2) sleep(10);
-                    // if (flight_plan_for_current_uav.uav_id==3) sleep(74);
-                    int current_uav_index = findUavIndexById(flight_plan_for_current_uav.uav_id);
+                    // if (flight_plans_for_current_uav.uav_id==2) sleep(10);
+                    // if (flight_plans_for_current_uav.uav_id==3) sleep(74);
+                    int current_uav_index = findUavIndexById(flight_plans_for_current_uav.uav_id);
                     if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
 #ifdef DEBUG
                     UAVs_[current_uav_index].mission->print();
@@ -454,7 +453,7 @@ void MissionController::planThread(void) {
                 }
             } else {
                 aerialcore_msgs::PostString post_yaml_string;
-                post_yaml_string.request.data = translateFlightPlanIntoDJIyaml(flight_plan_);
+                post_yaml_string.request.data = translateFlightPlanIntoDJIyaml(flight_plans_);
                 if (post_yaml_client_.call(post_yaml_string)) {
                     ROS_INFO("Mission Controller: yaml sent to DJI SDK.");
                 } else {
@@ -468,9 +467,9 @@ void MissionController::planThread(void) {
 } // end planThread
 
 
-void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plan) {
-    for (const aerialcore_msgs::FlightPlan& flight_plan_for_current_uav : _flight_plan) {
-        int current_uav_index = findUavIndexById(flight_plan_for_current_uav.uav_id);
+void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
+    for (const aerialcore_msgs::FlightPlan& flight_plans_for_current_uav : _flight_plans) {
+        int current_uav_index = findUavIndexById(flight_plans_for_current_uav.uav_id);
         if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
 
         UAVs_[current_uav_index].mission->clear();
@@ -480,19 +479,19 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
 
         std::vector<geometry_msgs::PoseStamped> pass_poses;
 
-        for (int i=0; i<flight_plan_for_current_uav.nodes.size(); i++) {
+        for (int i=0; i<flight_plans_for_current_uav.nodes.size(); i++) {
             geometry_msgs::PoseStamped current_pose_stamped;
-            current_pose_stamped.pose.position.x = current_graph_[ flight_plan_for_current_uav.nodes[i] ].x;
-            current_pose_stamped.pose.position.y = current_graph_[ flight_plan_for_current_uav.nodes[i] ].y;
-            current_pose_stamped.pose.position.z = current_graph_[ flight_plan_for_current_uav.nodes[i] ].altitude == 0 ? current_graph_[ flight_plan_for_current_uav.nodes[i] ].z : current_graph_[ flight_plan_for_current_uav.nodes[i] ].z + (current_graph_[ flight_plan_for_current_uav.nodes[i] ].altitude - map_origin_geo_.altitude);
+            current_pose_stamped.pose.position.x = current_graph_[ flight_plans_for_current_uav.nodes[i] ].x;
+            current_pose_stamped.pose.position.y = current_graph_[ flight_plans_for_current_uav.nodes[i] ].y;
+            current_pose_stamped.pose.position.z = current_graph_[ flight_plans_for_current_uav.nodes[i] ].altitude == 0 ? current_graph_[ flight_plans_for_current_uav.nodes[i] ].z : current_graph_[ flight_plans_for_current_uav.nodes[i] ].z + (current_graph_[ flight_plans_for_current_uav.nodes[i] ].altitude - map_origin_geo_.altitude);
 
-            if ( current_graph_[ flight_plan_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION || current_graph_[ flight_plan_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION || current_graph_[ flight_plan_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION ) {
+            if ( current_graph_[ flight_plans_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION || current_graph_[ flight_plans_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION || current_graph_[ flight_plans_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION ) {
 
                 if (pass_poses.size()>0) {
                     UAVs_[current_uav_index].mission->addPassWpList(pass_poses);
                 }
                 if (first_iteration) {
-                    current_pose_stamped.pose.position.z = current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].altitude == 0 ? current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].z : current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].z + (current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].altitude - map_origin_geo_.altitude);
+                    current_pose_stamped.pose.position.z = current_graph_[ flight_plans_for_current_uav.nodes[i+1] ].altitude == 0 ? current_graph_[ flight_plans_for_current_uav.nodes[i+1] ].z : current_graph_[ flight_plans_for_current_uav.nodes[i+1] ].z + (current_graph_[ flight_plans_for_current_uav.nodes[i+1] ].altitude - map_origin_geo_.altitude);
                     UAVs_[current_uav_index].mission->addTakeOffWp(current_pose_stamped);
                     flying_or_landed = true;
                     first_iteration=false;
@@ -509,13 +508,13 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
                         }
                         flying_or_landed = false;
                     } else {
-                        current_pose_stamped.pose.position.z = current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].altitude == 0 ? current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].z : current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].z + (current_graph_[ flight_plan_for_current_uav.nodes[i+1] ].altitude - map_origin_geo_.altitude);
+                        current_pose_stamped.pose.position.z = current_graph_[ flight_plans_for_current_uav.nodes[i+1] ].altitude == 0 ? current_graph_[ flight_plans_for_current_uav.nodes[i+1] ].z : current_graph_[ flight_plans_for_current_uav.nodes[i+1] ].z + (current_graph_[ flight_plans_for_current_uav.nodes[i+1] ].altitude - map_origin_geo_.altitude);
                         UAVs_[current_uav_index].mission->addTakeOffWp(current_pose_stamped);
                         flying_or_landed = true;
                     }
                 }
                 pass_poses.clear();
-            } else if ( current_graph_[ flight_plan_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_PYLON || current_graph_[ flight_plan_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_PASS_WP_AVOIDING_NO_FLY_ZONE ) {
+            } else if ( current_graph_[ flight_plans_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_PYLON || current_graph_[ flight_plans_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_PASS_WP_AVOIDING_NO_FLY_ZONE ) {
                 pass_poses.push_back(current_pose_stamped);
                 flying_or_landed = true;
                 if (first_iteration) {
@@ -527,28 +526,28 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
 } // end translateFlightPlanIntoUAVMission
 
 
-std::string MissionController::translateFlightPlanIntoDJIyaml(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plan) {
+std::string MissionController::translateFlightPlanIntoDJIyaml(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
     std::string yaml_to_return = {R"(frame_id: /gps
 
 uav_n: )"};
-    yaml_to_return.append(std::to_string(_flight_plan.size()).c_str());
+    yaml_to_return.append(std::to_string(_flight_plans.size()).c_str());
     yaml_to_return.append("\n\n");
-    for (const aerialcore_msgs::FlightPlan& flight_plan_for_current_uav : _flight_plan) {
+    for (const aerialcore_msgs::FlightPlan& flight_plans_for_current_uav : _flight_plans) {
         yaml_to_return.append("uav_");
-        yaml_to_return.append(std::to_string(flight_plan_for_current_uav.uav_id).c_str());
+        yaml_to_return.append(std::to_string(flight_plans_for_current_uav.uav_id).c_str());
         yaml_to_return.append({R"(:
   wp_n: )"});
-        yaml_to_return.append(std::to_string(flight_plan_for_current_uav.nodes.size()-2 ).c_str());
-        for (int i=1; i<flight_plan_for_current_uav.nodes.size()-1; i++) {
+        yaml_to_return.append(std::to_string(flight_plans_for_current_uav.nodes.size()-2 ).c_str());
+        for (int i=1; i<flight_plans_for_current_uav.nodes.size()-1; i++) {
             yaml_to_return.append({R"(
   wp_)"});
             yaml_to_return.append(std::to_string(i-1).c_str());
             yaml_to_return.append(": [");
-            yaml_to_return.append(std::to_string(current_graph_[flight_plan_for_current_uav.nodes[i]].latitude).c_str());
+            yaml_to_return.append(std::to_string(current_graph_[flight_plans_for_current_uav.nodes[i]].latitude).c_str());
             yaml_to_return.append(", ");
-            yaml_to_return.append(std::to_string(current_graph_[flight_plan_for_current_uav.nodes[i]].longitude).c_str());
+            yaml_to_return.append(std::to_string(current_graph_[flight_plans_for_current_uav.nodes[i]].longitude).c_str());
             yaml_to_return.append(", ");
-            yaml_to_return.append(std::to_string(current_graph_[flight_plan_for_current_uav.nodes[i]].altitude).c_str());
+            yaml_to_return.append(std::to_string(current_graph_[flight_plans_for_current_uav.nodes[i]].altitude).c_str());
             yaml_to_return.append("]");
         }
         yaml_to_return.append("\n\n");
@@ -692,14 +691,14 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
     }
 #endif
 
-    // Build the flight_plan_ so we can translate it later to use the mission_lib or DJI SDK:
-    flight_plan_.clear();
+    // Build the flight_plans_ so we can translate it later to use the mission_lib or DJI SDK:
+    flight_plans_.clear();
     aerialcore_msgs::FlightPlan current_flight_plan;
     int regular_landing_station_index = -1;
     for (int i=0; i<=current_graph_.size(); i++) {
         if (i==current_graph_.size() || current_graph_[i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && regular_landing_station_index!=-1) {
             current_flight_plan.nodes.push_back(regular_landing_station_index);
-            flight_plan_.push_back(current_flight_plan);
+            flight_plans_.push_back(current_flight_plan);
             current_flight_plan.nodes.clear();
             if (i==current_graph_.size()) {
                 break;
@@ -720,13 +719,13 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
     }
 
     if (commanding_UAV_with_mission_lib_or_DJI_SDK_) {
-        translateFlightPlanIntoUAVMission(flight_plan_);
+        translateFlightPlanIntoUAVMission(flight_plans_);
 
-        for (const aerialcore_msgs::FlightPlan& flight_plan_for_current_uav : flight_plan_) {
+        for (const aerialcore_msgs::FlightPlan& flight_plans_for_current_uav : flight_plans_) {
             // // HARDCODED WAITS BETWEEN TAKEOFFS FOR NOVEMBER EXPERIMENTS:
-            // if (flight_plan_for_current_uav.uav_id==2) sleep(10);
-            // if (flight_plan_for_current_uav.uav_id==3) sleep(74);
-            int current_uav_index = findUavIndexById(flight_plan_for_current_uav.uav_id);
+            // if (flight_plans_for_current_uav.uav_id==2) sleep(10);
+            // if (flight_plans_for_current_uav.uav_id==3) sleep(74);
+            int current_uav_index = findUavIndexById(flight_plans_for_current_uav.uav_id);
             if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
             UAVs_[current_uav_index].enabled_to_supervise = true;
 #ifdef DEBUG
@@ -738,7 +737,7 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
         _res.success=true;
     } else {
         aerialcore_msgs::PostString post_yaml_string;
-        post_yaml_string.request.data = translateFlightPlanIntoDJIyaml(flight_plan_);
+        post_yaml_string.request.data = translateFlightPlanIntoDJIyaml(flight_plans_);
         if (post_yaml_client_.call(post_yaml_string)) {
             ROS_INFO("Mission Controller: yaml sent to DJI SDK.");
             _res.success=true;
