@@ -423,7 +423,7 @@ void MissionController::planThread(void) {
             clock_t t_begin, t_end;
             t_begin = clock();
 
-            flight_plans_ = centralized_planner_.getPlanGreedy(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_);
+            flight_plans_ = centralized_planner_.getPlanGreedy(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
             // flight_plans_ =  centralized_planner_.getPlanMILP(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
             // flight_plans_ =  centralized_planner_.getPlanHeuristic(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
             t_end = clock();
