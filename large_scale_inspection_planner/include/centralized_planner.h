@@ -75,6 +75,9 @@ private:
 
     std::vector<aerialcore_msgs::Edge> edges_;       // Vector of edges possible in which for each pair of nodes (i,j) there is information of whether it is an inspection edge or not. If it is, it still can be used for cross-heading.
 
+    std::vector< std::vector< std::vector<float> > > time_cost_matrices_;
+    std::vector< std::vector< std::vector<float> > > battery_drop_matrices_;
+
     std::map<int, int> from_graph_index_to_matrix_index_;
     std::map<int, int> from_matrix_index_to_graph_index_;
     std::map<int, std::map<int, std::map<int, int>>> from_k_i_j_to_x_index_;
@@ -85,7 +88,7 @@ private:
     std::vector<aerialcore_msgs::FlightPlan> flight_plans_;  // Output.
 
     void constructUAVs(const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info);
-    void constructEdges(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::vector< std::vector<float> > >& _time_cost_matrices);
+    void constructEdges(std::vector<aerialcore_msgs::GraphNode>& _graph);
 
     // Greedy:
     void nearestGraphNodeLandStation(int _from_this_index_graph, int& _index_graph_node_to_return, float& _distance_to_return);
