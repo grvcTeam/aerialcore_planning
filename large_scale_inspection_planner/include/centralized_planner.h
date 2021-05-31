@@ -97,6 +97,8 @@ private:
 
     float batteryDrop(int _flying_time, int _time_max_flying) const { return (float)_flying_time/(float)_time_max_flying; }
 
+    void fillEdgesInsideFlightPlans(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
+
     // Heuristic:
     float solutionTimeCost(std::vector<aerialcore_msgs::FlightPlan> _flight_plans);
     bool solutionBatteryDropValidOrNot(std::vector<aerialcore_msgs::FlightPlan> _flight_plans);

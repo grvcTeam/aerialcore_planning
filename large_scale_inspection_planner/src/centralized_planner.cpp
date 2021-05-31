@@ -183,15 +183,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
         }
     }
 
-    for (int i=0; i<flight_plans_.size(); i++) {
-        for (int j=0; j<flight_plans_[i].nodes.size()-1; j++) {
-            for (int k=0; k<edges_.size(); k++) {
-                if (flight_plans_[i].nodes[j]==edges_[k].i && flight_plans_[i].nodes[j+1]==edges_[k].j) {
-                    flight_plans_[i].edges.push_back(k);
-                }
-            }
-        }
-    }
+    fillEdgesInsideFlightPlans(flight_plans_);
 
     return flight_plans_;
 
@@ -947,6 +939,8 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 
     // Calculate the path free of obstacles between nodes outside in the Mission Controller. There is a path warantied between the nodes.
 
+    fillEdgesInsideFlightPlans(flight_plans_);
+
     return flight_plans_;
 
 } // end getPlanMILP method
@@ -1068,7 +1062,7 @@ void CentralizedPlanner::constructEdges(std::vector<aerialcore_msgs::GraphNode>&
         std::cout << "from_matrix_index_to_graph_index_[" << it->first << "] = " << it->second << std::endl;
     }
 #endif
-}
+} // end constructEdges
 
 
 int CentralizedPlanner::findUavIndexById(int _UAV_id) {
@@ -1083,7 +1077,22 @@ int CentralizedPlanner::findUavIndexById(int _UAV_id) {
         ROS_ERROR("Centralized Planner: UAV id=%d provided not found on the Mission Controller.", _UAV_id);
     }
     return uav_index;
-} // end constructEdges
+} // end findUavIndexById
+
+
+void CentralizedPlanner::fillEdgesInsideFlightPlans(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
+    for (int i=0; i<_flight_plans.size(); i++) {
+        _flight_plans[i].edges.clear();
+        for (int j=0; j<_flight_plans[i].nodes.size()-1; j++) {
+            for (int k=0; k<edges_.size(); k++) {
+                if (_flight_plans[i].nodes[j]==edges_[k].i && _flight_plans[i].nodes[j+1]==edges_[k].j) {
+                    _flight_plans[i].edges.push_back(k);
+                    break;
+                }
+            }
+        }
+    }
+} // end fillEdgesInsideFlightPlans
 
 
 std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanHeuristic(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::vector< std::vector< std::vector<float> > >& _time_cost_matrices, const std::vector< std::vector< std::vector<float> > >& _battery_drop_matrices) {
@@ -1094,6 +1103,10 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanHeuristic(st
     flight_plans_.clear();
 
     // TODO
+    
+    fillEdgesInsideFlightPlans(flight_plans_);
+
+    return flight_plans_;
 
 } // end getPlanHeuristic
 
