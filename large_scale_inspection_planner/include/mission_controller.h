@@ -65,6 +65,7 @@ private:
 
   void translateFlightPlanIntoUAVMission(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
   std::string translateFlightPlanIntoDJIyaml(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
+  std::string translateFlightPlanIntoYaml(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
 
   ros::ServiceServer start_supervising_srv_;
   ros::ServiceServer stop_supervising_srv_;

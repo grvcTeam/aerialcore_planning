@@ -559,6 +559,30 @@ uav_n: )"};
 } // end translateFlightPlanIntoDJIyaml
 
 
+std::string MissionController::translateFlightPlanIntoYaml(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
+    std::string yaml_to_return;
+    for (const aerialcore_msgs::FlightPlan& flight_plans_for_current_uav : _flight_plans) {
+        yaml_to_return.append("waypoints_");
+        yaml_to_return.append(std::to_string(flight_plans_for_current_uav.uav_id).c_str());
+        yaml_to_return.append(": \"");
+        for (int i=0; i<flight_plans_for_current_uav.nodes.size(); i++) {
+            yaml_to_return.append(std::to_string(current_graph_[flight_plans_for_current_uav.nodes[i]].x).c_str());
+            yaml_to_return.append(" ");
+            yaml_to_return.append(std::to_string(current_graph_[flight_plans_for_current_uav.nodes[i]].y).c_str());
+            yaml_to_return.append(" ");
+            yaml_to_return.append(std::to_string(current_graph_[flight_plans_for_current_uav.nodes[i]].z).c_str());
+            yaml_to_return.append(" 0;\n");
+        }
+        yaml_to_return.back() = '\"';
+        yaml_to_return.append("\n\n");
+    }
+#ifdef DEBUG
+    std::cout << yaml_to_return << std::endl;
+#endif
+    return yaml_to_return;
+} // end translateFlightPlanIntoYaml
+
+
 bool MissionController::stopSupervisingServiceCallback(aerialcore_msgs::StopSupervising::Request& _req, aerialcore_msgs::StopSupervising::Response& _res) {
     stop_current_supervising_ = true;
     if(parameter_estimator_thread_.joinable()) parameter_estimator_thread_.join();
