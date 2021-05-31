@@ -92,21 +92,21 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
         float battery = current_uav.initial_battery;
 
         int index_graph_of_next_pylon;
-        float distance_of_next_pylon;
 
         int index_edge_to_erase = -1;
 
         int index_graph_land_station_from_next_pylon;
         int index_graph_land_station_from_pylon_last;
-        float distance_land_station_from_next_pylon;
 
         // Calculate closest pylon from the UAV initial pose:
-        nearestGraphNodePylon(uav_initial_position_graph_index, index_graph_of_next_pylon, distance_of_next_pylon);
+        nearestGraphNodePylon(uav_initial_position_graph_index, index_graph_of_next_pylon, current_uav.id);
 
         // Calculate closest land station from that closest pylon:
-        nearestGraphNodeLandStation(index_graph_of_next_pylon, index_graph_land_station_from_next_pylon, distance_land_station_from_next_pylon);
+        nearestGraphNodeLandStation(index_graph_of_next_pylon, index_graph_land_station_from_next_pylon, current_uav.id);
 
-        while (edges_pairs_.size()>0 && (battery - batteryDrop( (distance_of_next_pylon+distance_land_station_from_next_pylon)/current_uav.speed_xy , current_uav.time_max_flying) > current_uav.minimum_battery)) {
+        while (edges_pairs_.size()>0 && (battery
+            - battery_drop_matrices_[findUavIndexById(current_uav.id)][ from_graph_index_to_matrix_index_[ uav_initial_position_graph_index ] ][ from_graph_index_to_matrix_index_[ index_graph_of_next_pylon ] ]
+            - battery_drop_matrices_[findUavIndexById(current_uav.id)][ from_graph_index_to_matrix_index_[ index_graph_of_next_pylon ] ][ from_graph_index_to_matrix_index_[ index_graph_land_station_from_next_pylon ] ] ) ) {
             // Insert pylon because it can be reached with enough battery to go later to a land station:
             current_flight_plan.nodes.push_back(index_graph_of_next_pylon);
 
@@ -115,33 +115,33 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
             }
 
             // Update the battery left:            
-            battery -= batteryDrop( distance_of_next_pylon/current_uav.speed_xy , current_uav.time_max_flying);
+            battery -= battery_drop_matrices_[findUavIndexById(current_uav.id)][ from_graph_index_to_matrix_index_[ current_flight_plan.nodes.back() ] ][ from_graph_index_to_matrix_index_[ index_graph_of_next_pylon ] ];
 
             // Calculate pylon with most benefit from current pylon:
-            mostRewardedPylon(current_flight_plan.nodes.back(), index_graph_of_next_pylon, distance_of_next_pylon, index_edge_to_erase);
+            mostRewardedPylon(current_flight_plan.nodes.back(), index_graph_of_next_pylon, index_edge_to_erase, current_uav.id);
 
             index_graph_land_station_from_pylon_last = index_graph_land_station_from_next_pylon;
 
             if (index_graph_of_next_pylon == -1) { // No next pylon connected with unserved edges, search pylons not connected to this one.
                 int index_pylon_connected_with_unserved_edge;
-                float distance_pylon_connected_with_unserved_edge;
-                nearestGraphNodePylon(current_flight_plan.nodes.back(), index_graph_of_next_pylon, distance_of_next_pylon);
+                nearestGraphNodePylon(current_flight_plan.nodes.back(), index_graph_of_next_pylon, current_uav.id);
                 if (index_graph_of_next_pylon == -1) break; // No next pylon at all with unserved edges.
                 else {  // Pylon has edges unserved connected.
-                    mostRewardedPylon(index_graph_of_next_pylon, index_pylon_connected_with_unserved_edge, distance_pylon_connected_with_unserved_edge, index_edge_to_erase);
-                    nearestGraphNodeLandStation(index_pylon_connected_with_unserved_edge, index_graph_land_station_from_next_pylon, distance_land_station_from_next_pylon);
-                    if ( (index_pylon_connected_with_unserved_edge!=-1) && (index_graph_land_station_from_next_pylon!=-1) && (battery - batteryDrop( (distance_of_next_pylon+distance_pylon_connected_with_unserved_edge+distance_land_station_from_next_pylon)/current_uav.speed_xy , current_uav.time_max_flying) > current_uav.minimum_battery) ) {
+                    mostRewardedPylon(index_graph_of_next_pylon, index_pylon_connected_with_unserved_edge, index_edge_to_erase, current_uav.id);
+                    nearestGraphNodeLandStation(index_pylon_connected_with_unserved_edge, index_graph_land_station_from_next_pylon, current_uav.id);
+                    if ( (index_pylon_connected_with_unserved_edge!=-1) && (index_graph_land_station_from_next_pylon!=-1) && (battery
+                        - battery_drop_matrices_[findUavIndexById(current_uav.id)][ from_graph_index_to_matrix_index_[ current_flight_plan.nodes.back() ] ][ from_graph_index_to_matrix_index_[ index_pylon_connected_with_unserved_edge ] ]
+                        - battery_drop_matrices_[findUavIndexById(current_uav.id)][ from_graph_index_to_matrix_index_[ index_pylon_connected_with_unserved_edge ] ][ from_graph_index_to_matrix_index_[ index_graph_land_station_from_next_pylon ] ] ) ) {
                         current_flight_plan.nodes.push_back(index_graph_of_next_pylon);
-                        battery -= batteryDrop( distance_of_next_pylon/current_uav.speed_xy , current_uav.time_max_flying);
+                        battery -= battery_drop_matrices_[findUavIndexById(current_uav.id)][ from_graph_index_to_matrix_index_[ current_flight_plan.nodes.back() ] ][ from_graph_index_to_matrix_index_[ index_graph_of_next_pylon ] ];
                         index_graph_of_next_pylon = index_pylon_connected_with_unserved_edge;
-                        distance_of_next_pylon = distance_pylon_connected_with_unserved_edge;
                     } else {    // Only insert the next pylon if it has battery to at least fulfill one edge.
                         break;
                     }
                 }
             } else {
                 // Calculate closest land station from that most rewarded pylon:
-                nearestGraphNodeLandStation(index_graph_of_next_pylon, index_graph_land_station_from_next_pylon, distance_land_station_from_next_pylon);
+                nearestGraphNodeLandStation(index_graph_of_next_pylon, index_graph_land_station_from_next_pylon, current_uav.id);
             }
         }
         // Insert closest land station when inserting another pylon would result in low battery:
@@ -198,31 +198,21 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
 } // end getPlanGreedy method
 
 
-// Brief method that returns the index and distance of the nearest land station graph node given an inital index.
-void CentralizedPlanner::nearestGraphNodeLandStation(int _from_this_index_graph, int& _index_graph_node_to_return, float& _distance_to_return) {
+// Brief method that returns the index of the nearest land station graph node given an inital index.
+void CentralizedPlanner::nearestGraphNodeLandStation(int _from_this_index_graph, int& _index_graph_node_to_return, int _uav_id) {
 
     _index_graph_node_to_return = -1;
-    _distance_to_return = std::numeric_limits<float>::max();
-
-    geometry_msgs::PointStamped from_here;
-    from_here.point.x = graph_[_from_this_index_graph].x;
-    from_here.point.y = graph_[_from_this_index_graph].y;
+    float time_cost = std::numeric_limits<float>::max();
 
     for (int i=0; i<graph_.size(); i++) {
         if (graph_[i].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION || graph_[i].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION) {
 
-            geometry_msgs::PointStamped to_here;
-            to_here.point.x = graph_[i].x;
-            to_here.point.y = graph_[i].y;
+            float current_time_cost = time_cost_matrices_[findUavIndexById(_uav_id)][_from_this_index_graph][i];
+            if (current_time_cost <= 0.001) continue;     // It's the same graph node or path not found, ignore and continue.
 
-            auto path = path_planner_.getPath(from_here, to_here);
-            if (path.size() == 0) continue;         // No path found.
-            float distance_xy = path_planner_.getFlatDistance();
-            if (distance_xy <= 0.001) continue;     // It's the same graph node, ignore and continue.
-
-            if ( _distance_to_return > distance_xy ) {
+            if ( time_cost > current_time_cost ) {
                 _index_graph_node_to_return = i;
-                _distance_to_return = distance_xy;
+                time_cost = current_time_cost;
             }
         }
     }
@@ -230,15 +220,11 @@ void CentralizedPlanner::nearestGraphNodeLandStation(int _from_this_index_graph,
 } // end nearestGraphNodeLandStation method
 
 
-// Brief method that returns the index and distance of the nearest pylon graph node given an inital index. The new pylon will have edges unserved and will not be directly connected.
-void CentralizedPlanner::nearestGraphNodePylon(int _from_this_index_graph, int& _index_graph_node_to_return, float& _distance_to_return) {
+// Brief method that returns the index of the nearest pylon graph node given an inital index. The new pylon will have edges unserved and will not be directly connected.
+void CentralizedPlanner::nearestGraphNodePylon(int _from_this_index_graph, int& _index_graph_node_to_return, int _uav_id) {
 
     _index_graph_node_to_return = -1;
-    _distance_to_return = std::numeric_limits<float>::max();
-
-    geometry_msgs::PointStamped from_here;
-    from_here.point.x = graph_[_from_this_index_graph].x;
-    from_here.point.y = graph_[_from_this_index_graph].y;
+    float time_cost = std::numeric_limits<float>::max();
 
     for (int i=0; i<graph_.size(); i++) {
         if (graph_[i].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
@@ -255,14 +241,8 @@ void CentralizedPlanner::nearestGraphNodePylon(int _from_this_index_graph, int& 
                 continue;
             }
 
-            geometry_msgs::PointStamped to_here;
-            to_here.point.x = graph_[i].x;
-            to_here.point.y = graph_[i].y;
-
-            auto path = path_planner_.getPath(from_here, to_here);
-            if (path.size() == 0) continue;         // No path found.
-            float distance_xy = path_planner_.getFlatDistance();
-            if (distance_xy <= 0.001) continue;     // It's the same graph node, ignore and continue.
+            float current_time_cost = time_cost_matrices_[findUavIndexById(_uav_id)][_from_this_index_graph][i];
+            if (current_time_cost <= 0.001) continue;     // It's the same graph node or path not found, ignore and continue.
 
             // Only consider i (current node iterated) if it has edges unserved:
             bool has_edges_unserved = false;
@@ -281,9 +261,9 @@ void CentralizedPlanner::nearestGraphNodePylon(int _from_this_index_graph, int& 
                 continue;
             }
 
-            if ( _distance_to_return > distance_xy ) {
+            if ( time_cost > current_time_cost ) {
                 _index_graph_node_to_return = i;
-                _distance_to_return = distance_xy;
+                time_cost = current_time_cost;
             }
         }
     }
@@ -291,16 +271,12 @@ void CentralizedPlanner::nearestGraphNodePylon(int _from_this_index_graph, int& 
 } // end nearestGraphNodePylon method
 
 
-// Brief method that returns the index and distance of the furthest connected pylon from an initial pylon.
-void CentralizedPlanner::mostRewardedPylon(int _initial_pylon_index, int& _index_graph_node_to_return, float& _distance_to_return, int& _index_edge_to_erase) {
+// Brief method that returns the index of the furthest connected pylon from an initial pylon.
+void CentralizedPlanner::mostRewardedPylon(int _initial_pylon_index, int& _index_graph_node_to_return, int& _index_edge_to_erase, int _uav_id) {
 
     _index_graph_node_to_return = -1;
-    _distance_to_return = 0;
+    float time_cost = 0;
     _index_edge_to_erase = -1;
-
-    geometry_msgs::PointStamped from_here;
-    from_here.point.x = graph_[_initial_pylon_index].x;
-    from_here.point.y = graph_[_initial_pylon_index].y;
 
     if (!graph_[_initial_pylon_index].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
         return;
@@ -326,18 +302,12 @@ void CentralizedPlanner::mostRewardedPylon(int _initial_pylon_index, int& _index
             continue;
         }
 
-        geometry_msgs::PointStamped to_here;
-        to_here.point.x = graph_[current_connection_index].x;
-        to_here.point.y = graph_[current_connection_index].y;
+        float current_time_cost = time_cost_matrices_[findUavIndexById(_uav_id)][_initial_pylon_index][i];
+        if (current_time_cost <= 0.001) continue;     // It's the same graph node or path not found, ignore and continue.
 
-        auto path = path_planner_.getPath(from_here, to_here);
-        if (path.size() == 0) continue;         // No path found.
-        float distance_xy = path_planner_.getFlatDistance();
-        if (distance_xy <= 0.001) continue;     // It's the same graph node, ignore and continue.
-
-        if ( _distance_to_return < distance_xy ) {
+        if ( time_cost < current_time_cost ) {
             _index_graph_node_to_return = current_connection_index;
-            _distance_to_return = distance_xy;
+            time_cost = current_time_cost;
             _index_edge_to_erase = i;
         }
     }
@@ -1131,7 +1101,11 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanHeuristic(st
 float CentralizedPlanner::solutionTimeCost(std::vector<aerialcore_msgs::FlightPlan> _flight_plans) {
     float solution_time_cost = 0;
 
-    // TODO
+    for (int i=0; i<_flight_plans.size(); i++) {
+        for (int j=0; j<_flight_plans[i].nodes.size()-1; j++) {
+            solution_time_cost += time_cost_matrices_[i][ from_graph_index_to_matrix_index_[_flight_plans[i].nodes[j]] ][ from_graph_index_to_matrix_index_[_flight_plans[i].nodes[j+1]] ];
+        }
+    }
 
     return solution_time_cost;
 } // end solutionTimeCost
@@ -1143,7 +1117,7 @@ bool CentralizedPlanner::solutionBatteryDropValidOrNot(std::vector<aerialcore_ms
     for (int i=0; i<_flight_plans.size(); i++) {
         float battery_left = UAVs_[i].initial_battery;
         for (int j=0; j<_flight_plans[i].nodes.size()-1; j++) {
-            battery_left -= batteryDrop( time_cost_matrices_[i][ from_graph_index_to_matrix_index_[_flight_plans[i].nodes[j]] ][ from_graph_index_to_matrix_index_[_flight_plans[i].nodes[j+1]] ] , UAVs_[i].time_max_flying);
+            battery_left -= battery_drop_matrices_[i][ from_graph_index_to_matrix_index_[_flight_plans[i].nodes[j]] ][ from_graph_index_to_matrix_index_[_flight_plans[i].nodes[j+1]] ];
         }
         if (battery_left < UAVs_[i].minimum_battery) {
             solution_battery_drop_valid_or_not = false;

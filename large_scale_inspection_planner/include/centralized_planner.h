@@ -91,9 +91,9 @@ private:
     void constructEdges(std::vector<aerialcore_msgs::GraphNode>& _graph);
 
     // Greedy:
-    void nearestGraphNodeLandStation(int _from_this_index_graph, int& _index_graph_node_to_return, float& _distance_to_return);
-    void nearestGraphNodePylon(int _from_this_index_graph, int& _index_graph_node_to_return, float& _distance_to_return);
-    void mostRewardedPylon(int _initial_pylon, int& _index_graph_node_to_return, float& _distance_to_return, int& _index_edge_to_erase);
+    void nearestGraphNodeLandStation(int _from_this_index_graph, int& _index_graph_node_to_return, int _uav_id);
+    void nearestGraphNodePylon(int _from_this_index_graph, int& _index_graph_node_to_return, int _uav_id);
+    void mostRewardedPylon(int _initial_pylon, int& _index_graph_node_to_return, int& _index_edge_to_erase, int _uav_id);
 
     float batteryDrop(int _flying_time, int _time_max_flying) const { return (float)_flying_time/(float)_time_max_flying; }
 
