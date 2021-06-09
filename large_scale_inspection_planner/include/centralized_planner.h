@@ -44,8 +44,7 @@ public:
 
     void printPlan();
 
-    void fillEdgesInsideFlightPlans(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
-    void fillPosesInsideFlightPlans(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
+    void fillFlightPlansFields(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
 
 private:
 

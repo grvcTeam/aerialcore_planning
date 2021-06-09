@@ -469,52 +469,39 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
 
         UAVs_[current_uav_index].mission->clear();
 
-        bool first_iteration = true;
-        bool flying_or_landed; // True if flying at the time after the wp is inserted, false if landed. Useful to track takeoffs vs landings, both with negative nodes.
-
         std::vector<geometry_msgs::PoseStamped> pass_poses;
 
-        for (int i=0; i<flight_plans_for_current_uav.nodes.size(); i++) {
-            geometry_msgs::PoseStamped current_pose_stamped;
-            current_pose_stamped.pose.position.x = current_graph_[ flight_plans_for_current_uav.nodes[i] ].x;
-            current_pose_stamped.pose.position.y = current_graph_[ flight_plans_for_current_uav.nodes[i] ].y;
-            current_pose_stamped.pose.position.z = current_graph_[ flight_plans_for_current_uav.nodes[i] ].altitude == 0 ? current_graph_[ flight_plans_for_current_uav.nodes[i] ].z : current_graph_[ flight_plans_for_current_uav.nodes[i] ].z + (current_graph_[ flight_plans_for_current_uav.nodes[i] ].altitude - map_origin_geo_.altitude);
+        if (flight_plans_for_current_uav.poses.size() != flight_plans_for_current_uav.type.size()) {
+            ROS_ERROR("Mission Controller: UAV id=%d has a faulty FlightPlan which poses and type vectors have different sizes.", flight_plans_for_current_uav.uav_id);
+        }
 
-            if ( current_graph_[ flight_plans_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION || current_graph_[ flight_plans_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION || current_graph_[ flight_plans_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION ) {
+        for (int i=0; i<flight_plans_for_current_uav.poses.size(); i++) {
+            geometry_msgs::PoseStamped current_pose_stamped = flight_plans_for_current_uav.poses[i];
 
+            if (flight_plans_for_current_uav.type[i] == aerialcore_msgs::FlightPlan::TYPE_PASS_WP) {
+                pass_poses.push_back(current_pose_stamped);
+
+            } else {
                 if (pass_poses.size()>0) {
                     UAVs_[current_uav_index].mission->addPassWpList(pass_poses);
                 }
-                if (first_iteration) {
-                    current_pose_stamped.pose.position.z = current_graph_[ flight_plans_for_current_uav.nodes[i+1] ].altitude == 0 ? current_graph_[ flight_plans_for_current_uav.nodes[i+1] ].z : current_graph_[ flight_plans_for_current_uav.nodes[i+1] ].z + (current_graph_[ flight_plans_for_current_uav.nodes[i+1] ].altitude - map_origin_geo_.altitude);
+
+                if (flight_plans_for_current_uav.type[i] == aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP) {
                     UAVs_[current_uav_index].mission->addTakeOffWp(current_pose_stamped);
-                    flying_or_landed = true;
-                    first_iteration=false;
-                } else {
-                    if (flying_or_landed) {
-                        if (UAVs_[current_uav_index].mission->airframeType() == grvc::AirframeType::FIXED_WING) {
-                            geometry_msgs::PoseStamped loiter_to_alt_start_landing_pose_pose_stamped;
-                            loiter_to_alt_start_landing_pose_pose_stamped.pose.position.x = pass_poses.back().pose.position.x;
-                            loiter_to_alt_start_landing_pose_pose_stamped.pose.position.y = pass_poses.back().pose.position.y;
-                            loiter_to_alt_start_landing_pose_pose_stamped.pose.position.z = pass_poses.back().pose.position.z;
-                            UAVs_[current_uav_index].mission->addLandWp(loiter_to_alt_start_landing_pose_pose_stamped, current_pose_stamped);
-                        } else {
-                            UAVs_[current_uav_index].mission->addLandWp(current_pose_stamped);
-                        }
-                        flying_or_landed = false;
+
+                } else if (flight_plans_for_current_uav.type[i] == aerialcore_msgs::FlightPlan::TYPE_LAND_WP) {
+                    if (UAVs_[current_uav_index].mission->airframeType() == grvc::AirframeType::FIXED_WING) {
+                        geometry_msgs::PoseStamped loiter_to_alt_start_landing_pose_pose_stamped;
+                        loiter_to_alt_start_landing_pose_pose_stamped.pose.position.x = pass_poses.back().pose.position.x;
+                        loiter_to_alt_start_landing_pose_pose_stamped.pose.position.y = pass_poses.back().pose.position.y;
+                        loiter_to_alt_start_landing_pose_pose_stamped.pose.position.z = pass_poses.back().pose.position.z;
+                        UAVs_[current_uav_index].mission->addLandWp(loiter_to_alt_start_landing_pose_pose_stamped, current_pose_stamped);
                     } else {
-                        current_pose_stamped.pose.position.z = current_graph_[ flight_plans_for_current_uav.nodes[i+1] ].altitude == 0 ? current_graph_[ flight_plans_for_current_uav.nodes[i+1] ].z : current_graph_[ flight_plans_for_current_uav.nodes[i+1] ].z + (current_graph_[ flight_plans_for_current_uav.nodes[i+1] ].altitude - map_origin_geo_.altitude);
-                        UAVs_[current_uav_index].mission->addTakeOffWp(current_pose_stamped);
-                        flying_or_landed = true;
+                        UAVs_[current_uav_index].mission->addLandWp(current_pose_stamped);
                     }
                 }
+
                 pass_poses.clear();
-            } else if ( current_graph_[ flight_plans_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_PYLON ) {
-                pass_poses.push_back(current_pose_stamped);
-                flying_or_landed = true;
-                if (first_iteration) {
-                    first_iteration=false;
-                }
             }
         }
     }
@@ -738,8 +725,7 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
             current_flight_plan.nodes.push_back(i);
         }
     }
-    centralized_planner_.fillEdgesInsideFlightPlans(flight_plans_);
-    centralized_planner_.fillPosesInsideFlightPlans(flight_plans_);
+    centralized_planner_.fillFlightPlansFields(flight_plans_);
 
     // First disable all UAVs from supervising to then enable only the ones used:
     for (UAV& current_uav : UAVs_) {

@@ -83,7 +83,7 @@ private:
   CentralizedPlanner centralized_planner_;  // Planner that assigns nodes to inspect of the electric grid graph for each UAV.
   ParameterEstimator parameter_estimator_;  // Module to estimate the time_cost_matrices and battery_drop_matrices between edges.
   PlanMonitor        plan_monitor_;         // Module to check if the drones are deviating enough to run the replanning.
-  grvc::PathPlanner path_planner_;
+  grvc::PathPlanner  path_planner_;
 
   std::vector<aerialcore_msgs::FlightPlan> flight_plans_;
 

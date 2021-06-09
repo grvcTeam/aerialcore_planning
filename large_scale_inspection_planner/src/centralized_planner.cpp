@@ -108,6 +108,8 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
         int index_graph_land_station_from_next_pylon;
         int index_graph_land_station_from_pylon_last;
 
+        int uav_index = findUavIndexById(current_uav.id);
+
         // Calculate closest pylon from the UAV initial pose:
         nearestGraphNodePylon(uav_initial_position_graph_index, index_graph_of_next_pylon, current_uav.id);
 
@@ -115,8 +117,8 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
         nearestGraphNodeLandStation(index_graph_of_next_pylon, index_graph_land_station_from_next_pylon, current_uav.id);
 
         while (edges_pairs_.size()>0 && (battery
-            - battery_drop_matrices_[findUavIndexById(current_uav.id)][ from_graph_index_to_matrix_index_[ uav_initial_position_graph_index ] ][ from_graph_index_to_matrix_index_[ index_graph_of_next_pylon ] ]
-            - battery_drop_matrices_[findUavIndexById(current_uav.id)][ from_graph_index_to_matrix_index_[ index_graph_of_next_pylon ] ][ from_graph_index_to_matrix_index_[ index_graph_land_station_from_next_pylon ] ] ) ) {
+            - battery_drop_matrices_[uav_index][ from_graph_index_to_matrix_index_[ uav_initial_position_graph_index ] ][ from_graph_index_to_matrix_index_[ index_graph_of_next_pylon ] ]
+            - battery_drop_matrices_[uav_index][ from_graph_index_to_matrix_index_[ index_graph_of_next_pylon ] ][ from_graph_index_to_matrix_index_[ index_graph_land_station_from_next_pylon ] ] ) ) {
             // Insert pylon because it can be reached with enough battery to go later to a land station:
             current_flight_plan.nodes.push_back(index_graph_of_next_pylon);
 
@@ -125,7 +127,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
             }
 
             // Update the battery left:            
-            battery -= battery_drop_matrices_[findUavIndexById(current_uav.id)][ from_graph_index_to_matrix_index_[ current_flight_plan.nodes.back() ] ][ from_graph_index_to_matrix_index_[ index_graph_of_next_pylon ] ];
+            battery -= battery_drop_matrices_[uav_index][ from_graph_index_to_matrix_index_[ current_flight_plan.nodes.back() ] ][ from_graph_index_to_matrix_index_[ index_graph_of_next_pylon ] ];
 
             // Calculate pylon with most benefit from current pylon:
             mostRewardedPylon(current_flight_plan.nodes.back(), index_graph_of_next_pylon, index_edge_to_erase, current_uav.id);
@@ -140,10 +142,10 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
                     mostRewardedPylon(index_graph_of_next_pylon, index_pylon_connected_with_unserved_edge, index_edge_to_erase, current_uav.id);
                     nearestGraphNodeLandStation(index_pylon_connected_with_unserved_edge, index_graph_land_station_from_next_pylon, current_uav.id);
                     if ( (index_pylon_connected_with_unserved_edge!=-1) && (index_graph_land_station_from_next_pylon!=-1) && (battery
-                        - battery_drop_matrices_[findUavIndexById(current_uav.id)][ from_graph_index_to_matrix_index_[ current_flight_plan.nodes.back() ] ][ from_graph_index_to_matrix_index_[ index_pylon_connected_with_unserved_edge ] ]
-                        - battery_drop_matrices_[findUavIndexById(current_uav.id)][ from_graph_index_to_matrix_index_[ index_pylon_connected_with_unserved_edge ] ][ from_graph_index_to_matrix_index_[ index_graph_land_station_from_next_pylon ] ] ) ) {
+                        - battery_drop_matrices_[uav_index][ from_graph_index_to_matrix_index_[ current_flight_plan.nodes.back() ] ][ from_graph_index_to_matrix_index_[ index_pylon_connected_with_unserved_edge ] ]
+                        - battery_drop_matrices_[uav_index][ from_graph_index_to_matrix_index_[ index_pylon_connected_with_unserved_edge ] ][ from_graph_index_to_matrix_index_[ index_graph_land_station_from_next_pylon ] ] ) ) {
                         current_flight_plan.nodes.push_back(index_graph_of_next_pylon);
-                        battery -= battery_drop_matrices_[findUavIndexById(current_uav.id)][ from_graph_index_to_matrix_index_[ current_flight_plan.nodes.back() ] ][ from_graph_index_to_matrix_index_[ index_graph_of_next_pylon ] ];
+                        battery -= battery_drop_matrices_[uav_index][ from_graph_index_to_matrix_index_[ current_flight_plan.nodes.back() ] ][ from_graph_index_to_matrix_index_[ index_graph_of_next_pylon ] ];
                         index_graph_of_next_pylon = index_pylon_connected_with_unserved_edge;
                     } else {    // Only insert the next pylon if it has battery to at least fulfill one edge.
                         break;
@@ -162,8 +164,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
         }
     }
 
-    fillEdgesInsideFlightPlans(flight_plans_);
-    fillPosesInsideFlightPlans(flight_plans_);
+    fillFlightPlansFields(flight_plans_);
 
     return flight_plans_;
 
@@ -919,8 +920,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 
     // Calculate the path free of obstacles between nodes outside in the Mission Controller. There is a path warantied between the nodes.
 
-    fillEdgesInsideFlightPlans(flight_plans_);
-    fillPosesInsideFlightPlans(flight_plans_);
+    fillFlightPlansFields(flight_plans_);
 
     return flight_plans_;
 
@@ -1077,8 +1077,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanHeuristic(st
     // 6) Wind adapt
     // 7) Problem with paths in the cost matrix (wind doesn't affect the same with paths)
 
-    fillEdgesInsideFlightPlans(flight_plans_);
-    fillPosesInsideFlightPlans(flight_plans_);
+    fillFlightPlansFields(flight_plans_);
 
     return flight_plans_;
 
@@ -1140,7 +1139,9 @@ bool CentralizedPlanner::solutionValidOrNot(std::vector<aerialcore_msgs::FlightP
 } // end solutionValidOrNot
 
 
-void CentralizedPlanner::fillEdgesInsideFlightPlans(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
+void CentralizedPlanner::fillFlightPlansFields(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
+
+    // Fill the edges:
     for (int i=0; i<_flight_plans.size(); i++) {
         _flight_plans[i].edges.clear();
         for (int j=0; j<_flight_plans[i].nodes.size()-1; j++) {
@@ -1152,12 +1153,13 @@ void CentralizedPlanner::fillEdgesInsideFlightPlans(std::vector<aerialcore_msgs:
             }
         }
     }
-} // end fillEdgesInsideFlightPlans
 
-
-void CentralizedPlanner::fillPosesInsideFlightPlans(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
+    // Fill the poses and their type:
     // Postprocess to calculate the path free of obstacles between nodes:
     for (int i=0; i<flight_plans_.size(); i++) {
+
+        bool previous_iteration_landing;
+
         for (int j=0; j<flight_plans_[i].nodes.size()-1; j++) {
             geographic_msgs::GeoPoint test_point_1, test_point_2;
 
@@ -1175,6 +1177,30 @@ void CentralizedPlanner::fillPosesInsideFlightPlans(std::vector<aerialcore_msgs:
             pose_to_insert.pose.position.z = graph_[ flight_plans_[i].nodes[j] ].altitude - map_origin_geo_.altitude + graph_[ flight_plans_[i].nodes[j] ].z;;
             flight_plans_[i].poses.push_back(pose_to_insert);
 
+            // Fill the type of pose:
+            if (j==0) {     // The first node, aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION, can be on the air or not:
+                if (UAVs_[ findUavIndexById(flight_plans_[i].uav_id) ].flying_or_landed_initially) {
+                    flight_plans_[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_WP);
+                    previous_iteration_landing = false;
+                } else {
+                    flight_plans_[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP);
+                    previous_iteration_landing = false;
+                }
+            } else {        // Any other node different from the first one:
+                if (graph_[ flight_plans_[i].nodes[j] ].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION || graph_[ flight_plans_[i].nodes[j] ].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION) {
+                    if (previous_iteration_landing) {
+                        flight_plans_[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP);
+                        previous_iteration_landing = false;
+                    } else {
+                        flight_plans_[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_LAND_WP);
+                        previous_iteration_landing = true;
+                    }
+                } else if (graph_[ flight_plans_[i].nodes[j] ].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
+                    flight_plans_[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_WP);
+                    previous_iteration_landing = false;
+                }
+            }
+
             if (!path_planner_.checkIfTwoPointsAreVisible(test_point_1, test_point_2)) {
                 auto path = path_planner_.getPathWithRelativeAltitude(test_point_1, test_point_2, map_origin_geo_.altitude);
 
@@ -1187,17 +1213,22 @@ void CentralizedPlanner::fillPosesInsideFlightPlans(std::vector<aerialcore_msgs:
                     pose_to_insert.pose.position.y = cartesian_point.y;
                     pose_to_insert.pose.position.z = cartesian_point.z;
                     flight_plans_[i].poses.push_back(pose_to_insert);
+
+                    flight_plans_[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_WP);
                 }
 
             }
         }
+
         geometry_msgs::PoseStamped pose_to_insert;
         pose_to_insert.pose.position.x = graph_[ flight_plans_[i].nodes.back() ].x;
         pose_to_insert.pose.position.y = graph_[ flight_plans_[i].nodes.back() ].y;
         pose_to_insert.pose.position.z = graph_[ flight_plans_[i].nodes.back() ].altitude - map_origin_geo_.altitude + graph_[ flight_plans_[i].nodes.back() ].z;
         flight_plans_[i].poses.push_back(pose_to_insert);
+
+        flight_plans_[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_LAND_WP);
     }
-} // end fillPosesInsideFlightPlans
+} // end fillFlightPlansFields
 
 
 } // end namespace aerialcore
