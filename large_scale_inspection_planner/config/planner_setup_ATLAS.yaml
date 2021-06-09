@@ -36,6 +36,10 @@ parameter_estimator_time: 5.0
 plan_monitor_time: 5.0
 
 
+# Deviation limit (in parts per unit of the duration of the plans), if this is surpassed (greater or lower) the Plan Monitor will tell the planner to trigger the replanning:
+deviation_limit: 0.1
+
+
 # Geographic coordinate (latitude, longitude, altitude) that makes (x,y,z) = (0,0,0) meters in cartesian coordinates:
 map_origin_geo: [38.138728, -3.173825, 444]
 

@@ -7,6 +7,7 @@
 
 #include <centralized_planner.h>
 
+#include <ros/ros.h>
 #include <math.h>
 
 #include "ortools/linear_solver/linear_solver.h"
@@ -23,7 +24,16 @@ namespace aerialcore {
 
 
 // Brief Constructor
-CentralizedPlanner::CentralizedPlanner() : path_planner_() {}
+CentralizedPlanner::CentralizedPlanner() : path_planner_() {
+    ros::NodeHandle nh;
+
+    // map_origin_geo is the geographic coordinate origin of the cartesian coordinates. Loaded to the param server in the YAML config file.
+    std::vector<double> map_origin_geo_vector;
+    nh.getParam("map_origin_geo", map_origin_geo_vector);
+    map_origin_geo_.latitude  = map_origin_geo_vector[0];
+    map_origin_geo_.longitude = map_origin_geo_vector[1];
+    map_origin_geo_.altitude  = map_origin_geo_vector[2];
+}
 
 
 // Brief Destructor
@@ -152,38 +162,8 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
         }
     }
 
-    // Postprocess to calculate the path free of obstacles between nodes:
-    // Up until now the flight plan didn't store the intermediate points to avoid flying above no-fly zones. Run the path planning between pair of nodes to calculate and store the waypoints of those paths in the solution:
-    // It should be a faster way of calculating this while the algorithm is running, but a lot should be changed to do that right now, easier to do it like this.
-    for (int i=0; i<flight_plans_.size(); i++) {
-        for (int j=0; j<flight_plans_[i].nodes.size()-1; j++) {
-            geometry_msgs::Point32 test_point_1, test_point_2;
-            test_point_1.x = _graph[ flight_plans_[i].nodes[j] ].x;       test_point_2.x = _graph[ flight_plans_[i].nodes[j+1] ].x;
-            test_point_1.y = _graph[ flight_plans_[i].nodes[j] ].y;       test_point_2.y = _graph[ flight_plans_[i].nodes[j+1] ].y;
-            test_point_1.z = _graph[ flight_plans_[i].nodes[j] ].z;       test_point_2.z = _graph[ flight_plans_[i].nodes[j+1] ].z;
-            if (!path_planner_.checkIfTwoPointsAreVisible(test_point_1, test_point_2)) {
-                auto path = path_planner_.getPath(test_point_1, test_point_2);
-
-                for (int k=0; k<path.size()-1; k++) {
-                    aerialcore_msgs::GraphNode graph_node;
-                    graph_node.type = aerialcore_msgs::GraphNode::TYPE_PASS_WP_AVOIDING_NO_FLY_ZONE;
-                    graph_node.x = path[k].x;
-                    graph_node.y = path[k].y;
-                    graph_node.z = path[k].z;
-                    // graph_node.latitude = // TODO, cartesian to geographic
-                    // graph_node.longitude = // TODO, cartesian to geographic
-                    // graph_node.altitude = // TODO, correct environment altitude
-                    _graph.push_back(graph_node);
-
-                    int last_inserted_node_index = _graph.size()-1;
-                    flight_plans_[i].nodes.insert(flight_plans_[i].nodes.begin()+j+1+k, last_inserted_node_index);
-                }
-
-            }
-        }
-    }
-
     fillEdgesInsideFlightPlans(flight_plans_);
+    fillPosesInsideFlightPlans(flight_plans_);
 
     return flight_plans_;
 
@@ -940,6 +920,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
     // Calculate the path free of obstacles between nodes outside in the Mission Controller. There is a path warantied between the nodes.
 
     fillEdgesInsideFlightPlans(flight_plans_);
+    fillPosesInsideFlightPlans(flight_plans_);
 
     return flight_plans_;
 
@@ -1080,21 +1061,6 @@ int CentralizedPlanner::findUavIndexById(int _UAV_id) {
 } // end findUavIndexById
 
 
-void CentralizedPlanner::fillEdgesInsideFlightPlans(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
-    for (int i=0; i<_flight_plans.size(); i++) {
-        _flight_plans[i].edges.clear();
-        for (int j=0; j<_flight_plans[i].nodes.size()-1; j++) {
-            for (int k=0; k<edges_.size(); k++) {
-                if (_flight_plans[i].nodes[j]==edges_[k].i && _flight_plans[i].nodes[j+1]==edges_[k].j) {
-                    _flight_plans[i].edges.push_back(k);
-                    break;
-                }
-            }
-        }
-    }
-} // end fillEdgesInsideFlightPlans
-
-
 std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanHeuristic(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::vector< std::vector< std::vector<float> > >& _time_cost_matrices, const std::vector< std::vector< std::vector<float> > >& _battery_drop_matrices) {
 
     // Get the initial plan with the greedy method:
@@ -1102,9 +1068,17 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanHeuristic(st
     std::vector<aerialcore_msgs::FlightPlan> greedy_flight_plans = flight_plans_;
     flight_plans_.clear();
 
-    // TODO
-    
+    // TODO:
+    // 1) Agarwal: Merge-Embed-Merge algorithm
+    // 1) VNS CTU
+    // 3) Dubins for navigations with VTOL or fixed wing, may be needed navigations between non-parallel inspection edges.
+    // 4) Compare with similar problems (maybe ask for the code or just do it myself)
+    // 5) Online
+    // 6) Wind adapt
+    // 7) Problem with paths in the cost matrix (wind doesn't affect the same with paths)
+
     fillEdgesInsideFlightPlans(flight_plans_);
+    fillPosesInsideFlightPlans(flight_plans_);
 
     return flight_plans_;
 
@@ -1164,6 +1138,66 @@ bool CentralizedPlanner::solutionValidOrNot(std::vector<aerialcore_msgs::FlightP
 
     return true;
 } // end solutionValidOrNot
+
+
+void CentralizedPlanner::fillEdgesInsideFlightPlans(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
+    for (int i=0; i<_flight_plans.size(); i++) {
+        _flight_plans[i].edges.clear();
+        for (int j=0; j<_flight_plans[i].nodes.size()-1; j++) {
+            for (int k=0; k<edges_.size(); k++) {
+                if (_flight_plans[i].nodes[j]==edges_[k].i && _flight_plans[i].nodes[j+1]==edges_[k].j) {
+                    _flight_plans[i].edges.push_back(k);
+                    break;
+                }
+            }
+        }
+    }
+} // end fillEdgesInsideFlightPlans
+
+
+void CentralizedPlanner::fillPosesInsideFlightPlans(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
+    // Postprocess to calculate the path free of obstacles between nodes:
+    for (int i=0; i<flight_plans_.size(); i++) {
+        for (int j=0; j<flight_plans_[i].nodes.size()-1; j++) {
+            geographic_msgs::GeoPoint test_point_1, test_point_2;
+
+            test_point_1.latitude  = graph_[ flight_plans_[i].nodes[j] ].latitude;
+            test_point_1.longitude = graph_[ flight_plans_[i].nodes[j] ].longitude;
+            test_point_1.altitude  = graph_[ flight_plans_[i].nodes[j] ].z;
+
+            test_point_2.latitude  = graph_[ flight_plans_[i].nodes[j+1] ].latitude;
+            test_point_2.longitude = graph_[ flight_plans_[i].nodes[j+1] ].longitude;
+            test_point_2.altitude  = graph_[ flight_plans_[i].nodes[j+1] ].z;
+
+            geometry_msgs::PoseStamped pose_to_insert;
+            pose_to_insert.pose.position.x = graph_[ flight_plans_[i].nodes[j] ].x;
+            pose_to_insert.pose.position.y = graph_[ flight_plans_[i].nodes[j] ].y;
+            pose_to_insert.pose.position.z = graph_[ flight_plans_[i].nodes[j] ].altitude - map_origin_geo_.altitude + graph_[ flight_plans_[i].nodes[j] ].z;;
+            flight_plans_[i].poses.push_back(pose_to_insert);
+
+            if (!path_planner_.checkIfTwoPointsAreVisible(test_point_1, test_point_2)) {
+                auto path = path_planner_.getPathWithRelativeAltitude(test_point_1, test_point_2, map_origin_geo_.altitude);
+
+                for (int k=0; k<path.size()-1; k++) {
+                    geometry_msgs::Point32 cartesian_point = geographic_to_cartesian(path[k], map_origin_geo_);
+                    cartesian_point.z = path[k].altitude;
+
+                    geometry_msgs::PoseStamped pose_to_insert;
+                    pose_to_insert.pose.position.x = cartesian_point.x;
+                    pose_to_insert.pose.position.y = cartesian_point.y;
+                    pose_to_insert.pose.position.z = cartesian_point.z;
+                    flight_plans_[i].poses.push_back(pose_to_insert);
+                }
+
+            }
+        }
+        geometry_msgs::PoseStamped pose_to_insert;
+        pose_to_insert.pose.position.x = graph_[ flight_plans_[i].nodes.back() ].x;
+        pose_to_insert.pose.position.y = graph_[ flight_plans_[i].nodes.back() ].y;
+        pose_to_insert.pose.position.z = graph_[ flight_plans_[i].nodes.back() ].altitude - map_origin_geo_.altitude + graph_[ flight_plans_[i].nodes.back() ].z;
+        flight_plans_[i].poses.push_back(pose_to_insert);
+    }
+} // end fillPosesInsideFlightPlans
 
 
 } // end namespace aerialcore

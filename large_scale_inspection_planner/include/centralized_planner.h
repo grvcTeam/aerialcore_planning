@@ -15,6 +15,7 @@
 #include <utility>
 
 #include <geometry_msgs/PointStamped.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Point32.h>
 #include <geographic_msgs/GeoPoint.h>
 #include <aerialcore_msgs/FlightPlan.h>
@@ -42,6 +43,9 @@ public:
     // _drone_info it's a vector of tuples, each tuple with 10 elements. The first in the tuple is the initial battery, and so on with all the elements in the "UAV" structure defined here below.
 
     void printPlan();
+
+    void fillEdgesInsideFlightPlans(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
+    void fillPosesInsideFlightPlans(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
 
 private:
 
@@ -86,6 +90,8 @@ private:
     int y_and_f_index_size_ = 0;
 
     std::vector<aerialcore_msgs::FlightPlan> flight_plans_;  // Output.
+    
+    geographic_msgs::GeoPoint map_origin_geo_;
 
     void constructUAVs(const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info);
     void constructEdges(std::vector<aerialcore_msgs::GraphNode>& _graph);
@@ -96,8 +102,6 @@ private:
     void mostRewardedPylon(int _initial_pylon, int& _index_graph_node_to_return, int& _index_edge_to_erase, int _uav_id);
 
     float batteryDrop(int _flying_time, int _time_max_flying) const { return (float)_flying_time/(float)_time_max_flying; }
-
-    void fillEdgesInsideFlightPlans(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
 
     // Heuristic:
     float solutionTimeCost(std::vector<aerialcore_msgs::FlightPlan> _flight_plans);

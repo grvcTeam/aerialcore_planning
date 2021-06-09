@@ -250,6 +250,7 @@ MissionController::MissionController() {
 
     current_graph_ = complete_graph_;
     removeGraphNodesAndEdgesAboveNoFlyZones(current_graph_);
+    complete_graph_cleaned_ = current_graph_;
 
 #ifdef DEBUG
     for (int i=0; i<complete_graph_.size(); i++) {      // Print complete_graph_ to check that the yaml file was parsed correctly:
@@ -333,19 +334,9 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
         }
     }
 
-    // Reset the current graph: erase the graph nodes corresponding to the initial position of the UAVs and pass waypoints for avoiding no-fly zones (if there are any because of previously started missions).
-    std::vector<int> indexes_to_erase;              // Dont't erase directly the indexes, it's safer erase later with a sorted decreasing vector.
-    for (int i=0; i<current_graph_.size(); i++) {
-        if (current_graph_[i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION || current_graph_[i].type == aerialcore_msgs::GraphNode::TYPE_PASS_WP_AVOIDING_NO_FLY_ZONE) {
-            indexes_to_erase.push_back(i);
-        }
-    }
-    // Reverse order of the vector of indexes to erase (from more to less now):
-    std::reverse(indexes_to_erase.begin(), indexes_to_erase.end());
-    // Erase indexes of the graph:
-    for (int current_index_to_erase: indexes_to_erase) {
-        current_graph_.erase( current_graph_.begin() + current_index_to_erase );
-    }
+    // Reset the current graph:
+    current_graph_.clear();
+    current_graph_ = complete_graph_cleaned_;
 
     // Stop the current supervising threads, consisting on the parameter estimator (module of same name) and plan thread (plan monitor and planner modules):
     stop_current_supervising_ = true;
@@ -366,7 +357,7 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
 void MissionController::parameterEstimatorThread(void) {
     ros::Rate loop_rate(1.0/parameter_estimator_time_); // [Hz, inverse of seconds]
     while (!stop_current_supervising_) {
-        parameter_estimator_.updateMatrices(current_graph_, no_fly_zones_, geofence_);
+        parameter_estimator_.updateMatrices(current_graph_, no_fly_zones_, geofence_);  // TODO: current_graph_ should have a mutex.
         loop_rate.sleep();
     }
 } // end parameterEstimatorThread
@@ -377,55 +368,58 @@ void MissionController::planThread(void) {
     ros::Rate loop_rate(1.0/plan_monitor_time_);        // [Hz, inverse of seconds]
     while (!stop_current_supervising_) {
 
-        if (plan_monitor_.enoughDeviationToReplan(parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices())) {
+        current_graph_.clear();
+        current_graph_ = specific_subgraph_;    // TODO: current_graph_ should have a mutex.
 
-            std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> > drone_info_for_planning;
-            for (const UAV& current_uav : UAVs_) {
-                if (current_uav.enabled_to_supervise == true) {
-                    std::tuple<float, float, int, int, int, int, int, int, bool, bool> new_tuple;
-                    std::get<0>(new_tuple) = commanding_UAV_with_mission_lib_or_DJI_SDK_ ? current_uav.mission->battery() : 1.0;
-                    std::get<1>(new_tuple) = current_uav.minimum_battery;
-                    std::get<2>(new_tuple) = current_uav.time_until_fully_charged;
-                    std::get<3>(new_tuple) = current_uav.time_max_flying;
-                    std::get<4>(new_tuple) = current_uav.speed_xy;
-                    std::get<5>(new_tuple) = current_uav.speed_z_down;
-                    std::get<6>(new_tuple) = current_uav.speed_z_up;
-                    std::get<7>(new_tuple) = current_uav.id;
-                    std::get<8>(new_tuple) = commanding_UAV_with_mission_lib_or_DJI_SDK_ ? current_uav.mission->armed() : false;  // TODO: better way to know if flying?
-                    std::get<9>(new_tuple) = current_uav.recharging;
-                    drone_info_for_planning.push_back(new_tuple);
+        std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> > drone_info;
+        for (const UAV& current_uav : UAVs_) {
+            if (current_uav.enabled_to_supervise == true) {
+                std::tuple<float, float, int, int, int, int, int, int, bool, bool> new_tuple;
+                std::get<0>(new_tuple) = commanding_UAV_with_mission_lib_or_DJI_SDK_ ? current_uav.mission->battery() : 1.0;
+                std::get<1>(new_tuple) = current_uav.minimum_battery;
+                std::get<2>(new_tuple) = current_uav.time_until_fully_charged;
+                std::get<3>(new_tuple) = current_uav.time_max_flying;
+                std::get<4>(new_tuple) = current_uav.speed_xy;
+                std::get<5>(new_tuple) = current_uav.speed_z_down;
+                std::get<6>(new_tuple) = current_uav.speed_z_up;
+                std::get<7>(new_tuple) = current_uav.id;
+                std::get<8>(new_tuple) = commanding_UAV_with_mission_lib_or_DJI_SDK_ ? current_uav.mission->armed() : false;  // TODO: better way to know if flying?
+                std::get<9>(new_tuple) = current_uav.recharging;
+                drone_info.push_back(new_tuple);
 
-                    aerialcore_msgs::GraphNode current_uav_initial_position_graph_node;
-                    current_uav_initial_position_graph_node.type = aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION;
-                    current_uav_initial_position_graph_node.id = current_uav.id;
-                    if (commanding_UAV_with_mission_lib_or_DJI_SDK_) {
-                        current_uav_initial_position_graph_node.x = current_uav.mission->pose().pose.position.x;
-                        current_uav_initial_position_graph_node.y = current_uav.mission->pose().pose.position.y;
-                        current_uav_initial_position_graph_node.z = current_uav.mission->pose().pose.position.z;
-                    } else {
-                        // // HARDCODED INITIAL POSES FOR NOVEMBER EXPERIMENTS?
-                        // current_uav_initial_position_graph_node.x = current_uav.id==1 ? 28 : 36.119532;
-                        // current_uav_initial_position_graph_node.y = current_uav.id==1 ? 61 : 63.737163;
-                        // current_uav_initial_position_graph_node.z = current_uav.id==1 ? 0.32 : 0;
-                    }
-                    current_graph_.push_back(current_uav_initial_position_graph_node);
+                aerialcore_msgs::GraphNode current_uav_initial_position_graph_node;
+                current_uav_initial_position_graph_node.type = aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION;
+                current_uav_initial_position_graph_node.id = current_uav.id;
+                if (commanding_UAV_with_mission_lib_or_DJI_SDK_) {
+                    current_uav_initial_position_graph_node.x = current_uav.mission->pose().pose.position.x;
+                    current_uav_initial_position_graph_node.y = current_uav.mission->pose().pose.position.y;
+                    current_uav_initial_position_graph_node.z = current_uav.mission->pose().pose.position.z;
+                } else {
+                    // // HARDCODED INITIAL POSES FOR NOVEMBER EXPERIMENTS?
+                    // current_uav_initial_position_graph_node.x = current_uav.id==1 ? 28 : 36.119532;
+                    // current_uav_initial_position_graph_node.y = current_uav.id==1 ? 61 : 63.737163;
+                    // current_uav_initial_position_graph_node.z = current_uav.id==1 ? 0.32 : 0;
                 }
+                current_graph_.push_back(current_uav_initial_position_graph_node);
             }
+        }
+
+        // Wait until the parameter_estimator_ calculate the matrices:
+        while (parameter_estimator_.getTimeCostMatrices().size()==0 && ros::ok()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        }
+
+        if (flight_plans_.size()==0 || plan_monitor_.enoughDeviationToReplan(current_graph_, flight_plans_, drone_info, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices())) {
 
             // Calculate the solution with computation time:
-
-            // Wait until the parameter_estimator_ calculate the matrices:
-            while (parameter_estimator_.getTimeCostMatrices().size()==0 && ros::ok()) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(200));
-            }
 
             std::cout << "Start the computation of the plan." << std::endl;
             clock_t t_begin, t_end;
             t_begin = clock();
 
-            flight_plans_ = centralized_planner_.getPlanGreedy(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
-            // flight_plans_ =  centralized_planner_.getPlanMILP(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
-            // flight_plans_ =  centralized_planner_.getPlanHeuristic(current_graph_, drone_info_for_planning, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
+            flight_plans_ = centralized_planner_.getPlanGreedy(current_graph_, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
+            // flight_plans_ =  centralized_planner_.getPlanMILP(current_graph_, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
+            // flight_plans_ =  centralized_planner_.getPlanHeuristic(current_graph_, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
             t_end = clock();
 
             double seconds = ((float)(t_end-t_begin))/CLOCKS_PER_SEC;
@@ -441,6 +435,7 @@ void MissionController::planThread(void) {
 
                 for (const aerialcore_msgs::FlightPlan& flight_plans_for_current_uav : flight_plans_) {
                     // // HARDCODED WAITS BETWEEN TAKEOFFS FOR NOVEMBER EXPERIMENTS:
+                    // TODO: do waits right.
                     // if (flight_plans_for_current_uav.uav_id==2) sleep(10);
                     // if (flight_plans_for_current_uav.uav_id==3) sleep(74);
                     int current_uav_index = findUavIndexById(flight_plans_for_current_uav.uav_id);
@@ -514,7 +509,7 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
                     }
                 }
                 pass_poses.clear();
-            } else if ( current_graph_[ flight_plans_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_PYLON || current_graph_[ flight_plans_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_PASS_WP_AVOIDING_NO_FLY_ZONE ) {
+            } else if ( current_graph_[ flight_plans_for_current_uav.nodes[i] ].type == aerialcore_msgs::GraphNode::TYPE_PYLON ) {
                 pass_poses.push_back(current_pose_stamped);
                 flying_or_landed = true;
                 if (first_iteration) {
@@ -537,17 +532,25 @@ uav_n: )"};
         yaml_to_return.append(std::to_string(flight_plans_for_current_uav.uav_id).c_str());
         yaml_to_return.append({R"(:
   wp_n: )"});
-        yaml_to_return.append(std::to_string(flight_plans_for_current_uav.nodes.size()-2 ).c_str());
-        for (int i=1; i<flight_plans_for_current_uav.nodes.size()-1; i++) {
+        yaml_to_return.append(std::to_string(flight_plans_for_current_uav.poses.size()-2 ).c_str());
+        for (int i=1; i<flight_plans_for_current_uav.poses.size()-1; i++) {
+            geometry_msgs::Point32 aux_point32;
+            aux_point32.x = flight_plans_for_current_uav.poses[i].pose.position.x;
+            aux_point32.y = flight_plans_for_current_uav.poses[i].pose.position.y;
+            aux_point32.z = flight_plans_for_current_uav.poses[i].pose.position.z;
+
+            geographic_msgs::GeoPoint current_geopoint = cartesian_to_geographic(aux_point32, map_origin_geo_);
+            current_geopoint.altitude = flight_plans_for_current_uav.poses[i].pose.position.z;
+
             yaml_to_return.append({R"(
   wp_)"});
             yaml_to_return.append(std::to_string(i-1).c_str());
             yaml_to_return.append(": [");
-            yaml_to_return.append(std::to_string(current_graph_[flight_plans_for_current_uav.nodes[i]].latitude).c_str());
+            yaml_to_return.append(std::to_string(current_geopoint.latitude).c_str());
             yaml_to_return.append(", ");
-            yaml_to_return.append(std::to_string(current_graph_[flight_plans_for_current_uav.nodes[i]].longitude).c_str());
+            yaml_to_return.append(std::to_string(current_geopoint.longitude).c_str());
             yaml_to_return.append(", ");
-            yaml_to_return.append(std::to_string(current_graph_[flight_plans_for_current_uav.nodes[i]].altitude).c_str());
+            yaml_to_return.append(std::to_string(current_geopoint.altitude).c_str());
             yaml_to_return.append("]");
         }
         yaml_to_return.append("\n\n");
@@ -565,12 +568,12 @@ std::string MissionController::translateFlightPlanIntoYaml(const std::vector<aer
         yaml_to_return.append("waypoints_");
         yaml_to_return.append(std::to_string(flight_plans_for_current_uav.uav_id).c_str());
         yaml_to_return.append(": \"");
-        for (int i=0; i<flight_plans_for_current_uav.nodes.size(); i++) {
-            yaml_to_return.append(std::to_string(current_graph_[flight_plans_for_current_uav.nodes[i]].x).c_str());
+        for (const geometry_msgs::PoseStamped& current_pose : flight_plans_for_current_uav.poses) {
+            yaml_to_return.append(std::to_string(current_pose.pose.position.x).c_str());
             yaml_to_return.append(" ");
-            yaml_to_return.append(std::to_string(current_graph_[flight_plans_for_current_uav.nodes[i]].y).c_str());
+            yaml_to_return.append(std::to_string(current_pose.pose.position.y).c_str());
             yaml_to_return.append(" ");
-            yaml_to_return.append(std::to_string(current_graph_[flight_plans_for_current_uav.nodes[i]].z).c_str());
+            yaml_to_return.append(std::to_string(current_pose.pose.position.z).c_str());
             yaml_to_return.append(" 0;\n");
         }
         yaml_to_return.back() = '\"';
@@ -626,8 +629,7 @@ bool MissionController::doSpecificSupervisionServiceCallback(aerialcore_msgs::Do
 bool MissionController::doContinuousSupervisionServiceCallback(std_srvs::Trigger::Request& _req, std_srvs::Trigger::Response& _res) {
     continuous_or_specific_supervision_ = true;
     current_graph_.clear();
-    current_graph_ = complete_graph_;
-    removeGraphNodesAndEdgesAboveNoFlyZones(current_graph_);
+    current_graph_ = complete_graph_cleaned_;
     _res.success=true;
     return true;
 } // end doContinuousSupervisionServiceCallback
@@ -736,6 +738,8 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
             current_flight_plan.nodes.push_back(i);
         }
     }
+    centralized_planner_.fillEdgesInsideFlightPlans(flight_plans_);
+    centralized_planner_.fillPosesInsideFlightPlans(flight_plans_);
 
     // First disable all UAVs from supervising to then enable only the ones used:
     for (UAV& current_uav : UAVs_) {

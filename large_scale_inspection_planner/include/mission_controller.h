@@ -77,6 +77,7 @@ private:
   // Power lines graph:
   std::vector<aerialcore_msgs::GraphNode> current_graph_;
   std::vector<aerialcore_msgs::GraphNode> complete_graph_;
+  std::vector<aerialcore_msgs::GraphNode> complete_graph_cleaned_;
   std::vector<aerialcore_msgs::GraphNode> specific_subgraph_;
 
   CentralizedPlanner centralized_planner_;  // Planner that assigns nodes to inspect of the electric grid graph for each UAV.
@@ -95,7 +96,7 @@ private:
 
   // UAVs:
   struct UAV {
-    grvc::Mission * mission = nullptr;  // For simulation!!! In the real flights of november there will be no VTOL nor fixed wing, only DJI multicopters.
+    grvc::Mission * mission = nullptr;  // For simulation!!! In the real flights of November there will be no VTOL nor fixed wing, only DJI multicopters.
 
     std::string airframe_type;  // Not the one from the roslaunch (PX4), but the one in the yaml.
 
