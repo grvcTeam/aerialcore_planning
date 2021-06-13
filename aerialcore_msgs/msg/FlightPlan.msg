@@ -1,5 +1,6 @@
 uint8 TYPE_TAKEOFF_WP = 0
-uint8 TYPE_PASS_WP = 1
+uint8 TYPE_PASS_NODE_WP = 1 # Pass waypoint extracted from a node of the graph.
+uint8 TYPE_PASS_NFZ_WP = 1  # Pass waypoint added to avoid flying above a no-fly zone.
 uint8 TYPE_LAND_WP = 2
 
 Header header

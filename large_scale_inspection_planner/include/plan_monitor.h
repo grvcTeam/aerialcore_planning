@@ -35,9 +35,9 @@ public:
 
 private:
 
-    bool checkIfPlansHaveChanged (const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) const;
+    // bool checkIfPlansHaveChanged (const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) const;
     void constructUAVs(const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info);
-    int findUavIndexById(int _UAV_id);
+    int  findUavIndexById(int _UAV_id);
 
     // UAVs:
     struct UAV {
@@ -54,8 +54,7 @@ private:
 
 
         // Specific of the Plan Monitor:
-        float duration_planned = 0; // Duration in seconds of the current flight_plan_ for this UAV.
-        int last_segment = -1;      // First node of the segment that this UAV was doing for this plan the last time the Plan Monitor was called.
+        int last_segment = 0;      // First node of the segment that this UAV was doing for this plan the last time the Plan Monitor was called.
 
 
         int id;
@@ -65,11 +64,7 @@ private:
     };
     std::vector<UAV> UAVs_;
 
-    std::vector<aerialcore_msgs::FlightPlan> last_flight_plans_;
-
     float deviation_limit_;         // Parameter read from the configuration file. Parts per unit of the duration of the plans, if this is surpassed (greater or lower) the replanning will be triggered.
-
-    float total_duration_planned_;  // Sum of the planned duration of all the UAVs.
 
 };  // end PlanMonitor class
 

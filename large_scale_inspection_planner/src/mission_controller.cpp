@@ -248,9 +248,11 @@ MissionController::MissionController() {
         }
     }
 
+    current_graph_mutex_.lock();
     current_graph_ = complete_graph_;
     removeGraphNodesAndEdgesAboveNoFlyZones(current_graph_);
     complete_graph_cleaned_ = current_graph_;
+    current_graph_mutex_.unlock();
 
 #ifdef DEBUG
     for (int i=0; i<complete_graph_.size(); i++) {      // Print complete_graph_ to check that the yaml file was parsed correctly:
@@ -334,10 +336,6 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
         }
     }
 
-    // Reset the current graph:
-    current_graph_.clear();
-    current_graph_ = complete_graph_cleaned_;
-
     // Stop the current supervising threads, consisting on the parameter estimator (module of same name) and plan thread (plan monitor and planner modules):
     stop_current_supervising_ = true;
     if(parameter_estimator_thread_.joinable()) parameter_estimator_thread_.join();
@@ -357,7 +355,9 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
 void MissionController::parameterEstimatorThread(void) {
     ros::Rate loop_rate(1.0/parameter_estimator_time_); // [Hz, inverse of seconds]
     while (!stop_current_supervising_) {
-        parameter_estimator_.updateMatrices(current_graph_, no_fly_zones_, geofence_);  // TODO: current_graph_ should have a mutex.
+        current_graph_mutex_.lock();
+        parameter_estimator_.updateMatrices(current_graph_, no_fly_zones_, geofence_);
+        current_graph_mutex_.unlock();
         loop_rate.sleep();
     }
 } // end parameterEstimatorThread
@@ -368,8 +368,15 @@ void MissionController::planThread(void) {
     ros::Rate loop_rate(1.0/plan_monitor_time_);        // [Hz, inverse of seconds]
     while (!stop_current_supervising_) {
 
+        // Reset the current graph:
+        current_graph_mutex_.lock();
         current_graph_.clear();
-        current_graph_ = specific_subgraph_;    // TODO: current_graph_ should have a mutex.
+        if (continuous_or_specific_supervision_) {
+            current_graph_ = complete_graph_cleaned_;
+        } else {
+            current_graph_ = specific_subgraph_cleaned_;
+        }
+        current_graph_mutex_.unlock();
 
         std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> > drone_info;
         for (const UAV& current_uav : UAVs_) {
@@ -400,7 +407,11 @@ void MissionController::planThread(void) {
                     // current_uav_initial_position_graph_node.y = current_uav.id==1 ? 61 : 63.737163;
                     // current_uav_initial_position_graph_node.z = current_uav.id==1 ? 0.32 : 0;
                 }
+                
+                current_graph_mutex_.lock();
                 current_graph_.push_back(current_uav_initial_position_graph_node);
+                current_graph_mutex_.unlock();
+                
             }
         }
 
@@ -409,7 +420,15 @@ void MissionController::planThread(void) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
 
-        if (flight_plans_.size()==0 || plan_monitor_.enoughDeviationToReplan(current_graph_, flight_plans_, drone_info, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices())) {
+        bool plan_from_scratch = flight_plans_.size()==0;
+        bool replan = false;
+        if (!replan) {
+            current_graph_mutex_.lock();
+            replan = plan_monitor_.enoughDeviationToReplan(current_graph_, flight_plans_, drone_info, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
+            current_graph_mutex_.unlock();
+        }
+
+        if (plan_from_scratch || replan) {
 
             // Calculate the solution with computation time:
 
@@ -417,9 +436,12 @@ void MissionController::planThread(void) {
             clock_t t_begin, t_end;
             t_begin = clock();
 
+            current_graph_mutex_.lock();
             flight_plans_ = centralized_planner_.getPlanGreedy(current_graph_, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
             // flight_plans_ =  centralized_planner_.getPlanMILP(current_graph_, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
             // flight_plans_ =  centralized_planner_.getPlanHeuristic(current_graph_, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
+            current_graph_mutex_.unlock();
+
             t_end = clock();
 
             double seconds = ((float)(t_end-t_begin))/CLOCKS_PER_SEC;
@@ -478,7 +500,8 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
         for (int i=0; i<flight_plans_for_current_uav.poses.size(); i++) {
             geometry_msgs::PoseStamped current_pose_stamped = flight_plans_for_current_uav.poses[i];
 
-            if (flight_plans_for_current_uav.type[i] == aerialcore_msgs::FlightPlan::TYPE_PASS_WP) {
+            if (flight_plans_for_current_uav.type[i] == aerialcore_msgs::FlightPlan::TYPE_PASS_NODE_WP
+             || flight_plans_for_current_uav.type[i] == aerialcore_msgs::FlightPlan::TYPE_PASS_NFZ_WP) {
                 pass_poses.push_back(current_pose_stamped);
 
             } else {
@@ -605,9 +628,14 @@ bool MissionController::doSpecificSupervisionServiceCallback(aerialcore_msgs::Do
     for (const aerialcore_msgs::GraphNode& current_graph_node : _req.specific_subgraph) {
         specific_subgraph_.push_back(current_graph_node);
     }
+
+    current_graph_mutex_.lock();
     current_graph_.clear();
     current_graph_ = specific_subgraph_;
     removeGraphNodesAndEdgesAboveNoFlyZones(current_graph_);
+    specific_subgraph_cleaned_ = current_graph_;
+    current_graph_mutex_.unlock();
+
     _res.success=true;
     return true;
 } // end doSpecificSupervisionServiceCallback
@@ -615,8 +643,12 @@ bool MissionController::doSpecificSupervisionServiceCallback(aerialcore_msgs::Do
 
 bool MissionController::doContinuousSupervisionServiceCallback(std_srvs::Trigger::Request& _req, std_srvs::Trigger::Response& _res) {
     continuous_or_specific_supervision_ = true;
+
+    current_graph_mutex_.lock();
     current_graph_.clear();
     current_graph_ = complete_graph_cleaned_;
+    current_graph_mutex_.unlock();
+
     _res.success=true;
     return true;
 } // end doContinuousSupervisionServiceCallback
@@ -624,6 +656,12 @@ bool MissionController::doContinuousSupervisionServiceCallback(std_srvs::Trigger
 
 bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_msgs::PostString::Request& _req, aerialcore_msgs::PostString::Response& _res) {
     ROS_INFO("Mission Controller: start specific supervision plan servive received.");
+
+    // Stop supervising threads, if exist:
+    stop_current_supervising_ = true;
+    if(parameter_estimator_thread_.joinable()) parameter_estimator_thread_.join();
+    if(plan_thread_.joinable()) plan_thread_.join();
+    stop_current_supervising_ = false;
 
     // Load to the parameter server the yaml string received:
     std::remove("current_plan.yaml");
@@ -637,7 +675,9 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
     }
     system("rosparam load current_plan.yaml");
 
+    current_graph_mutex_.lock();
     current_graph_.clear();
+    current_graph_mutex_.unlock();
 
     // Iterate the parameters loaded and create from them the graph:
     for (int id=1; id<=20; id++) {
@@ -656,10 +696,13 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
             } else {
                 // // HARDCODED INITIAL POSES ?
             }
+
+            current_graph_mutex_.lock();
             current_graph_.push_back(initial_graph_node);
             initial_graph_node.type = aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION;
             initial_graph_node.id = id;
             current_graph_.push_back(initial_graph_node);
+            current_graph_mutex_.unlock();
 
             // Build the pylons graph nodes for the current graph from the yaml string received:
             std::string waypoints;
@@ -684,7 +727,10 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
                 waypoints = waypoints.substr(sz);
                 (float) std::stod (waypoints,&sz);  // Don't save right now the heading.
                 waypoints = waypoints.substr(sz);
+
+                current_graph_mutex_.lock();
                 current_graph_.push_back(pylon_graph_node);
+                current_graph_mutex_.unlock();
             }
         }
     }
@@ -708,6 +754,8 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
     flight_plans_.clear();
     aerialcore_msgs::FlightPlan current_flight_plan;
     int regular_landing_station_index = -1;
+
+    current_graph_mutex_.lock();
     for (int i=0; i<=current_graph_.size(); i++) {
         if (i==current_graph_.size() || current_graph_[i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && regular_landing_station_index!=-1) {
             current_flight_plan.nodes.push_back(regular_landing_station_index);
@@ -725,6 +773,8 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
             current_flight_plan.nodes.push_back(i);
         }
     }
+    current_graph_mutex_.unlock();
+
     centralized_planner_.fillFlightPlansFields(flight_plans_);
 
     // First disable all UAVs from supervising to then enable only the ones used:

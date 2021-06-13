@@ -1156,47 +1156,47 @@ void CentralizedPlanner::fillFlightPlansFields(std::vector<aerialcore_msgs::Flig
 
     // Fill the poses and their type:
     // Postprocess to calculate the path free of obstacles between nodes:
-    for (int i=0; i<flight_plans_.size(); i++) {
+    for (int i=0; i<_flight_plans.size(); i++) {
 
         bool previous_iteration_landing;
 
-        for (int j=0; j<flight_plans_[i].nodes.size()-1; j++) {
+        for (int j=0; j<_flight_plans[i].nodes.size()-1; j++) {
             geographic_msgs::GeoPoint test_point_1, test_point_2;
 
-            test_point_1.latitude  = graph_[ flight_plans_[i].nodes[j] ].latitude;
-            test_point_1.longitude = graph_[ flight_plans_[i].nodes[j] ].longitude;
-            test_point_1.altitude  = graph_[ flight_plans_[i].nodes[j] ].z;
+            test_point_1.latitude  = graph_[ _flight_plans[i].nodes[j] ].latitude;
+            test_point_1.longitude = graph_[ _flight_plans[i].nodes[j] ].longitude;
+            test_point_1.altitude  = graph_[ _flight_plans[i].nodes[j] ].z;
 
-            test_point_2.latitude  = graph_[ flight_plans_[i].nodes[j+1] ].latitude;
-            test_point_2.longitude = graph_[ flight_plans_[i].nodes[j+1] ].longitude;
-            test_point_2.altitude  = graph_[ flight_plans_[i].nodes[j+1] ].z;
+            test_point_2.latitude  = graph_[ _flight_plans[i].nodes[j+1] ].latitude;
+            test_point_2.longitude = graph_[ _flight_plans[i].nodes[j+1] ].longitude;
+            test_point_2.altitude  = graph_[ _flight_plans[i].nodes[j+1] ].z;
 
             geometry_msgs::PoseStamped pose_to_insert;
-            pose_to_insert.pose.position.x = graph_[ flight_plans_[i].nodes[j] ].x;
-            pose_to_insert.pose.position.y = graph_[ flight_plans_[i].nodes[j] ].y;
-            pose_to_insert.pose.position.z = graph_[ flight_plans_[i].nodes[j] ].altitude - map_origin_geo_.altitude + graph_[ flight_plans_[i].nodes[j] ].z;;
-            flight_plans_[i].poses.push_back(pose_to_insert);
+            pose_to_insert.pose.position.x = graph_[ _flight_plans[i].nodes[j] ].x;
+            pose_to_insert.pose.position.y = graph_[ _flight_plans[i].nodes[j] ].y;
+            pose_to_insert.pose.position.z = graph_[ _flight_plans[i].nodes[j] ].altitude - map_origin_geo_.altitude + graph_[ _flight_plans[i].nodes[j] ].z;;
+            _flight_plans[i].poses.push_back(pose_to_insert);
 
             // Fill the type of pose:
             if (j==0) {     // The first node, aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION, can be on the air or not:
-                if (UAVs_[ findUavIndexById(flight_plans_[i].uav_id) ].flying_or_landed_initially) {
-                    flight_plans_[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_WP);
+                if (UAVs_[ findUavIndexById(_flight_plans[i].uav_id) ].flying_or_landed_initially) {
+                    _flight_plans[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_NODE_WP);
                     previous_iteration_landing = false;
                 } else {
-                    flight_plans_[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP);
+                    _flight_plans[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP);
                     previous_iteration_landing = false;
                 }
             } else {        // Any other node different from the first one:
-                if (graph_[ flight_plans_[i].nodes[j] ].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION || graph_[ flight_plans_[i].nodes[j] ].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION) {
+                if (graph_[ _flight_plans[i].nodes[j] ].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION || graph_[ _flight_plans[i].nodes[j] ].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION) {
                     if (previous_iteration_landing) {
-                        flight_plans_[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP);
+                        _flight_plans[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP);
                         previous_iteration_landing = false;
                     } else {
-                        flight_plans_[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_LAND_WP);
+                        _flight_plans[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_LAND_WP);
                         previous_iteration_landing = true;
                     }
-                } else if (graph_[ flight_plans_[i].nodes[j] ].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
-                    flight_plans_[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_WP);
+                } else if (graph_[ _flight_plans[i].nodes[j] ].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
+                    _flight_plans[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_NODE_WP);
                     previous_iteration_landing = false;
                 }
             }
@@ -1212,22 +1212,28 @@ void CentralizedPlanner::fillFlightPlansFields(std::vector<aerialcore_msgs::Flig
                     pose_to_insert.pose.position.x = cartesian_point.x;
                     pose_to_insert.pose.position.y = cartesian_point.y;
                     pose_to_insert.pose.position.z = cartesian_point.z;
-                    flight_plans_[i].poses.push_back(pose_to_insert);
+                    _flight_plans[i].poses.push_back(pose_to_insert);
 
-                    flight_plans_[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_WP);
+                    _flight_plans[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_NFZ_WP);
                 }
 
             }
         }
 
         geometry_msgs::PoseStamped pose_to_insert;
-        pose_to_insert.pose.position.x = graph_[ flight_plans_[i].nodes.back() ].x;
-        pose_to_insert.pose.position.y = graph_[ flight_plans_[i].nodes.back() ].y;
-        pose_to_insert.pose.position.z = graph_[ flight_plans_[i].nodes.back() ].altitude - map_origin_geo_.altitude + graph_[ flight_plans_[i].nodes.back() ].z;
-        flight_plans_[i].poses.push_back(pose_to_insert);
+        pose_to_insert.pose.position.x = graph_[ _flight_plans[i].nodes.back() ].x;
+        pose_to_insert.pose.position.y = graph_[ _flight_plans[i].nodes.back() ].y;
+        pose_to_insert.pose.position.z = graph_[ _flight_plans[i].nodes.back() ].altitude - map_origin_geo_.altitude + graph_[ _flight_plans[i].nodes.back() ].z;
+        _flight_plans[i].poses.push_back(pose_to_insert);
 
-        flight_plans_[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_LAND_WP);
+        _flight_plans[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_LAND_WP);
     }
+
+    ros::Time planning_time = ros::Time::now();
+    for (int i=0; i<_flight_plans.size(); i++) {
+        _flight_plans[i].header.stamp = planning_time;
+    }
+
 } // end fillFlightPlansFields
 
 

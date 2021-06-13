@@ -73,7 +73,7 @@ const std::vector< std::vector< std::vector<float> > >& ParameterEstimator::getB
 // Method called periodically in an external thread, located in the Mission Controller, that will update both the cost and battery drop matrices with the last prediction:
 void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector<geometry_msgs::Polygon>& _no_fly_zones, const geometry_msgs::Polygon& _geofence /* poses, batteries, plan, wind sensor?*/) {
 
-    if (distance_cost_matrix_.size()==0) {  // Only enter the first time this method is called.
+    if (distance_cost_matrix_.size()==0) {  // Only enter the first time this method is called. TODO: really update all the time.
         std::vector< std::vector<float> > new_distance_cost_matrix;
         if (construct_distance_cost_matrix_) {
             // Construct the distance_cost_matrix and export it to a default yaml file.
@@ -89,9 +89,9 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
                 if (_graph[i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION) {
                     uav_initial_positions_indexes.push_back(i);
                 } else if (_graph[i].type == aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION) {
-                    // uav_regular_land_stations_indexes.push_back(i);
+                    uav_regular_land_stations_indexes.push_back(i);
                 } else if (_graph[i].type == aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) {
-                    // uav_recharging_land_stations_indexes.push_back(i);
+                    uav_recharging_land_stations_indexes.push_back(i);
                 } else if (_graph[i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
                     pylons_indexes.push_back(i);
                 }

@@ -17,6 +17,7 @@
 #include <map>
 #include <thread>
 #include <atomic>
+#include <mutex>
 
 #include <std_srvs/Trigger.h>
 #include <geographic_msgs/GeoPoint.h>
@@ -75,10 +76,12 @@ private:
   ros::ServiceClient post_yaml_client_;
 
   // Power lines graph:
-  std::vector<aerialcore_msgs::GraphNode> current_graph_;
   std::vector<aerialcore_msgs::GraphNode> complete_graph_;
   std::vector<aerialcore_msgs::GraphNode> complete_graph_cleaned_;
   std::vector<aerialcore_msgs::GraphNode> specific_subgraph_;
+  std::vector<aerialcore_msgs::GraphNode> specific_subgraph_cleaned_;
+  std::vector<aerialcore_msgs::GraphNode> current_graph_;
+  std::mutex current_graph_mutex_;
 
   CentralizedPlanner centralized_planner_;  // Planner that assigns nodes to inspect of the electric grid graph for each UAV.
   ParameterEstimator parameter_estimator_;  // Module to estimate the time_cost_matrices and battery_drop_matrices between edges.
