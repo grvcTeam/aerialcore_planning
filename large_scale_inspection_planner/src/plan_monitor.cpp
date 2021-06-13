@@ -27,7 +27,7 @@ PlanMonitor::~PlanMonitor() {}
 
 
 // Method called periodically in an external thread, located in the Mission Controller, that will call the planner in the same thread if it returns true:
-bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< std::vector< std::vector<float> > >& _time_cost_matrices, const std::vector< std::vector< std::vector<float> > >& _battery_drop_matrices) {
+bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::map<int, std::vector< std::vector<float> > >& _time_cost_matrices, const std::map<int, std::vector< std::vector<float> > >& _battery_drop_matrices) {
 
     ros::Time time_now = ros::Time::now();
 
@@ -41,6 +41,15 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
     // Iterate the planned UAVs to calculate the duration planned and real for each one of them and all of them in total:
     for (int i=0; i<_flight_plans.size(); i++) {
         int uav_index = findUavIndexById(_flight_plans[i].uav_id);
+
+        if (i==0) { // Build only once the maps that allows to easilly access the matrices (TODO: if matrices were maps instead of vectors this shouldn't be necessary):
+            from_graph_index_to_matrix_index_.clear();
+            from_matrix_index_to_graph_index_.clear();
+            for (int i=1; i<_time_cost_matrices.size(); i++) {
+                from_graph_index_to_matrix_index_[ (int) _time_cost_matrices.at( _flight_plans[i].uav_id )[i][0] ] = i;
+                from_matrix_index_to_graph_index_[i] = (int) _time_cost_matrices.at( _flight_plans[i].uav_id )[i][0];
+            }
+        }
 
         // Search for the initial node in the graph of the current UAV of the plan:
         float x_ini, y_ini;   // Define the x-y variables for the initial UAV position.
@@ -126,7 +135,7 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
         // Calculate the duration planned:
         duration_planned[uav_index] = 0;
         for (int j=0; j<_flight_plans[i].nodes.size()-1; j++) {
-            duration_planned[uav_index] += _time_cost_matrices[uav_index][ _flight_plans[i].nodes[j] ][ _flight_plans[i].nodes[j+1] ];    // TODO: the k in the matrices doesn't need to be the same as the one in the plans. DANGER. May be better to use the id of the UAVs than some random index.
+            duration_planned[uav_index] += _time_cost_matrices.at( _flight_plans[i].uav_id )[ from_graph_index_to_matrix_index_[ _flight_plans[i].nodes[j] ] ][ from_graph_index_to_matrix_index_[ _flight_plans[i].nodes[j+1] ] ];
             if (_flight_plans[i].nodes[j+1]==last_index_node_in_poses) {
                 break;
             }
@@ -150,7 +159,7 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
                     distance_up_until_intersection += sqrt( pow(x_inter-_flight_plans[i].poses[j].pose.position.x,2) + pow(y_inter-_flight_plans[i].poses[j].pose.position.y,2) );
                 }
             }
-            duration_planned[uav_index] += distance_up_until_intersection/distance_up_until_next_node * _time_cost_matrices[uav_index][last_index_node_in_graph][next_index_node_in_graph];   // TODO: wind considered properly up until the last node, for poses of no-fly zones (middle cost inside the edge) wind cost calculated with a rule of three by distances.
+            duration_planned[uav_index] += distance_up_until_intersection/distance_up_until_next_node * _time_cost_matrices.at( _flight_plans[i].uav_id )[ from_graph_index_to_matrix_index_[last_index_node_in_graph] ][ from_graph_index_to_matrix_index_[next_index_node_in_graph] ];   // TODO: wind considered properly up until the last node, for poses of no-fly zones (middle cost inside the edge) wind cost calculated with a rule of three by distances.
         }
         total_duration_planned += duration_planned[uav_index];
 
