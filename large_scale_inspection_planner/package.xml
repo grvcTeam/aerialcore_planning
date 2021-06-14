@@ -22,6 +22,7 @@
   <build_depend>mission_lib</build_depend>
   <build_depend>path_planner</build_depend>
   <build_depend>aerialcore_msgs</build_depend>
+  <build_depend>curl</build_depend>
   <run_depend>geometry_msgs</run_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>rospy</run_depend>
@@ -30,6 +31,7 @@
   <run_depend>mission_lib</run_depend>
   <run_depend>path_planner</run_depend>
   <run_depend>aerialcore_msgs</run_depend>
+  <run_depend>curl</run_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

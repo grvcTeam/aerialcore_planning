@@ -73,6 +73,16 @@ private:
     };
     std::vector<UAV> UAVs_;
 
+    geometry_msgs::Point32 wind_vector_;    // ENU: x positive is East, y positive is North direction and z positive is up. Module of the vector is the wind speed in m/s.
+    float wind_speed_;                      // Module of the wind vector (m/s).
+
+    void getWindFromInternet();
+    static size_t writeCallback(void *contents, size_t size, size_t nmemb, void *userp);
+
+    float batteryDropMulticopter(int _uav_id, int _index_i, int _index_j);
+    float batteryDropFixedWing(int _uav_id, int _index_i, int _index_j);
+    float batteryDropVTOL(int _uav_id, int _index_i, int _index_j);
+
 };  // end ParameterEstimator class
 
 }   // end namespace aerialcore

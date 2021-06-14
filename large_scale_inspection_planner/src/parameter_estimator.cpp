@@ -12,8 +12,9 @@
 #include <sstream>
 #include <XmlRpcValue.h>
 #include <fstream>
+#include <curl/curl.h>
 
-// #define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
+#define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
 
 namespace aerialcore {
 
@@ -200,13 +201,21 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
     // Construct the battery_drop_matrices.
     std::map<int, std::vector< std::vector<float> > > new_battery_drop_matrices;
     for (int k=0; k<UAVs_.size(); k++) {
-        std::vector< std::vector<float> > new_battery_drop_matrix(time_cost_matrices_[k].size(), std::vector<float>(time_cost_matrices_[k][0].size(), -1.0));
-        for (int i=0; i<time_cost_matrices_[k].size(); i++) {
-            for (int j=0; j<time_cost_matrices_[k][i].size(); j++) {
-                if (i==0 || j==0 || time_cost_matrices_[k][i][j]==-1) {
-                    new_battery_drop_matrix[i][j] = time_cost_matrices_[k][i][j];
+        std::vector< std::vector<float> > new_battery_drop_matrix(time_cost_matrices_[ UAVs_[k].id ].size(), std::vector<float>(time_cost_matrices_[ UAVs_[k].id ][0].size(), -1.0));
+        for (int i=0; i<time_cost_matrices_[ UAVs_[k].id ].size(); i++) {
+            for (int j=0; j<time_cost_matrices_[ UAVs_[k].id ][i].size(); j++) {
+                if (i==0 || j==0 || time_cost_matrices_[ UAVs_[k].id ][i][j]==-1) {
+                    new_battery_drop_matrix[i][j] = time_cost_matrices_[ UAVs_[k].id ][i][j];
                 } else {
-                    new_battery_drop_matrix[i][j] = time_cost_matrices_[k][i][j] / UAVs_[k].time_max_flying;    // TODO: calculate BETTER (consider WIND and BATTERY HEALTH, maybe also mAh?).
+                    // if (UAVs_[k].airframe_type == "MULTICOPTER") {
+                    //     new_battery_drop_matrix[i][j] = batteryDropMulticopter(UAVs_[k].id, i, j);
+                    // } else if (UAVs_[k].airframe_type == "FIXED_WING") {
+                    //     new_battery_drop_matrix[i][j] = batteryDropFixedWing(UAVs_[k].id, i, j);
+                    // } else if (UAVs_[k].airframe_type == "VTOL") {
+                    //     new_battery_drop_matrix[i][j] = batteryDropVTOL(UAVs_[k].id, i, j);
+                    // }
+
+                    new_battery_drop_matrix[i][j] = time_cost_matrices_[ UAVs_[k].id ][i][j] / UAVs_[k].time_max_flying;    // TODO: calculate BETTER (consider WIND and BATTERY HEALTH, UAV type, maybe also mAh?).
                 }
             }
         }
@@ -217,6 +226,8 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
     battery_drop_matrices_mutex_.unlock();
 
 # ifdef DEBUG
+    getWindFromInternet();
+
     std::string time_cost_matrices_string = "time_cost_matrices: [\n";
     for (std::map<int, std::vector< std::vector<float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
         time_cost_matrices_string.append("  [\n");
@@ -255,6 +266,109 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
     std::cout << battery_drop_matrices_string << std::endl << std::endl;
 #endif
 
+}
+
+
+void ParameterEstimator::getWindFromInternet() {
+    CURL *curl;
+    CURLcode res;
+    std::string readBuffer;
+
+    curl = curl_easy_init();
+    if(curl) {
+        // Prepare the URL for cURL:
+        std::string url = "https://www.eltiempo.es/villacarrillo.html?v=por_hora";   // TODO: as a parameter.
+
+        // Get string data to the readBuffer from the URL with cURL:
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+        res = curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
+
+        std::cout << readBuffer << std::endl;
+    }
+
+    if (readBuffer.size() == 0) {
+        ROS_ERROR("Parameter Estimator: eltiempo.es didn't answer. Returning empty wind vector (no wind).");
+    } else {
+        std::string wind_direction_search_pattern = "<i class=\"icon icon-colored_0_w ";    // 32 elements
+        std::string wind_speed_search_pattern = "<span data-wind=\"";                       // 17 elements
+        std::string end_pattern = "\"";
+
+        // Find the place where the first wind direction and speed are (as these values are in order, start where the previous one is found and avoid searching before):
+        size_t wind_direction_found = readBuffer.find(wind_direction_search_pattern);
+        size_t wind_direction_end_found = readBuffer.find(end_pattern, wind_direction_found+32);
+        size_t wind_speed_found = readBuffer.find(wind_speed_search_pattern, wind_direction_end_found);
+        size_t wind_speed_end_found = readBuffer.find(end_pattern, wind_speed_found+17);
+
+        if (wind_direction_found==std::string::npos || wind_direction_end_found==std::string::npos || wind_speed_found==std::string::npos || wind_speed_end_found==std::string::npos) {
+            ROS_ERROR("Parameter Estimator: parse error from eltiempo.es");
+        }
+
+        std::string wind_direction_string = readBuffer.substr(wind_direction_found+32, wind_direction_end_found-(wind_direction_found+32));
+        std::string wind_speed_string = readBuffer.substr(wind_speed_found+17, wind_speed_end_found-(wind_speed_found+17));
+
+        std::string::size_type sz;
+        std::stringstream wind_speed_stringstream;
+        wind_speed_stringstream << wind_speed_string;
+
+        wind_speed_ = (float) std::stod ( wind_speed_stringstream.str() , &sz);
+
+        // The cardinal points specified are the ones from which the wind is COMING.
+        if (wind_direction_string=="north") {
+            wind_vector_.y = -wind_speed_;
+        } else if (wind_direction_string=="north-east") {
+            wind_vector_.x = -wind_speed_*sqrt(2.0)/2.0;
+            wind_vector_.y = -wind_speed_*sqrt(2.0)/2.0;
+        } else if (wind_direction_string=="east") {
+            wind_vector_.x = -wind_speed_;
+        } else if (wind_direction_string=="south-east") {
+            wind_vector_.x = -wind_speed_*sqrt(2.0)/2.0;
+            wind_vector_.y = wind_speed_*sqrt(2.0)/2.0;
+        } else if (wind_direction_string=="south") {
+            wind_vector_.y = wind_speed_;
+        } else if (wind_direction_string=="south-west") {
+            wind_vector_.x = wind_speed_*sqrt(2.0)/2.0;
+            wind_vector_.y = wind_speed_*sqrt(2.0)/2.0;
+        } else if (wind_direction_string=="west") {
+            wind_vector_.x = wind_speed_;
+        } else if (wind_direction_string=="north-west") {
+            wind_vector_.x = wind_speed_*sqrt(2.0)/2.0;
+            wind_vector_.y = -wind_speed_*sqrt(2.0)/2.0;
+        }
+
+# ifdef DEBUG
+        std::cout << "wind_direction_found = "<< wind_direction_found << std::endl;
+        std::cout << "wind_direction_end_found = "<< wind_direction_end_found << std::endl;
+        std::cout << "wind_speed_found = "<< wind_speed_found << std::endl;
+        std::cout << "wind_speed_end_found = "<< wind_speed_end_found << std::endl;
+        std::cout << "wind_direction_string = " << wind_direction_string << std::endl;
+        std::cout << "wind_speed_string = " << wind_speed_string << std::endl;
+        std::cout << std::endl << "wind_speed_ = " << wind_speed_ << std::endl;
+        std::cout << "wind_vector_.x = " << wind_vector_.x << std::endl;
+        std::cout << "wind_vector_.y = " << wind_vector_.y << std::endl;
+        std::cout << "wind_vector_.z = " << wind_vector_.z << std::endl;
+#endif
+    }
+}
+
+
+size_t ParameterEstimator::writeCallback(void *contents, size_t size, size_t nmemb, void *userp) {
+    ((std::string*)userp)->append((char*)contents, size * nmemb);
+    return size * nmemb;
+}   // end writeCallback
+
+
+float ParameterEstimator::batteryDropMulticopter(int _uav_id, int _index_i, int _index_j) {
+}
+
+
+float ParameterEstimator::batteryDropFixedWing(int _uav_id, int _index_i, int _index_j) {
+}
+
+
+float ParameterEstimator::batteryDropVTOL(int _uav_id, int _index_i, int _index_j) {
 }
 
 

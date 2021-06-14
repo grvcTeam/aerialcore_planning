@@ -2,11 +2,11 @@
 
 
 # Dictionary of the actual drones used in the simulation or reality (key: UAV id, value: airframe type):
-drones: {"1": "multicopter", "2": "multicopter"} #, "3": "multicopter"}
+drones: {"1": "MULTICOPTER"} #, "2": "FIXED_WING", "3": "VTOL"}
 
 
 # Airframe types, each one with its own parameter values (time in seconds, speed in m/s, battery in in parts per unit):
-multicopter:
+MULTICOPTER:
   time_max_flying: 1800
   speed_xy: 5.5
   speed_z_down: 1.5
@@ -14,7 +14,7 @@ multicopter:
   minimum_battery: 0.2
   time_until_fully_charged: 1800
 
-fixed_wing:
+FIXED_WING:
   time_max_flying: 5400
   speed_xy: 20.0
   speed_z_down: 1.5
