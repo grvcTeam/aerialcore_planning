@@ -14,6 +14,7 @@
 
 namespace aerialcore {
 
+#define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
 
 // Brief Constructor
 PlanMonitor::PlanMonitor() {
@@ -170,19 +171,21 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
     }
 
     // Compare the total planned duration with the real one:
-    if (total_duration_planned<total_duration_real*(1-deviation_limit_) ||
-        total_duration_planned>total_duration_real*(1+deviation_limit_)) {
+    if (total_duration_planned<total_duration_real*(1-deviation_limit_)
+     || total_duration_planned>total_duration_real*(1+deviation_limit_)) {
+        std::cout << "Replan true." << std::endl;
         return true;
     } else {
         // Compare the planned duration of each UAV with the real one:
         for (int i=0; i<_flight_plans.size(); i++) {
             int uav_index = findUavIndexById(_flight_plans[i].uav_id);
-            if (duration_planned[uav_index]<duration_real[uav_index]*(1-deviation_limit_) ||
-                duration_planned[uav_index]>duration_real[uav_index]*(1+deviation_limit_)) {
+            if (duration_planned[uav_index]<duration_real[uav_index]*(1-deviation_limit_)
+             || duration_planned[uav_index]>duration_real[uav_index]*(1+deviation_limit_)) {
+                std::cout << "Replan true." << std::endl;
                 return true;
             }
         }
-
+        std::cout << "Replan false." << std::endl;
         return false;
     }
 
@@ -203,11 +206,6 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
 //                 } else {
 //                     for (int j=0; last_flight_plans_[i].nodes.size(); j++) {
 //                         if (last_flight_plans_[i].nodes[j]!=_flight_plans[i].nodes[j]) {
-//                             return true;
-//                         }
-//                     }
-//                     for (int j=0; last_flight_plans_[i].edges.size(); j++) {
-//                         if (last_flight_plans_[i].edges[j]!=_flight_plans[i].edges[j]) {
 //                             return true;
 //                         }
 //                     }

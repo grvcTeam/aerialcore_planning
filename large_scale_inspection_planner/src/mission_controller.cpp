@@ -248,10 +248,12 @@ MissionController::MissionController() {
         }
     }
 
+    next_current_graph_ = complete_graph_;
+    removeGraphNodesAndEdgesAboveNoFlyZones(next_current_graph_);
+    complete_graph_cleaned_ = next_current_graph_;
+
     current_graph_mutex_.lock();
-    current_graph_ = complete_graph_;
-    removeGraphNodesAndEdgesAboveNoFlyZones(current_graph_);
-    complete_graph_cleaned_ = current_graph_;
+    current_graph_ = complete_graph_cleaned_;
     current_graph_mutex_.unlock();
 
 #ifdef DEBUG
@@ -368,15 +370,13 @@ void MissionController::planThread(void) {
     ros::Rate loop_rate(1.0/plan_monitor_time_);        // [Hz, inverse of seconds]
     while (!stop_current_supervising_) {
 
-        // Reset the current graph:
-        current_graph_mutex_.lock();
-        current_graph_.clear();
+        // Reset the next current graph:
+        next_current_graph_.clear();
         if (continuous_or_specific_supervision_) {
-            current_graph_ = complete_graph_cleaned_;
+            next_current_graph_ = complete_graph_cleaned_;
         } else {
-            current_graph_ = specific_subgraph_cleaned_;
+            next_current_graph_ = specific_subgraph_cleaned_;
         }
-        current_graph_mutex_.unlock();
 
         std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> > drone_info;
         for (const UAV& current_uav : UAVs_) {
@@ -401,17 +401,30 @@ void MissionController::planThread(void) {
                     current_uav_initial_position_graph_node.x = current_uav.mission->pose().pose.position.x;
                     current_uav_initial_position_graph_node.y = current_uav.mission->pose().pose.position.y;
                     current_uav_initial_position_graph_node.z = current_uav.mission->pose().pose.position.z;
+
+                    geometry_msgs::Point32 aux_point32;
+                    aux_point32.x = current_uav_initial_position_graph_node.x;
+                    aux_point32.y = current_uav_initial_position_graph_node.y;
+                    aux_point32.z = current_uav_initial_position_graph_node.z;
+                    geographic_msgs::GeoPoint current_geopoint = cartesian_to_geographic(aux_point32, map_origin_geo_);
+
+                    current_uav_initial_position_graph_node.latitude  = current_geopoint.latitude;
+                    current_uav_initial_position_graph_node.longitude = current_geopoint.longitude;
+                    current_uav_initial_position_graph_node.altitude  = current_geopoint.altitude;
                 } else {
                     // // HARDCODED INITIAL POSES FOR NOVEMBER EXPERIMENTS?
                     // current_uav_initial_position_graph_node.x = current_uav.id==1 ? 28 : 36.119532;
                     // current_uav_initial_position_graph_node.y = current_uav.id==1 ? 61 : 63.737163;
                     // current_uav_initial_position_graph_node.z = current_uav.id==1 ? 0.32 : 0;
                 }
-                
+
+                next_current_graph_.push_back(current_uav_initial_position_graph_node);
+
                 current_graph_mutex_.lock();
-                current_graph_.push_back(current_uav_initial_position_graph_node);
+                current_graph_.clear();
+                current_graph_ = next_current_graph_;
                 current_graph_mutex_.unlock();
-                
+
             }
         }
 
@@ -437,7 +450,7 @@ void MissionController::planThread(void) {
             t_begin = clock();
 
             current_graph_mutex_.lock();
-            // flight_plans_ = centralized_planner_.getPlanGreedy(current_graph_, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
+            flight_plans_ = centralized_planner_.getPlanGreedy(current_graph_, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
             // flight_plans_ =  centralized_planner_.getPlanMILP(current_graph_, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
             // flight_plans_ =  centralized_planner_.getPlanHeuristic(current_graph_, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
             current_graph_mutex_.unlock();
@@ -629,11 +642,14 @@ bool MissionController::doSpecificSupervisionServiceCallback(aerialcore_msgs::Do
         specific_subgraph_.push_back(current_graph_node);
     }
 
+    next_current_graph_.clear();
+    next_current_graph_ = specific_subgraph_;
+    removeGraphNodesAndEdgesAboveNoFlyZones(next_current_graph_);
+    specific_subgraph_cleaned_ = next_current_graph_;
+
     current_graph_mutex_.lock();
     current_graph_.clear();
-    current_graph_ = specific_subgraph_;
-    removeGraphNodesAndEdgesAboveNoFlyZones(current_graph_);
-    specific_subgraph_cleaned_ = current_graph_;
+    current_graph_ = specific_subgraph_cleaned_;
     current_graph_mutex_.unlock();
 
     _res.success=true;

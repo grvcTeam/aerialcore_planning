@@ -24,7 +24,7 @@ namespace aerialcore {
 
 
 // Brief Constructor
-CentralizedPlanner::CentralizedPlanner() : path_planner_() {
+CentralizedPlanner::CentralizedPlanner() {
     ros::NodeHandle nh;
 
     // map_origin_geo is the geographic coordinate origin of the cartesian coordinates. Loaded to the param server in the YAML config file.
@@ -54,7 +54,24 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
     battery_drop_matrices_ = _battery_drop_matrices;
 
     if (_geofence.points.size()>0 && _no_fly_zones.size()>0) {
-        path_planner_ = grvc::PathPlanner(_no_fly_zones, _geofence);
+        std::vector< std::vector<geographic_msgs::GeoPoint> > obstacle_polygon_vector_geo;
+        std::vector<geographic_msgs::GeoPoint> geofence_polygon_geo;
+
+        for (geometry_msgs::Polygon no_fly_zone: _no_fly_zones) {
+            std::vector<geographic_msgs::GeoPoint> no_fly_zone_geo;
+            for (geometry_msgs::Point32 nfz_point: no_fly_zone.points) {
+                geographic_msgs::GeoPoint nfz_point_geo = cartesian_to_geographic(nfz_point, map_origin_geo_);
+                no_fly_zone_geo.push_back(nfz_point_geo);
+            }
+            obstacle_polygon_vector_geo.push_back(no_fly_zone_geo);
+        }
+
+        for (geometry_msgs::Point32 geofence_point: _geofence.points) {
+            geographic_msgs::GeoPoint nfz_point_geo = cartesian_to_geographic(geofence_point, map_origin_geo_);
+            geofence_polygon_geo.push_back(nfz_point_geo);
+        }
+
+        path_planner_ = grvc::PathPlanner(obstacle_polygon_vector_geo, geofence_polygon_geo);
     }
 
     constructUAVs(_drone_info);
@@ -88,7 +105,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
         // Find the initial position of the drone in the graph and insert it as the first node of the flight plan:
         int uav_initial_position_graph_index = -1;
         for (int i=0; i<graph_.size(); i++) {
-            if (graph_[i].id == current_uav.id) {
+            if (graph_[i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && graph_[i].id == current_uav.id) {
                 uav_initial_position_graph_index = i;
                 break;
             }
@@ -178,7 +195,7 @@ void CentralizedPlanner::nearestGraphNodeLandStation(int _from_this_index_graph,
     for (int i=0; i<graph_.size(); i++) {
         if (graph_[i].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION || graph_[i].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION) {
 
-            float current_time_cost = time_cost_matrices_[_uav_id][_from_this_index_graph][i];
+            float current_time_cost = time_cost_matrices_[_uav_id][ from_graph_index_to_matrix_index_[_from_this_index_graph] ][ from_graph_index_to_matrix_index_[i] ];
             if (current_time_cost <= 0.001) continue;     // It's the same graph node or path not found, ignore and continue.
 
             if ( time_cost > current_time_cost ) {
@@ -212,7 +229,7 @@ void CentralizedPlanner::nearestGraphNodePylon(int _from_this_index_graph, int& 
                 continue;
             }
 
-            float current_time_cost = time_cost_matrices_[_uav_id][_from_this_index_graph][i];
+            float current_time_cost = time_cost_matrices_[_uav_id][ from_graph_index_to_matrix_index_[_from_this_index_graph] ][ from_graph_index_to_matrix_index_[i] ];
             if (current_time_cost <= 0.001) continue;     // It's the same graph node or path not found, ignore and continue.
 
             // Only consider i (current node iterated) if it has edges unserved:
@@ -273,7 +290,7 @@ void CentralizedPlanner::mostRewardedPylon(int _initial_pylon_index, int& _index
             continue;
         }
 
-        float current_time_cost = time_cost_matrices_[_uav_id][_initial_pylon_index][i];
+        float current_time_cost = time_cost_matrices_[_uav_id][ from_graph_index_to_matrix_index_[_initial_pylon_index] ][ from_graph_index_to_matrix_index_[i] ];
         if (current_time_cost <= 0.001) continue;     // It's the same graph node or path not found, ignore and continue.
 
         if ( time_cost < current_time_cost ) {
@@ -292,12 +309,16 @@ void CentralizedPlanner::printPlan() {
     std::cout << "Printing flight plan from the planner:" << std::endl;
     std::cout << std::endl;
     for (int i=0; i<flight_plans_.size(); i++) {
-        std::cout << "flight_plans[ " << i << " ].id = " << flight_plans_[i].uav_id << std::endl;
+        std::cout << "flight_plans[ " << i << " ].uav_id = " << flight_plans_[i].uav_id << std::endl;
+        std::cout << "flight_plans[ " << i << " ].header.stamp.toSec() = " << flight_plans_[i].header.stamp.toSec() << std::endl;
         for (int j=0; j<flight_plans_[i].nodes.size(); j++) {
             std::cout << "flight_plans[ " << i << " ].nodes[ " << j << " ] = " << flight_plans_[i].nodes[j] << std::endl;
         }
-        for (int j=0; j<flight_plans_[i].edges.size(); j++) {
-            std::cout << "flight_plans[ " << i << " ].edges[ " << j << " ] = " << flight_plans_[i].edges[j] << std::endl;
+        for (int j=0; j<flight_plans_[i].poses.size(); j++) {
+            std::cout << "flight_plans[ " << i << " ].poses[ " << j << " ] = " << flight_plans_[i].poses[j];
+        }
+        for (int j=0; j<flight_plans_[i].type.size(); j++) {
+            std::cout << "flight_plans[ " << i << " ].type[ " << j << " ] = " << flight_plans_[i].type[j] << std::endl;
         }
     }
     std::cout << std::endl;
@@ -1121,13 +1142,13 @@ bool CentralizedPlanner::solutionValidOrNot(std::vector<aerialcore_msgs::FlightP
     for (int i=0; i<_flight_plans.size(); i++) {
         bool previous_is_navigation = false;
         bool current_is_navigation;
-        for (int j=0; j<_flight_plans[i].edges.size(); j++) {
-            current_is_navigation = edges_[ _flight_plans[i].edges[j] ].type != aerialcore_msgs::Edge::TYPE_INSPECTION ? true : false ;
-            if (previous_is_navigation && current_is_navigation) {
-                return false;
-            }
-            previous_is_navigation = current_is_navigation;
-        }
+        // for (int j=0; j<_flight_plans[i].edges.size(); j++) {    // TODO: edges removed from the FlightPlan msg.
+        //     current_is_navigation = edges_[ _flight_plans[i].edges[j] ].type != aerialcore_msgs::Edge::TYPE_INSPECTION ? true : false ;
+        //     if (previous_is_navigation && current_is_navigation) {
+        //         return false;
+        //     }
+        //     previous_is_navigation = current_is_navigation;
+        // }
     }
 
     // Solution battery drop is acceptable or not:
@@ -1140,19 +1161,6 @@ bool CentralizedPlanner::solutionValidOrNot(std::vector<aerialcore_msgs::FlightP
 
 
 void CentralizedPlanner::fillFlightPlansFields(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
-
-    // Fill the edges:
-    for (int i=0; i<_flight_plans.size(); i++) {
-        _flight_plans[i].edges.clear();
-        for (int j=0; j<_flight_plans[i].nodes.size()-1; j++) {
-            for (int k=0; k<edges_.size(); k++) {
-                if (_flight_plans[i].nodes[j]==edges_[k].i && _flight_plans[i].nodes[j+1]==edges_[k].j) {
-                    _flight_plans[i].edges.push_back(k);
-                    break;
-                }
-            }
-        }
-    }
 
     // Fill the poses and their type:
     // Postprocess to calculate the path free of obstacles between nodes:
@@ -1185,12 +1193,14 @@ void CentralizedPlanner::fillFlightPlansFields(std::vector<aerialcore_msgs::Flig
                 } else {
                     _flight_plans[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP);
                     previous_iteration_landing = false;
+                    _flight_plans[i].poses.back().pose.position.z += graph_[ _flight_plans[i].nodes[j+1] ].z;       // Takeoff to the next node height.
                 }
             } else {        // Any other node different from the first one:
                 if (graph_[ _flight_plans[i].nodes[j] ].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION || graph_[ _flight_plans[i].nodes[j] ].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION) {
                     if (previous_iteration_landing) {
                         _flight_plans[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP);
                         previous_iteration_landing = false;
+                        _flight_plans[i].poses.back().pose.position.z += graph_[ _flight_plans[i].nodes[j+1] ].z;   // Takeoff to the next node height.
                     } else {
                         _flight_plans[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_LAND_WP);
                         previous_iteration_landing = true;
@@ -1202,9 +1212,19 @@ void CentralizedPlanner::fillFlightPlansFields(std::vector<aerialcore_msgs::Flig
             }
 
             if (!path_planner_.checkIfTwoPointsAreVisible(test_point_1, test_point_2)) {
-                auto path = path_planner_.getPathWithRelativeAltitude(test_point_1, test_point_2, map_origin_geo_.altitude);
+# ifdef DEBUG
+                printPlan();
+                std::cout << "test_point_1.latitude  = " << test_point_1.latitude << std::endl;
+                std::cout << "test_point_1.longitude = " << test_point_1.longitude << std::endl;
+                std::cout << "test_point_1.altitude  = " << test_point_1.altitude << std::endl;
+                std::cout << "test_point_2.latitude  = " << test_point_2.latitude << std::endl;
+                std::cout << "test_point_2.longitude = " << test_point_2.longitude << std::endl;
+                std::cout << "test_point_2.altitude  = " << test_point_2.altitude << std::endl;
+# endif
+                std::vector<geographic_msgs::GeoPoint> path = path_planner_.getPathWithRelativeAltitude(test_point_1, test_point_2, map_origin_geo_.altitude);
+                int path_size = path.size();    // If not like this .size() treated as unsigned int and can't be negative.
 
-                for (int k=0; k<path.size()-1; k++) {
+                for (int k=0; k<path_size-1; k++) {
                     geometry_msgs::Point32 cartesian_point = geographic_to_cartesian(path[k], map_origin_geo_);
                     cartesian_point.z = path[k].altitude;
 

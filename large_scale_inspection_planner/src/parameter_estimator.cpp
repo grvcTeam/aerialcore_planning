@@ -14,7 +14,7 @@
 #include <fstream>
 #include <curl/curl.h>
 
-#define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
+// #define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
 
 namespace aerialcore {
 
@@ -74,7 +74,7 @@ const std::map<int, std::vector< std::vector<float> > >& ParameterEstimator::get
 // Method called periodically in an external thread, located in the Mission Controller, that will update both the cost and battery drop matrices with the last prediction:
 void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector<geometry_msgs::Polygon>& _no_fly_zones, const geometry_msgs::Polygon& _geofence /* poses, batteries, plan, wind sensor?*/) {
 
-    if (distance_cost_matrix_.size()==0) {  // Only enter the first time this method is called.
+    if (distance_cost_matrix_.size()==0 || true /* bypass this */) {  // Only enter the first time this method is called. // TODO: initial position changing all the time.
         std::vector< std::vector<float> > new_distance_cost_matrix;
         if (construct_distance_cost_matrix_) {
             // Construct the distance_cost_matrix and export it to a default yaml file.
@@ -286,7 +286,7 @@ void ParameterEstimator::getWindFromInternet() {
         res = curl_easy_perform(curl);
         curl_easy_cleanup(curl);
 
-        std::cout << readBuffer << std::endl;
+        // std::cout << readBuffer << std::endl;
     }
 
     if (readBuffer.size() == 0) {
@@ -339,10 +339,10 @@ void ParameterEstimator::getWindFromInternet() {
         }
 
 # ifdef DEBUG
-        std::cout << "wind_direction_found = "<< wind_direction_found << std::endl;
-        std::cout << "wind_direction_end_found = "<< wind_direction_end_found << std::endl;
-        std::cout << "wind_speed_found = "<< wind_speed_found << std::endl;
-        std::cout << "wind_speed_end_found = "<< wind_speed_end_found << std::endl;
+        // std::cout << "wind_direction_found = "<< wind_direction_found << std::endl;
+        // std::cout << "wind_direction_end_found = "<< wind_direction_end_found << std::endl;
+        // std::cout << "wind_speed_found = "<< wind_speed_found << std::endl;
+        // std::cout << "wind_speed_end_found = "<< wind_speed_end_found << std::endl;
         std::cout << "wind_direction_string = " << wind_direction_string << std::endl;
         std::cout << "wind_speed_string = " << wind_speed_string << std::endl;
         std::cout << std::endl << "wind_speed_ = " << wind_speed_ << std::endl;
@@ -360,7 +360,7 @@ size_t ParameterEstimator::writeCallback(void *contents, size_t size, size_t nme
 }   // end writeCallback
 
 
-float ParameterEstimator::batteryDropMulticopter(int _uav_id, int _index_i, int _index_j) {
+float ParameterEstimator::batteryDropMulticopter(int _uav_id, int _index_i, int _index_j) { // TODO: more parameters needed (propellers radious, mass, etc.)
 }
 
 
