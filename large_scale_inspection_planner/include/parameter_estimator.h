@@ -36,17 +36,18 @@ public:
     void updateMatrices(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector<geometry_msgs::Polygon>& _no_fly_zones, const geometry_msgs::Polygon& _geofence /* poses, batteries, plan, wind sensor?*/);
 
     // Getters that the Mission Controller will use for the Planner and Plan Monitor:
-    const std::vector< std::vector<float> >& getDistanceCostMatrix();
-    const std::map<int, std::vector< std::vector<float> > >& getTimeCostMatrices();
-    const std::map<int, std::vector< std::vector<float> > >& getBatteryDropMatrices();
+    const std::map<int, std::map<int, float> >& getDistanceCostMatrix();
+    const std::map<int, std::map<int, std::map<int, float> > >& getTimeCostMatrices();
+    const std::map<int, std::map<int, std::map<int, float> > >& getBatteryDropMatrices();
 
 private:
     // The following are the capacity and cost matrices. For them, each row and column are graph nodes and the elements between them are the edges.
-    // The first row and column are the indexes of that graph nodes in the graph, and the following rows and columns are the following graph nodes (in this order): initial UAV pose, regular land stations, recharging land stations, and pylons.
-    std::vector< std::vector<float> > distance_cost_matrix_;                    // Square symetrical matrix. The elements are the distance (in meters) to cover that edge, if the edge doesn't make sense or there is no connection possible then the value is -1.
-    std::map<int, std::vector< std::vector<float> > > time_cost_matrices_;      // One square symetrical matrix for each UAV (map by id). The elements are the time (in seconds) to cover that edge, if the edge doesn't make sense or there is no connection possible then the value is -1.
-    std::map<int, std::vector< std::vector<float> > > battery_drop_matrices_;   // One square non-symetrical matrix for each UAV (map by id). The elements are the battery drop (per unit, not %) to cover that edge, if the edge doesn't make sense or there is no connection possible then the value is -1.
-    // TODO: the matrices really should have been anidated maps with nodes as keys, not anidated vectors, which adds complexity by adding other unnecessary indexes.
+    // The rows and columns are the following graph nodes: initial UAV pose, regular land stations, recharging land stations, and pylons.
+    std::map<int, std::map<int, float> > distance_cost_matrix_;                    // Square symetrical matrix (maps by graph nodes indexes). The elements are the distance (in meters) to cover that edge, if the edge doesn't make sense or there is no connection possible then the value is -1.
+    std::map<int, std::map<int, std::map<int, float> > > time_cost_matrices_;      // One square symetrical matrix for each UAV (map by id and by graph nodes indexes). The elements are the time (in seconds) to cover that edge, if the edge doesn't make sense or there is no connection possible then the value is -1.
+    std::map<int, std::map<int, std::map<int, float> > > battery_drop_matrices_;   // One square non-symetrical matrix for each UAV (map by id and by graph nodes indexes). The elements are the battery drop (per unit, not %) to cover that edge, if the edge doesn't make sense or there is no connection possible then the value is -1.
+
+    std::vector<float> nodes_indexes_in_order_;
 
     grvc::PathPlanner path_planner_;
 

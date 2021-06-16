@@ -14,7 +14,7 @@
 #include <fstream>
 #include <curl/curl.h>
 
-// #define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
+#define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
 
 namespace aerialcore {
 
@@ -50,21 +50,21 @@ ParameterEstimator::ParameterEstimator() {
 ParameterEstimator::~ParameterEstimator() {}
 
 
-const std::vector< std::vector<float> >& ParameterEstimator::getDistanceCostMatrix() {
+const std::map<int, std::map<int, float> >& ParameterEstimator::getDistanceCostMatrix() {
     distance_cost_matrix_mutex_.lock(); // Wait here until the attribute is fully created before the getter returns the reference.
     distance_cost_matrix_mutex_.unlock();
     return distance_cost_matrix_;
 }
 
 
-const std::map<int, std::vector< std::vector<float> > >& ParameterEstimator::getTimeCostMatrices() {
+const std::map<int, std::map<int, std::map<int, float> > >& ParameterEstimator::getTimeCostMatrices() {
     time_cost_matrices_mutex_.lock();     // Wait here until the attribute is fully created before the getter returns the reference.
     time_cost_matrices_mutex_.unlock();
     return time_cost_matrices_;
 }
 
 
-const std::map<int, std::vector< std::vector<float> > >& ParameterEstimator::getBatteryDropMatrices() {
+const std::map<int, std::map<int, std::map<int, float> > >& ParameterEstimator::getBatteryDropMatrices() {
     battery_drop_matrices_mutex_.lock();  // Wait here until the attribute is fully created before the getter returns the reference.
     battery_drop_matrices_mutex_.unlock();
     return battery_drop_matrices_;
@@ -74,8 +74,10 @@ const std::map<int, std::vector< std::vector<float> > >& ParameterEstimator::get
 // Method called periodically in an external thread, located in the Mission Controller, that will update both the cost and battery drop matrices with the last prediction:
 void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector<geometry_msgs::Polygon>& _no_fly_zones, const geometry_msgs::Polygon& _geofence /* poses, batteries, plan, wind sensor?*/) {
 
+    std::map<int, std::map<int, float> > new_distance_cost_matrix;
+    std::map<int, std::map<int, std::map<int, float> > > new_time_cost_matrices;
+
     if (distance_cost_matrix_.size()==0 || true /* bypass this */) {  // Only enter the first time this method is called. // TODO: initial position changing all the time.
-        std::vector< std::vector<float> > new_distance_cost_matrix;
         if (construct_distance_cost_matrix_) {
             // Construct the distance_cost_matrix and export it to a default yaml file.
 
@@ -84,7 +86,7 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
                 path_planner_ = grvc::PathPlanner(_no_fly_zones, _geofence);
             }
 
-            // Create the first row and column of the matrix, which has this order: UAV initial positions, regular land stations, recharging land stations and pylons.
+            // Create the vector with the nodes, which has this order: UAV initial positions, regular land stations, recharging land stations and pylons.
             std::vector<int> uav_initial_positions_indexes, uav_regular_land_stations_indexes, uav_recharging_land_stations_indexes, pylons_indexes;
             for (int i=0; i<_graph.size(); i++) {
                 if (_graph[i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION) {
@@ -97,52 +99,63 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
                     pylons_indexes.push_back(i);
                 }
             }
-            std::vector<float> first_row_and_column;
-            first_row_and_column.push_back(-1);
-            first_row_and_column.insert(first_row_and_column.end(), uav_initial_positions_indexes.begin(), uav_initial_positions_indexes.end());
-            first_row_and_column.insert(first_row_and_column.end(), uav_regular_land_stations_indexes.begin(), uav_regular_land_stations_indexes.end());
-            first_row_and_column.insert(first_row_and_column.end(), uav_recharging_land_stations_indexes.begin(), uav_recharging_land_stations_indexes.end());
-            first_row_and_column.insert(first_row_and_column.end(), pylons_indexes.begin(), pylons_indexes.end());
+            nodes_indexes_in_order_.clear();
+            nodes_indexes_in_order_.insert(nodes_indexes_in_order_.end(), uav_initial_positions_indexes.begin(), uav_initial_positions_indexes.end());
+            nodes_indexes_in_order_.insert(nodes_indexes_in_order_.end(), uav_regular_land_stations_indexes.begin(), uav_regular_land_stations_indexes.end());
+            nodes_indexes_in_order_.insert(nodes_indexes_in_order_.end(), uav_recharging_land_stations_indexes.begin(), uav_recharging_land_stations_indexes.end());
+            nodes_indexes_in_order_.insert(nodes_indexes_in_order_.end(), pylons_indexes.begin(), pylons_indexes.end());
 
-            // Initialize the distance_cost_matrix with -1 in all elements but those in the first row and column:
-            new_distance_cost_matrix.push_back(first_row_and_column);
-            std::vector<float> initial_rows(first_row_and_column.size(), -1);
-            for (int i=1; i<first_row_and_column.size(); i++) {
-                initial_rows[0] = first_row_and_column[i];
-                new_distance_cost_matrix.push_back(initial_rows);
+            // Initialize the distance_cost_matrix with -1 in all elements:
+            for (int i=0; i<nodes_indexes_in_order_.size(); i++) {
+                for (int j=0; j<nodes_indexes_in_order_.size(); j++) {
+                    new_distance_cost_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ] = -1;
+                }
             }
 
             // Call the path planner between initial UAV poses and landing stations to pylons, and between pylons:
             geometry_msgs::Point32 from_here;
             geometry_msgs::Point32 to_here;
-            for (int i=1; i<first_row_and_column.size(); i++) {
-                for (int j= i+1 >= 1+uav_initial_positions_indexes.size()+uav_regular_land_stations_indexes.size()+uav_recharging_land_stations_indexes.size() ? i+1 : 1+uav_initial_positions_indexes.size()+uav_regular_land_stations_indexes.size()+uav_recharging_land_stations_indexes.size() ; j<first_row_and_column.size(); j++) {
-                    from_here.x = _graph[ first_row_and_column[i] ].x;
-                    from_here.y = _graph[ first_row_and_column[i] ].y;
-                    from_here.z = _graph[ first_row_and_column[i] ].z;
-                    to_here.x =   _graph[ first_row_and_column[j] ].x;
-                    to_here.y =   _graph[ first_row_and_column[j] ].y;
-                    to_here.z =   _graph[ first_row_and_column[j] ].z;
+            for (int i=0; i<nodes_indexes_in_order_.size(); i++) {
+                for (int j= i >= uav_initial_positions_indexes.size()+uav_regular_land_stations_indexes.size()+uav_recharging_land_stations_indexes.size() ? i+1 : uav_initial_positions_indexes.size()+uav_regular_land_stations_indexes.size()+uav_recharging_land_stations_indexes.size() ; j<nodes_indexes_in_order_.size(); j++) {
+                    from_here.x = _graph[ nodes_indexes_in_order_[i] ].x;
+                    from_here.y = _graph[ nodes_indexes_in_order_[i] ].y;
+                    from_here.z = _graph[ nodes_indexes_in_order_[i] ].z;
+                    to_here.x =   _graph[ nodes_indexes_in_order_[j] ].x;
+                    to_here.y =   _graph[ nodes_indexes_in_order_[j] ].y;
+                    to_here.z =   _graph[ nodes_indexes_in_order_[j] ].z;
                     auto path = path_planner_.getPath(from_here, to_here);
                     if (path.size() == 0) { // No path found.
-                        new_distance_cost_matrix[i][j] = -1;
-                        new_distance_cost_matrix[j][i] = -1;
+                        new_distance_cost_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ] = -1;
+                        new_distance_cost_matrix[ nodes_indexes_in_order_[j] ][ nodes_indexes_in_order_[i] ] = -1;
                     } else {
-                        new_distance_cost_matrix[i][j] = path_planner_.getFlatDistance();   // TODO: more precise path with also precise height distances?
-                        new_distance_cost_matrix[j][i] = path_planner_.getFlatDistance();
+                        new_distance_cost_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ] = path_planner_.getFlatDistance();   // TODO: more precise path with also precise height distances?
+                        new_distance_cost_matrix[ nodes_indexes_in_order_[j] ][ nodes_indexes_in_order_[i] ] = path_planner_.getFlatDistance();
                     }
                 }
             }
 
             // Now save this new distance_cost_matrix into the yaml file:
             std::string new_distance_cost_matrix_file_string = "distance_cost_matrix: [\n";
-            for (int i=0; i<new_distance_cost_matrix.size(); i++) {
+            for (int i=0; i<nodes_indexes_in_order_.size(); i++) {
                 new_distance_cost_matrix_file_string.append("  [");
-                for (int j=0; j<new_distance_cost_matrix[i].size(); j++) {
+                if (i==0) {
+                    new_distance_cost_matrix_file_string.append(std::to_string(-1.0).c_str());
+                    new_distance_cost_matrix_file_string.append(", ");
+                    for (int j=0; j<nodes_indexes_in_order_.size(); j++) {
+                        if (j>0) {
+                            new_distance_cost_matrix_file_string.append(", ");
+                        }
+                        new_distance_cost_matrix_file_string.append(std::to_string( nodes_indexes_in_order_[j] ).c_str());
+                    }
+                    new_distance_cost_matrix_file_string.append("],\n  [");
+                }
+                new_distance_cost_matrix_file_string.append(std::to_string( nodes_indexes_in_order_[i] ).c_str());
+                new_distance_cost_matrix_file_string.append(", ");
+                for (int j=0; j<nodes_indexes_in_order_.size(); j++) {
                     if (j>0) {
                         new_distance_cost_matrix_file_string.append(", ");
                     }
-                    new_distance_cost_matrix_file_string.append(std::to_string(new_distance_cost_matrix[i][j]).c_str());
+                    new_distance_cost_matrix_file_string.append(std::to_string(new_distance_cost_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ]).c_str());
                 }
                 new_distance_cost_matrix_file_string.append("],\n");
             }
@@ -151,6 +164,7 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
             distance_cost_matrix_yaml_file << new_distance_cost_matrix_file_string;
             distance_cost_matrix_yaml_file.close();
         } else {
+            std::vector< std::vector<float> > new_distance_cost_matrix_vector;
             // Import the distance_cost_matrix from the default yaml file:
             XmlRpc::XmlRpcValue distance_cost_matrix_XmlRpc;
             ros::param::get("distance_cost_matrix", distance_cost_matrix_XmlRpc);
@@ -169,59 +183,68 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
                                 current_time_cost_row.push_back(time_cost_element);
                             }
                         }
-                        new_distance_cost_matrix.push_back(current_time_cost_row);
+                        new_distance_cost_matrix_vector.push_back(current_time_cost_row);
                     }
+                }
+            }
+
+            // Once buildt the distance matrix with vectors, pass it to maps:
+            for (int i=1; i<new_distance_cost_matrix_vector.size(); i++) {
+                for (int j=1; j<new_distance_cost_matrix_vector.size(); j++) {
+                    new_distance_cost_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ] = new_distance_cost_matrix_vector[i][j];
                 }
             }
         }
         distance_cost_matrix_mutex_.lock();
+        distance_cost_matrix_.clear();
         distance_cost_matrix_ = new_distance_cost_matrix;
         distance_cost_matrix_mutex_.unlock();
 
         // For that distance_cost_matrix, create the time_cost_matrices for each UAV (depending on its speed):
-        std::map<int, std::vector< std::vector<float> > > new_time_cost_matrices;
         for (int k=0; k<UAVs_.size(); k++) {    // The time is different for each UAV because of the different speed.
-            std::vector< std::vector<float> > new_time_cost_matrix(distance_cost_matrix_.size(), std::vector<float>(distance_cost_matrix_[0].size(), -1.0));
-            for (int i=0; i<distance_cost_matrix_.size(); i++) {
-                for (int j=0; j<distance_cost_matrix_[i].size(); j++) {
-                    if (i==0 || j==0 || distance_cost_matrix_[i][j]==-1) {
-                        new_time_cost_matrix[i][j] = distance_cost_matrix_[i][j];
+            std::map<int, std::map<int, float> > new_time_cost_matrix;
+            for (std::map<int, std::map<int, float> >::iterator it_i = new_distance_cost_matrix.begin(); it_i != new_distance_cost_matrix.end(); it_i++) {
+                for (std::map<int, float>::iterator it_j = it_i->second.begin(); it_j != it_i->second.end(); it_j++) {
+                    if (new_distance_cost_matrix[ it_i->first ][ it_j->first ]==-1) {
+                        new_time_cost_matrix[ it_i->first ][ it_j->first ] = new_distance_cost_matrix[ it_i->first ][ it_j->first ];
                     } else {
-                        new_time_cost_matrix[i][j] = distance_cost_matrix_[i][j] / UAVs_[k].speed_xy;   // TODO: more precise speed with also height speeds?
+                        new_time_cost_matrix[ it_i->first ][ it_j->first ] = new_distance_cost_matrix[ it_i->first ][ it_j->first ] / UAVs_[k].speed_xy;   // TODO: more precise speed with also height speeds?
                     }
                 }
             }
             new_time_cost_matrices[ UAVs_[k].id ] = new_time_cost_matrix;
         }
         time_cost_matrices_mutex_.lock();
+        time_cost_matrices_.clear();
         time_cost_matrices_ = new_time_cost_matrices;
         time_cost_matrices_mutex_.unlock();
     }   // End of building cost matrices the first time this method is called.
 
     // Construct the battery_drop_matrices.
-    std::map<int, std::vector< std::vector<float> > > new_battery_drop_matrices;
-    for (int k=0; k<UAVs_.size(); k++) {
-        std::vector< std::vector<float> > new_battery_drop_matrix(time_cost_matrices_[ UAVs_[k].id ].size(), std::vector<float>(time_cost_matrices_[ UAVs_[k].id ][0].size(), -1.0));
-        for (int i=0; i<time_cost_matrices_[ UAVs_[k].id ].size(); i++) {
-            for (int j=0; j<time_cost_matrices_[ UAVs_[k].id ][i].size(); j++) {
-                if (i==0 || j==0 || time_cost_matrices_[ UAVs_[k].id ][i][j]==-1) {
-                    new_battery_drop_matrix[i][j] = time_cost_matrices_[ UAVs_[k].id ][i][j];
+    std::map<int, std::map<int, std::map<int, float> > > new_battery_drop_matrices;
+    for (std::map<int, std::map<int, std::map<int, float> > >::iterator it_k = new_time_cost_matrices.begin(); it_k != new_time_cost_matrices.end(); it_k++) {
+        std::map<int, std::map<int, float> > new_battery_drop_matrix;
+        for (std::map<int, std::map<int, float> >::iterator it_i = it_k->second.begin(); it_i != it_k->second.end(); it_i++) {
+            for (std::map<int, float>::iterator it_j = it_i->second.begin(); it_j != it_i->second.end(); it_j++) {
+                if (it_j->second==-1) {
+                    new_battery_drop_matrix[ it_i->first ][ it_j->first ] = it_j->second;
                 } else {
-                    // if (UAVs_[k].airframe_type == "MULTICOPTER") {
-                    //     new_battery_drop_matrix[i][j] = batteryDropMulticopter(UAVs_[k].id, i, j);
-                    // } else if (UAVs_[k].airframe_type == "FIXED_WING") {
-                    //     new_battery_drop_matrix[i][j] = batteryDropFixedWing(UAVs_[k].id, i, j);
-                    // } else if (UAVs_[k].airframe_type == "VTOL") {
-                    //     new_battery_drop_matrix[i][j] = batteryDropVTOL(UAVs_[k].id, i, j);
+                    // if (UAVs_[ it_k->first ].airframe_type == "MULTICOPTER") {
+                    //     new_battery_drop_matrix[ it_i->first ][ it_j->first ] = batteryDropMulticopter(it_k->first, i, j);
+                    // } else if (UAVs_[ it_k->first ].airframe_type == "FIXED_WING") {
+                    //     new_battery_drop_matrix[ it_i->first ][ it_j->first ] = batteryDropFixedWing(it_k->first, i, j);
+                    // } else if (UAVs_[ it_k->first ].airframe_type == "VTOL") {
+                    //     new_battery_drop_matrix[ it_i->first ][ it_j->first ] = batteryDropVTOL(it_k->first, i, j);
                     // }
 
-                    new_battery_drop_matrix[i][j] = time_cost_matrices_[ UAVs_[k].id ][i][j] / UAVs_[k].time_max_flying;    // TODO: calculate BETTER (consider WIND and BATTERY HEALTH, UAV type, maybe also mAh?).
+                    new_battery_drop_matrix[ it_i->first ][ it_j->first ] = it_j->second / UAVs_[ it_k->first ].time_max_flying;    // TODO: calculate BETTER (consider WIND and BATTERY HEALTH, UAV type, maybe also mAh?).
                 }
             }
         }
-        new_battery_drop_matrices[ UAVs_[k].id ] = new_battery_drop_matrix;
+        new_battery_drop_matrices[ it_k->first ] = new_battery_drop_matrix;
     }
     battery_drop_matrices_mutex_.lock();
+    battery_drop_matrices_.clear();
     battery_drop_matrices_ = new_battery_drop_matrices;
     battery_drop_matrices_mutex_.unlock();
 
@@ -229,15 +252,30 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
     getWindFromInternet();
 
     std::string time_cost_matrices_string = "time_cost_matrices: [\n";
-    for (std::map<int, std::vector< std::vector<float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
-        time_cost_matrices_string.append("  [\n");
-        for (int i=0; i<it->second.size(); i++) {
+    for (std::map<int, std::map<int, std::map<int, float> > >::iterator it_k = time_cost_matrices_.begin(); it_k != time_cost_matrices_.end(); it_k++) {
+        time_cost_matrices_string.append("  [ uav_id = ");
+        time_cost_matrices_string.append(std::to_string( it_k->first ).c_str());
+        time_cost_matrices_string.append("\n");
+        for (int i=0; i<nodes_indexes_in_order_.size(); i++) {
             time_cost_matrices_string.append("    [");
-            for (int j=0; j<it->second[i].size(); j++) {
+            if (i==0) {
+                time_cost_matrices_string.append(std::to_string(-1.0).c_str());
+                time_cost_matrices_string.append(", ");
+                for (int j=0; j<nodes_indexes_in_order_.size(); j++) {
+                    if (j>0) {
+                        time_cost_matrices_string.append(", ");
+                    }
+                    time_cost_matrices_string.append(std::to_string( nodes_indexes_in_order_[j] ).c_str());
+                }
+                time_cost_matrices_string.append("],\n    [");
+            }
+            time_cost_matrices_string.append(std::to_string( nodes_indexes_in_order_[i] ).c_str());
+            time_cost_matrices_string.append(", ");
+            for (int j=0; j<nodes_indexes_in_order_.size(); j++) {
                 if (j>0) {
                     time_cost_matrices_string.append(", ");
                 }
-                time_cost_matrices_string.append(std::to_string(it->second[i][j]).c_str());
+                time_cost_matrices_string.append(std::to_string( it_k->second[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ]).c_str());
             }
             time_cost_matrices_string.append("],\n");
         }
@@ -246,15 +284,30 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
     time_cost_matrices_string.append("]");
 
     std::string battery_drop_matrices_string = "battery_drop_matrices: [\n";
-    for (std::map<int, std::vector< std::vector<float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
-        battery_drop_matrices_string.append("  [\n");
-        for (int i=0; i<it->second.size(); i++) {
+    for (std::map<int, std::map<int, std::map<int, float> > >::iterator it_k = battery_drop_matrices_.begin(); it_k != battery_drop_matrices_.end(); it_k++) {
+        battery_drop_matrices_string.append("  [ uav_id = ");
+        battery_drop_matrices_string.append(std::to_string( it_k->first ).c_str());
+        battery_drop_matrices_string.append("\n");
+        for (int i=0; i<nodes_indexes_in_order_.size(); i++) {
             battery_drop_matrices_string.append("    [");
-            for (int j=0; j<it->second[i].size(); j++) {
+            if (i==0) {
+                battery_drop_matrices_string.append(std::to_string(-1.0).c_str());
+                battery_drop_matrices_string.append(", ");
+                for (int j=0; j<nodes_indexes_in_order_.size(); j++) {
+                    if (j>0) {
+                        battery_drop_matrices_string.append(", ");
+                    }
+                    battery_drop_matrices_string.append(std::to_string( nodes_indexes_in_order_[j] ).c_str());
+                }
+                battery_drop_matrices_string.append("],\n    [");
+            }
+            battery_drop_matrices_string.append(std::to_string( nodes_indexes_in_order_[i] ).c_str());
+            battery_drop_matrices_string.append(", ");
+            for (int j=0; j<nodes_indexes_in_order_.size(); j++) {
                 if (j>0) {
                     battery_drop_matrices_string.append(", ");
                 }
-                battery_drop_matrices_string.append(std::to_string(it->second[i][j]).c_str());
+                battery_drop_matrices_string.append(std::to_string( it_k->second[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ]).c_str());
             }
             battery_drop_matrices_string.append("],\n");
         }

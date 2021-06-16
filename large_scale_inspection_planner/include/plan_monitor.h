@@ -31,16 +31,13 @@ public:
     ~PlanMonitor();
 
     // Method called periodically in an external thread, located in the Mission Controller, that will call the planner (in the same thread) if it returns true:
-    bool enoughDeviationToReplan(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::map<int, std::vector< std::vector<float> > >& _time_cost_matrices, const std::map<int, std::vector< std::vector<float> > >& _battery_drop_matrices);
+    bool enoughDeviationToReplan(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices);
 
 private:
 
     // bool checkIfPlansHaveChanged (const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) const;
     void constructUAVs(const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info);
     int  findUavIndexById(int _UAV_id);
-
-    std::map<int, int> from_graph_index_to_matrix_index_;
-    std::map<int, int> from_matrix_index_to_graph_index_;
 
     // UAVs:
     struct UAV {
