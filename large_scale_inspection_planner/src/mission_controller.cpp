@@ -257,6 +257,7 @@ MissionController::MissionController() {
     current_graph_mutex_.unlock();
 
 #ifdef DEBUG
+    current_graph_mutex_.lock();
     for (int i=0; i<complete_graph_.size(); i++) {      // Print complete_graph_ to check that the yaml file was parsed correctly:
         std::cout << "complete_graph_node[ " << i << " ].type                     = " << (int) complete_graph_[i].type << std::endl;
         std::cout << "complete_graph_node[ " << i << " ].id                       = " << complete_graph_[i].id << std::endl;
@@ -283,6 +284,7 @@ MissionController::MissionController() {
         std::cout << "current_graph_node[ " << i << " ].longitude                = " << current_graph_[i].longitude << std::endl;
         std::cout << "current_graph_node[ " << i << " ].altitude                 = " << current_graph_[i].altitude << std::endl;
     }
+    current_graph_mutex_.unlock();
 #endif
 
     // Advertised services:
@@ -751,6 +753,7 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
         }
     }
 #ifdef DEBUG
+    current_graph_mutex_.lock();
     for (int i=0; i<current_graph_.size(); i++) {      // Print current_graph_ to check that the yaml file was parsed correctly:
         std::cout << "graph_node[ " << i << " ].type                     = " << (int) current_graph_[i].type << std::endl;
         std::cout << "graph_node[ " << i << " ].id                       = " << current_graph_[i].id << std::endl;
@@ -764,6 +767,7 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
         std::cout << "graph_node[ " << i << " ].longitude                = " << current_graph_[i].longitude << std::endl;
         std::cout << "graph_node[ " << i << " ].altitude                 = " << current_graph_[i].altitude << std::endl;
     }
+    current_graph_mutex_.unlock();
 #endif
 
     // Build the flight_plans_ so we can translate it later to use the mission_lib or DJI SDK:

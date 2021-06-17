@@ -10,8 +10,6 @@
 #include <ros/ros.h>
 #include <math.h>
 
-#define PI 3.14159265
-
 namespace aerialcore {
 
 #define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
@@ -34,8 +32,8 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
 
     constructUAVs(_drone_info);
 
-    float total_duration_planned;   // Current planned duration up until the place where this method is called (for all UAVs).
-    float total_duration_real;      // Real current duration up until the place where this method is called (for all UAVs).
+    float total_duration_planned = 0;   // Current planned duration up until the place where this method is called (for all UAVs).
+    float total_duration_real = 0;      // Real current duration up until the place where this method is called (for all UAVs).
     std::map<int, float> duration_planned;  // Current planned duration up until the place where this method is called (for each UAV).
     std::map<int, float> duration_real;     // Real current duration up until the place where this method is called (for each UAV).
 
@@ -59,12 +57,12 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
 
             // Find the intersection point between the two following lines: segment of the current pair of nodes, and the perpendicular line to that previous line passing by the UAV pose:
 
-            // Angle of the current segment (the one perpendicular to this one will be alpha + PI/2):
+            // Angle of the current segment (the one perpendicular to this one will be alpha + M_PI/2):
             float alpha = atan2(_flight_plans[i].poses[j+1].pose.position.y - _flight_plans[i].poses[j].pose.position.y, _flight_plans[i].poses[j+1].pose.position.x - _flight_plans[i].poses[j].pose.position.x);
 
             // x-y for the intersection point between the two lines:
-            float x_inter = (y_ini - tan(alpha + PI/2) * x_ini) / (tan(alpha) - tan(alpha + PI/2));
-            float y_inter = y_ini + tan(alpha + PI/2) * (x_inter - x_ini);
+            float x_inter = (y_ini - tan(alpha + M_PI/2) * x_ini) / (tan(alpha) - tan(alpha + M_PI/2));
+            float y_inter = y_ini + tan(alpha + M_PI/2) * (x_inter - x_ini);
 
             // With that intersection calculate its perpendicular distance:
             if (_flight_plans[i].poses[j].pose.position.x<=_flight_plans[i].poses[j+1].pose.position.x && x_inter>=_flight_plans[i].poses[j].pose.position.x && x_inter<=_flight_plans[i].poses[j+1].pose.position.x
@@ -141,12 +139,12 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
                 if (j<UAVs_[uav_index].last_segment) {
                     distance_up_until_intersection += segment_distance;
                 } else if (j==UAVs_[uav_index].last_segment) {
-                    // Angle of the current segment (the one perpendicular to this one will be alpha + PI/2):
+                    // Angle of the current segment (the one perpendicular to this one will be alpha + M_PI/2):
                     float alpha = atan2(_flight_plans[i].poses[j+1].pose.position.y - _flight_plans[i].poses[j].pose.position.y, _flight_plans[i].poses[j+1].pose.position.x - _flight_plans[i].poses[j].pose.position.x);
 
                     // x-y for the intersection point between the two lines:
-                    float x_inter = (y_ini - tan(alpha + PI/2) * x_ini) / (tan(alpha) - tan(alpha + PI/2));
-                    float y_inter = y_ini + tan(alpha + PI/2) * (x_inter - x_ini);
+                    float x_inter = (y_ini - tan(alpha + M_PI/2) * x_ini) / (tan(alpha) - tan(alpha + M_PI/2));
+                    float y_inter = y_ini + tan(alpha + M_PI/2) * (x_inter - x_ini);
 
                     distance_up_until_intersection += sqrt( pow(x_inter-_flight_plans[i].poses[j].pose.position.x,2) + pow(y_inter-_flight_plans[i].poses[j].pose.position.y,2) );
                 }
@@ -161,22 +159,35 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
 
     }
 
+# ifdef DEBUG
+    std::cout << "total_duration_planned = " << total_duration_planned << std::endl;
+    std::cout << "total_duration_real = " << total_duration_real << std::endl;
+# endif
+
     // Compare the total planned duration with the real one:
     if (total_duration_planned<total_duration_real*(1-deviation_limit_)
      || total_duration_planned>total_duration_real*(1+deviation_limit_)) {
-        std::cout << "Replan true." << std::endl;
-        return true;
+        ROS_INFO("Plan Monitor: Replanning true.");
+        return false;
+        // return true;
     } else {
         // Compare the planned duration of each UAV with the real one:
         for (int i=0; i<_flight_plans.size(); i++) {
             int uav_index = findUavIndexById(_flight_plans[i].uav_id);
+
+# ifdef DEBUG
+            std::cout << "duration_planned[ " << _flight_plans[i].uav_id << " ] = " << duration_planned[uav_index] << std::endl;
+            std::cout << "duration_real[ " << _flight_plans[i].uav_id << " ] = " << duration_real[uav_index] << std::endl;
+# endif
+
             if (duration_planned[uav_index]<duration_real[uav_index]*(1-deviation_limit_)
              || duration_planned[uav_index]>duration_real[uav_index]*(1+deviation_limit_)) {
-                std::cout << "Replan true." << std::endl;
-                return true;
+                ROS_INFO("Plan Monitor: Replanning true.");
+                return false;
+                // return true;
             }
         }
-        std::cout << "Replan false." << std::endl;
+        ROS_INFO("Plan Monitor: Replanning false.");
         return false;
     }
 

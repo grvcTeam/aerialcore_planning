@@ -252,6 +252,7 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
     getWindFromInternet();
 
     std::string time_cost_matrices_string = "time_cost_matrices: [\n";
+    time_cost_matrices_mutex_.lock();
     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it_k = time_cost_matrices_.begin(); it_k != time_cost_matrices_.end(); it_k++) {
         time_cost_matrices_string.append("  [ uav_id = ");
         time_cost_matrices_string.append(std::to_string( it_k->first ).c_str());
@@ -282,8 +283,10 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
         time_cost_matrices_string.append("  ],\n");
     }
     time_cost_matrices_string.append("]");
+    time_cost_matrices_mutex_.unlock();
 
     std::string battery_drop_matrices_string = "battery_drop_matrices: [\n";
+    battery_drop_matrices_mutex_.lock();
     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it_k = battery_drop_matrices_.begin(); it_k != battery_drop_matrices_.end(); it_k++) {
         battery_drop_matrices_string.append("  [ uav_id = ");
         battery_drop_matrices_string.append(std::to_string( it_k->first ).c_str());
@@ -314,6 +317,7 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
         battery_drop_matrices_string.append("  ],\n");
     }
     battery_drop_matrices_string.append("]");
+    battery_drop_matrices_mutex_.unlock();
 
     std::cout << time_cost_matrices_string << std::endl << std::endl;
     std::cout << battery_drop_matrices_string << std::endl << std::endl;
@@ -330,7 +334,7 @@ void ParameterEstimator::getWindFromInternet() {
     curl = curl_easy_init();
     if(curl) {
         // Prepare the URL for cURL:
-        std::string url = "https://www.eltiempo.es/villacarrillo.html?v=por_hora";   // TODO: as a parameter.
+        std::string url = "https://api.openweathermap.org/data/2.5/weather?lat=38.138728&lon=-3.173825&appid=73bc471b3a4c39f688d5c0e79647db71";   // TODO: as a parameter.
 
         // Get string data to the readBuffer from the URL with cURL:
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
@@ -343,65 +347,60 @@ void ParameterEstimator::getWindFromInternet() {
     }
 
     if (readBuffer.size() == 0) {
-        ROS_ERROR("Parameter Estimator: eltiempo.es didn't answer. Returning empty wind vector (no wind).");
+        ROS_ERROR("Parameter Estimator: openweathermap didn't answer. Returning empty wind vector (no wind).");
     } else {
-        std::string wind_direction_search_pattern = "<i class=\"icon icon-colored_0_w ";    // 32 elements
-        std::string wind_speed_search_pattern = "<span data-wind=\"";                       // 17 elements
-        std::string end_pattern = "\"";
+        std::string wind_speed_search_pattern = "\"speed\":";       // 8 elements
+        std::string wind_direction_deg_search_pattern = "\"deg\":"; // 6 elements
+        std::string end_pattern = ",";
 
-        // Find the place where the first wind direction and speed are (as these values are in order, start where the previous one is found and avoid searching before):
-        size_t wind_direction_found = readBuffer.find(wind_direction_search_pattern);
-        size_t wind_direction_end_found = readBuffer.find(end_pattern, wind_direction_found+32);
-        size_t wind_speed_found = readBuffer.find(wind_speed_search_pattern, wind_direction_end_found);
-        size_t wind_speed_end_found = readBuffer.find(end_pattern, wind_speed_found+17);
+        // Find the place where the first wind direction and speed are:
+        size_t wind_speed_found = readBuffer.find(wind_speed_search_pattern);
+        size_t wind_speed_end_found = readBuffer.find(end_pattern, wind_speed_found+8);
+        size_t wind_direction_deg_found = readBuffer.find(wind_direction_deg_search_pattern);
+        size_t wind_direction_deg_end_found = readBuffer.find(end_pattern, wind_direction_deg_found+6);
 
-        if (wind_direction_found==std::string::npos || wind_direction_end_found==std::string::npos || wind_speed_found==std::string::npos || wind_speed_end_found==std::string::npos) {
-            ROS_ERROR("Parameter Estimator: parse error from eltiempo.es");
+        if (wind_speed_found==std::string::npos || wind_speed_end_found==std::string::npos || wind_direction_deg_found==std::string::npos || wind_direction_deg_end_found==std::string::npos) {
+            ROS_ERROR("Parameter Estimator: parse error from openweathermap");
         }
 
-        std::string wind_direction_string = readBuffer.substr(wind_direction_found+32, wind_direction_end_found-(wind_direction_found+32));
-        std::string wind_speed_string = readBuffer.substr(wind_speed_found+17, wind_speed_end_found-(wind_speed_found+17));
-
-        std::string::size_type sz;
-        std::stringstream wind_speed_stringstream;
-        wind_speed_stringstream << wind_speed_string;
-
-        wind_speed_ = (float) std::stod ( wind_speed_stringstream.str() , &sz);
-
-        // The cardinal points specified are the ones from which the wind is COMING.
-        if (wind_direction_string=="north") {
-            wind_vector_.y = -wind_speed_;
-        } else if (wind_direction_string=="north-east") {
-            wind_vector_.x = -wind_speed_*sqrt(2.0)/2.0;
-            wind_vector_.y = -wind_speed_*sqrt(2.0)/2.0;
-        } else if (wind_direction_string=="east") {
-            wind_vector_.x = -wind_speed_;
-        } else if (wind_direction_string=="south-east") {
-            wind_vector_.x = -wind_speed_*sqrt(2.0)/2.0;
-            wind_vector_.y = wind_speed_*sqrt(2.0)/2.0;
-        } else if (wind_direction_string=="south") {
-            wind_vector_.y = wind_speed_;
-        } else if (wind_direction_string=="south-west") {
-            wind_vector_.x = wind_speed_*sqrt(2.0)/2.0;
-            wind_vector_.y = wind_speed_*sqrt(2.0)/2.0;
-        } else if (wind_direction_string=="west") {
-            wind_vector_.x = wind_speed_;
-        } else if (wind_direction_string=="north-west") {
-            wind_vector_.x = wind_speed_*sqrt(2.0)/2.0;
-            wind_vector_.y = -wind_speed_*sqrt(2.0)/2.0;
-        }
+        std::string wind_speed_string = readBuffer.substr(wind_speed_found+8, wind_speed_end_found-(wind_speed_found+8));
+        std::string wind_direction_deg_string = readBuffer.substr(wind_direction_deg_found+6, wind_direction_deg_end_found-(wind_direction_deg_found+6));
 
 # ifdef DEBUG
-        // std::cout << "wind_direction_found = "<< wind_direction_found << std::endl;
-        // std::cout << "wind_direction_end_found = "<< wind_direction_end_found << std::endl;
         // std::cout << "wind_speed_found = "<< wind_speed_found << std::endl;
         // std::cout << "wind_speed_end_found = "<< wind_speed_end_found << std::endl;
-        std::cout << "wind_direction_string = " << wind_direction_string << std::endl;
-        std::cout << "wind_speed_string = " << wind_speed_string << std::endl;
-        std::cout << std::endl << "wind_speed_ = " << wind_speed_ << std::endl;
+        // std::cout << "wind_direction_deg_found = "<< wind_direction_deg_found << std::endl;
+        // std::cout << "wind_direction_deg_end_found = "<< wind_direction_deg_end_found << std::endl;
+        std::cout << std::endl << "wind_speed_string = " << wind_speed_string << std::endl;
+        std::cout << "wind_direction_deg_string = " << wind_direction_deg_string << std::endl << std::endl;
+#endif
+
+        std::string::size_type sz;
+
+        std::stringstream wind_speed_stringstream, wind_direction_deg_stringstream;
+        wind_speed_stringstream << wind_speed_string;
+        wind_direction_deg_stringstream << wind_direction_deg_string;
+
+        float wind_direction_deg;
+
+        try {   // try to parse into float the wind strings...
+            wind_speed_ = (float) std::stod ( wind_speed_stringstream.str() , &sz);
+            wind_direction_deg = (float) std::stod ( wind_direction_deg_stringstream.str() , &sz);
+        } catch (...) { // catch any exception
+            ROS_ERROR("Parameter Estimator: error reading the parsed string from openweathermap");
+            return;
+        }
+
+        // Wind direction is reported by the direction from which it originates (from which is COMING). For example, a north wind blows from the north to the south, with a direction angle of 0° (or 360°). A wind blowing from the east has a wind direction referred to as 90°, etc. 
+        wind_vector_.x = -wind_speed_*sin(wind_direction_deg*M_PI/180.0);
+        wind_vector_.y = -wind_speed_*cos(wind_direction_deg*M_PI/180.0);
+        wind_vector_.z = 0;
+
+# ifdef DEBUG
+        std::cout << "wind_speed_ = " << wind_speed_ << std::endl;
         std::cout << "wind_vector_.x = " << wind_vector_.x << std::endl;
         std::cout << "wind_vector_.y = " << wind_vector_.y << std::endl;
-        std::cout << "wind_vector_.z = " << wind_vector_.z << std::endl;
+        std::cout << "wind_vector_.z = " << wind_vector_.z << std::endl << std::endl;
 #endif
     }
 }
