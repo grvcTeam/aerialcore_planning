@@ -248,43 +248,14 @@ MissionController::MissionController() {
         }
     }
 
-    next_current_graph_ = complete_graph_;
-    removeGraphNodesAndEdgesAboveNoFlyZones(next_current_graph_);
-    complete_graph_cleaned_ = next_current_graph_;
-
     current_graph_mutex_.lock();
-    current_graph_ = complete_graph_cleaned_;
+    current_graph_ = complete_graph_;
+    removeGraphNodesAndEdgesAboveNoFlyZones(current_graph_);
+    complete_graph_cleaned_ = current_graph_;
     current_graph_mutex_.unlock();
 
 #ifdef DEBUG
-    current_graph_mutex_.lock();
-    for (int i=0; i<complete_graph_.size(); i++) {      // Print complete_graph_ to check that the yaml file was parsed correctly:
-        std::cout << "complete_graph_node[ " << i << " ].type                     = " << (int) complete_graph_[i].type << std::endl;
-        std::cout << "complete_graph_node[ " << i << " ].id                       = " << complete_graph_[i].id << std::endl;
-        for (int j=0; j<complete_graph_[i].connections_indexes.size(); j++) {
-            std::cout << "complete_graph_node[ " << i << " ].connections_indexes[ " << j << " ] = " << complete_graph_[i].connections_indexes[j] << std::endl;
-        }
-        std::cout << "complete_graph_node[ " << i << " ].x                        = " << complete_graph_[i].x << std::endl;
-        std::cout << "complete_graph_node[ " << i << " ].y                        = " << complete_graph_[i].y << std::endl;
-        std::cout << "complete_graph_node[ " << i << " ].z                        = " << complete_graph_[i].z << std::endl;
-        std::cout << "complete_graph_node[ " << i << " ].latitude                 = " << complete_graph_[i].latitude << std::endl;
-        std::cout << "complete_graph_node[ " << i << " ].longitude                = " << complete_graph_[i].longitude << std::endl;
-        std::cout << "complete_graph_node[ " << i << " ].altitude                 = " << complete_graph_[i].altitude << std::endl;
-    }
-    for (int i=0; i<current_graph_.size(); i++) {      // Print current_graph_ to check that the yaml file was parsed correctly:
-        std::cout << "current_graph_node[ " << i << " ].type                     = " << (int) current_graph_[i].type << std::endl;
-        std::cout << "current_graph_node[ " << i << " ].id                       = " << current_graph_[i].id << std::endl;
-        for (int j=0; j<current_graph_[i].connections_indexes.size(); j++) {
-            std::cout << "current_graph_node[ " << i << " ].connections_indexes[ " << j << " ] = " << current_graph_[i].connections_indexes[j] << std::endl;
-        }
-        std::cout << "current_graph_node[ " << i << " ].x                        = " << current_graph_[i].x << std::endl;
-        std::cout << "current_graph_node[ " << i << " ].y                        = " << current_graph_[i].y << std::endl;
-        std::cout << "current_graph_node[ " << i << " ].z                        = " << current_graph_[i].z << std::endl;
-        std::cout << "current_graph_node[ " << i << " ].latitude                 = " << current_graph_[i].latitude << std::endl;
-        std::cout << "current_graph_node[ " << i << " ].longitude                = " << current_graph_[i].longitude << std::endl;
-        std::cout << "current_graph_node[ " << i << " ].altitude                 = " << current_graph_[i].altitude << std::endl;
-    }
-    current_graph_mutex_.unlock();
+    printCurrentGraph();
 #endif
 
     // Advertised services:
@@ -344,6 +315,7 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
     stop_current_supervising_ = true;
     if(parameter_estimator_thread_.joinable()) parameter_estimator_thread_.join();
     if(plan_thread_.joinable()) plan_thread_.join();
+
     stop_current_supervising_ = false;
 
     // Start the supervising threads, consisting on the parameter estimator (module of same name) and plan thread (plan monitor and planner modules):
@@ -357,11 +329,15 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
 
 // Parameter Estimator thread:
 void MissionController::parameterEstimatorThread(void) {
+    std::vector<aerialcore_msgs::GraphNode> estimator_current_graph;
+
     ros::Rate loop_rate(1.0/parameter_estimator_time_); // [Hz, inverse of seconds]
     while (!stop_current_supervising_) {
         current_graph_mutex_.lock();
-        parameter_estimator_.updateMatrices(current_graph_, no_fly_zones_, geofence_);
+        estimator_current_graph = current_graph_;
         current_graph_mutex_.unlock();
+
+        parameter_estimator_.updateMatrices(estimator_current_graph, no_fly_zones_, geofence_);
         loop_rate.sleep();
     }
 } // end parameterEstimatorThread
@@ -369,15 +345,16 @@ void MissionController::parameterEstimatorThread(void) {
 
 // Plan thread:
 void MissionController::planThread(void) {
+    std::vector<aerialcore_msgs::GraphNode> planner_current_graph;
+
     ros::Rate loop_rate(1.0/plan_monitor_time_);        // [Hz, inverse of seconds]
     while (!stop_current_supervising_) {
 
         // Reset the next current graph:
-        next_current_graph_.clear();
         if (continuous_or_specific_supervision_) {
-            next_current_graph_ = complete_graph_cleaned_;
+            planner_current_graph = complete_graph_cleaned_;
         } else {
-            next_current_graph_ = specific_subgraph_cleaned_;
+            planner_current_graph = specific_subgraph_cleaned_;
         }
 
         std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> > drone_info;
@@ -396,39 +373,45 @@ void MissionController::planThread(void) {
                 std::get<9>(new_tuple) = current_uav.recharging;
                 drone_info.push_back(new_tuple);
 
-                aerialcore_msgs::GraphNode current_uav_initial_position_graph_node;
-                current_uav_initial_position_graph_node.type = aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION;
-                current_uav_initial_position_graph_node.id = current_uav.id;
+                aerialcore_msgs::GraphNode initial_position_graph_node;
+                initial_position_graph_node.type = aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION;
+                initial_position_graph_node.id = current_uav.id;
                 if (commanding_UAV_with_mission_lib_or_DJI_SDK_) {
-                    current_uav_initial_position_graph_node.x = current_uav.mission->pose().pose.position.x;
-                    current_uav_initial_position_graph_node.y = current_uav.mission->pose().pose.position.y;
-                    current_uav_initial_position_graph_node.z = current_uav.mission->pose().pose.position.z;
+
+                    const geometry_msgs::PoseStamped uav_pose = current_uav.mission->pose();
+
+                    initial_position_graph_node.x = uav_pose.pose.position.x;
+                    initial_position_graph_node.y = uav_pose.pose.position.y;
+                    initial_position_graph_node.z = uav_pose.pose.position.z;
 
                     geometry_msgs::Point32 aux_point32;
-                    aux_point32.x = current_uav_initial_position_graph_node.x;
-                    aux_point32.y = current_uav_initial_position_graph_node.y;
-                    aux_point32.z = current_uav_initial_position_graph_node.z;
+                    aux_point32.x = initial_position_graph_node.x;
+                    aux_point32.y = initial_position_graph_node.y;
+                    aux_point32.z = initial_position_graph_node.z;
                     geographic_msgs::GeoPoint current_geopoint = cartesian_to_geographic(aux_point32, map_origin_geo_);
 
-                    current_uav_initial_position_graph_node.latitude  = current_geopoint.latitude;
-                    current_uav_initial_position_graph_node.longitude = current_geopoint.longitude;
-                    current_uav_initial_position_graph_node.altitude  = current_geopoint.altitude;
+                    initial_position_graph_node.latitude  = current_geopoint.latitude;
+                    initial_position_graph_node.longitude = current_geopoint.longitude;
+                    initial_position_graph_node.altitude  = current_geopoint.altitude;
                 } else {
                     // // HARDCODED INITIAL POSES FOR NOVEMBER EXPERIMENTS?
-                    // current_uav_initial_position_graph_node.x = current_uav.id==1 ? 28 : 36.119532;
-                    // current_uav_initial_position_graph_node.y = current_uav.id==1 ? 61 : 63.737163;
-                    // current_uav_initial_position_graph_node.z = current_uav.id==1 ? 0.32 : 0;
+                    // initial_position_graph_node.x = current_uav.id==1 ? 28 : 36.119532;
+                    // initial_position_graph_node.y = current_uav.id==1 ? 61 : 63.737163;
+                    // initial_position_graph_node.z = current_uav.id==1 ? 0.32 : 0;
                 }
 
-                next_current_graph_.push_back(current_uav_initial_position_graph_node);
+                planner_current_graph.push_back(initial_position_graph_node);
 
                 current_graph_mutex_.lock();
-                current_graph_.clear();
-                current_graph_ = next_current_graph_;
+                current_graph_ = planner_current_graph;
                 current_graph_mutex_.unlock();
 
             }
         }
+
+#ifdef DEBUG
+        printCurrentGraph();
+#endif
 
         // Wait until the parameter_estimator_ calculate the matrices:
         while (parameter_estimator_.getTimeCostMatrices().size()==0 && ros::ok()) {
@@ -437,10 +420,8 @@ void MissionController::planThread(void) {
 
         bool plan_from_scratch = flight_plans_.size()==0;
         bool replan = false;
-        if (!replan) {
-            current_graph_mutex_.lock();
-            replan = plan_monitor_.enoughDeviationToReplan(current_graph_, flight_plans_, drone_info, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
-            current_graph_mutex_.unlock();
+        if (!plan_from_scratch) {
+            replan = plan_monitor_.enoughDeviationToReplan(planner_current_graph, flight_plans_, drone_info, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
         }
 
         if (plan_from_scratch || replan) {
@@ -451,11 +432,9 @@ void MissionController::planThread(void) {
             clock_t t_begin, t_end;
             t_begin = clock();
 
-            current_graph_mutex_.lock();
-            flight_plans_ = centralized_planner_.getPlanGreedy(current_graph_, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
-            // flight_plans_ =  centralized_planner_.getPlanMILP(current_graph_, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
-            // flight_plans_ =  centralized_planner_.getPlanHeuristic(current_graph_, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
-            current_graph_mutex_.unlock();
+            flight_plans_ = centralized_planner_.getPlanGreedy(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
+            // flight_plans_ =  centralized_planner_.getPlanMILP(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
+            // flight_plans_ =  centralized_planner_.getPlanHeuristic(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
 
             t_end = clock();
 
@@ -515,7 +494,7 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
         for (int i=0; i<flight_plans_for_current_uav.poses.size(); i++) {
             geometry_msgs::PoseStamped current_pose_stamped = flight_plans_for_current_uav.poses[i];
 
-            if (flight_plans_for_current_uav.type[i] == aerialcore_msgs::FlightPlan::TYPE_PASS_NODE_WP
+            if (flight_plans_for_current_uav.type[i] == aerialcore_msgs::FlightPlan::TYPE_PASS_PYLON_WP
              || flight_plans_for_current_uav.type[i] == aerialcore_msgs::FlightPlan::TYPE_PASS_NFZ_WP) {
                 pass_poses.push_back(current_pose_stamped);
 
@@ -644,14 +623,10 @@ bool MissionController::doSpecificSupervisionServiceCallback(aerialcore_msgs::Do
         specific_subgraph_.push_back(current_graph_node);
     }
 
-    next_current_graph_.clear();
-    next_current_graph_ = specific_subgraph_;
-    removeGraphNodesAndEdgesAboveNoFlyZones(next_current_graph_);
-    specific_subgraph_cleaned_ = next_current_graph_;
-
     current_graph_mutex_.lock();
-    current_graph_.clear();
-    current_graph_ = specific_subgraph_cleaned_;
+    current_graph_ = specific_subgraph_;
+    removeGraphNodesAndEdgesAboveNoFlyZones(current_graph_);
+    specific_subgraph_cleaned_ = current_graph_;
     current_graph_mutex_.unlock();
 
     _res.success=true;
@@ -753,21 +728,7 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
         }
     }
 #ifdef DEBUG
-    current_graph_mutex_.lock();
-    for (int i=0; i<current_graph_.size(); i++) {      // Print current_graph_ to check that the yaml file was parsed correctly:
-        std::cout << "graph_node[ " << i << " ].type                     = " << (int) current_graph_[i].type << std::endl;
-        std::cout << "graph_node[ " << i << " ].id                       = " << current_graph_[i].id << std::endl;
-        for (int j=0; j<current_graph_[i].connections_indexes.size(); j++) {
-            std::cout << "graph_node[ " << i << " ].connections_indexes[ " << j << " ] = " << current_graph_[i].connections_indexes[j] << std::endl;
-        }
-        std::cout << "graph_node[ " << i << " ].x                        = " << current_graph_[i].x << std::endl;
-        std::cout << "graph_node[ " << i << " ].y                        = " << current_graph_[i].y << std::endl;
-        std::cout << "graph_node[ " << i << " ].z                        = " << current_graph_[i].z << std::endl;
-        std::cout << "graph_node[ " << i << " ].latitude                 = " << current_graph_[i].latitude << std::endl;
-        std::cout << "graph_node[ " << i << " ].longitude                = " << current_graph_[i].longitude << std::endl;
-        std::cout << "graph_node[ " << i << " ].altitude                 = " << current_graph_[i].altitude << std::endl;
-    }
-    current_graph_mutex_.unlock();
+    printCurrentGraph();
 #endif
 
     // Build the flight_plans_ so we can translate it later to use the mission_lib or DJI SDK:
@@ -902,6 +863,25 @@ int MissionController::findUavIndexById(int _UAV_id) {
     }
     return uav_index;
 } // end findUavIndexById
+
+
+void MissionController::printCurrentGraph() {
+    current_graph_mutex_.lock();
+    for (int i=0; i<current_graph_.size(); i++) {      // Print current_graph_ to check that the yaml file was parsed correctly:
+        std::cout << "current_graph_node[ " << i << " ].type                     = " << (int) current_graph_[i].type << std::endl;
+        std::cout << "current_graph_node[ " << i << " ].id                       = " << current_graph_[i].id << std::endl;
+        for (int j=0; j<current_graph_[i].connections_indexes.size(); j++) {
+            std::cout << "current_graph_node[ " << i << " ].connections_indexes[ " << j << " ] = " << current_graph_[i].connections_indexes[j] << std::endl;
+        }
+        std::cout << "current_graph_node[ " << i << " ].x                        = " << current_graph_[i].x << std::endl;
+        std::cout << "current_graph_node[ " << i << " ].y                        = " << current_graph_[i].y << std::endl;
+        std::cout << "current_graph_node[ " << i << " ].z                        = " << current_graph_[i].z << std::endl;
+        std::cout << "current_graph_node[ " << i << " ].latitude                 = " << current_graph_[i].latitude << std::endl;
+        std::cout << "current_graph_node[ " << i << " ].longitude                = " << current_graph_[i].longitude << std::endl;
+        std::cout << "current_graph_node[ " << i << " ].altitude                 = " << current_graph_[i].altitude << std::endl;
+    }
+    current_graph_mutex_.unlock();
+}
 
 
 } // end namespace aerialcore

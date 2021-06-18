@@ -84,39 +84,36 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
                     UAVs_[uav_index].last_segment = j-2;
                     break;
                 }
-            } else {
-                UAVs_[uav_index].last_segment = j-2;
-                break;
             }
         }
 
         // Now we know the first pose of the segment, let's find out its node and the next one:
         int last_index_node_in_poses = -1;
         for (int j=UAVs_[uav_index].last_segment; j>=0; j--) {
-            if (_flight_plans[i].type[j]==aerialcore_msgs::FlightPlan::TYPE_PASS_NODE_WP) {
+            if (_flight_plans[i].type[j]!=aerialcore_msgs::FlightPlan::TYPE_PASS_NFZ_WP) {
                 last_index_node_in_poses = j;
                 break;
             }
         }
         int next_index_node_in_poses = -1;
-        for (int j=UAVs_[uav_index].last_segment+1; j<_flight_plans[i].poses.size(); j++) {
-            if (_flight_plans[i].type[j]==aerialcore_msgs::FlightPlan::TYPE_PASS_NODE_WP) {
+        for (int j= UAVs_[uav_index].last_segment+1<_flight_plans[i].poses.size() ? UAVs_[uav_index].last_segment+1 : UAVs_[uav_index].last_segment ; j<_flight_plans[i].poses.size(); j++) {
+            if (_flight_plans[i].type[j]!=aerialcore_msgs::FlightPlan::TYPE_PASS_NFZ_WP) {
                 next_index_node_in_poses = j;
                 break;
             }
         }
         int last_index_node_in_graph = -1;
         for (int g_i=0; g_i<_graph.size(); g_i++) {
-            if (_graph[g_i].x==_flight_plans[i].poses[last_index_node_in_poses].pose.position.x
-             && _graph[g_i].y==_flight_plans[i].poses[last_index_node_in_poses].pose.position.y) {
+            if (last_index_node_in_poses==0 && _graph[g_i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && _graph[g_i].id==_flight_plans[i].uav_id
+             || _graph[g_i].x==_flight_plans[i].poses[last_index_node_in_poses].pose.position.x && _graph[g_i].y==_flight_plans[i].poses[last_index_node_in_poses].pose.position.y) {
                 last_index_node_in_graph = g_i;
                 break;
             }
         }
         int next_index_node_in_graph = -1;
         for (int g_i=0; g_i<_graph.size(); g_i++) {
-            if (_graph[g_i].x==_flight_plans[i].poses[next_index_node_in_poses].pose.position.x
-             && _graph[g_i].y==_flight_plans[i].poses[next_index_node_in_poses].pose.position.y) {
+            if (next_index_node_in_poses==0 && _graph[g_i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && _graph[g_i].id==_flight_plans[i].uav_id
+             || _graph[g_i].x==_flight_plans[i].poses[next_index_node_in_poses].pose.position.x && _graph[g_i].y==_flight_plans[i].poses[next_index_node_in_poses].pose.position.y) {
                 next_index_node_in_graph = g_i;
                 break;
             }
@@ -126,7 +123,7 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
         duration_planned[uav_index] = 0;
         for (int j=0; j<_flight_plans[i].nodes.size()-1; j++) {
             duration_planned[uav_index] += _time_cost_matrices.at( _flight_plans[i].uav_id ).at( _flight_plans[i].nodes[j] ).at( _flight_plans[i].nodes[j+1] );
-            if (_flight_plans[i].nodes[j+1]==last_index_node_in_poses) {
+            if (_flight_plans[i].nodes[j]==last_index_node_in_graph) {
                 break;
             }
         }
@@ -152,6 +149,14 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
             duration_planned[uav_index] += distance_up_until_intersection/distance_up_until_next_node * _time_cost_matrices.at( _flight_plans[i].uav_id ).at(last_index_node_in_graph).at(next_index_node_in_graph);   // TODO: wind considered properly up until the last node, for poses of no-fly zones (middle cost inside the edge) wind cost calculated with a rule of three by distances.
         }
         total_duration_planned += duration_planned[uav_index];
+
+# ifdef DEBUG
+        std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> last_segment pose        = " << UAVs_[uav_index].last_segment << std::endl;
+        std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> last_index_node_in_poses = " << last_index_node_in_poses << std::endl;
+        std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> next_index_node_in_poses = " << next_index_node_in_poses << std::endl;
+        std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> last_index_node_in_graph = " << last_index_node_in_graph << std::endl;
+        std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> next_index_node_in_graph = " << next_index_node_in_graph << std::endl;
+# endif
 
         // Calculate the real duration:
         duration_real[uav_index] = time_now.toSec() - _flight_plans[i].header.stamp.toSec();
@@ -221,7 +226,7 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
 
 void PlanMonitor::constructUAVs(const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info) {
 
-    UAVs_.clear();
+    std::vector<UAV> UAVs_new;
 
     // _drone_info it's a vector of tuples, each tuple with 10 elements. The first in the tuple is the initial battery, and so on with all the elements in the "UAV" structure defined here below.
     for (const std::tuple<float, float, int, int, int, int, int, int, bool, bool>& current_drone : _drone_info) {
@@ -236,8 +241,13 @@ void PlanMonitor::constructUAVs(const std::vector< std::tuple<float, float, int,
         actual_UAV.id = std::get<7>(current_drone);
         actual_UAV.flying_or_landed_initially = std::get<8>(current_drone);
         actual_UAV.recharging_initially = std::get<9>(current_drone);
-        UAVs_.push_back(actual_UAV);
+        int uav_index = findUavIndexById(actual_UAV.id);
+        actual_UAV.last_segment = uav_index==-1 ? 0 : UAVs_[uav_index].last_segment;
+        UAVs_new.push_back(actual_UAV);
     }
+
+    UAVs_.clear();
+    UAVs_ = UAVs_new;
 } // end constructUAVs
 
 
@@ -248,9 +258,6 @@ int PlanMonitor::findUavIndexById(int _UAV_id) {
             uav_index = i;
             break;
         }
-    }
-    if (uav_index == -1) {
-        ROS_ERROR("Centralized Planner: UAV id=%d provided not found on the Mission Controller.", _UAV_id);
     }
     return uav_index;
 } // end findUavIndexById
