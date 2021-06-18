@@ -62,6 +62,8 @@ private:
 
   int findUavIndexById(int _UAV_id);
 
+  void printCurrentGraph();
+
   void removeGraphNodesAndEdgesAboveNoFlyZones(std::vector<aerialcore_msgs::GraphNode>& _graph_to_edit);
 
   void translateFlightPlanIntoUAVMission(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);

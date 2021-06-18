@@ -318,7 +318,15 @@ void CentralizedPlanner::printPlan() {
             std::cout << "flight_plans[ " << i << " ].poses[ " << j << " ] = " << flight_plans_[i].poses[j];
         }
         for (int j=0; j<flight_plans_[i].type.size(); j++) {
-            std::cout << "flight_plans[ " << i << " ].type[ " << j << " ] = " << flight_plans_[i].type[j] << std::endl;
+            if (flight_plans_[i].type[j] == aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP) {
+                std::cout << "flight_plans[ " << i << " ].type[ " << j << " ] = TYPE_TAKEOFF_WP" << std::endl;
+            } else if (flight_plans_[i].type[j] == aerialcore_msgs::FlightPlan::TYPE_PASS_PYLON_WP) {
+                std::cout << "flight_plans[ " << i << " ].type[ " << j << " ] = TYPE_PASS_PYLON_WP" << std::endl;
+            } else if (flight_plans_[i].type[j] == aerialcore_msgs::FlightPlan::TYPE_PASS_NFZ_WP) {
+                std::cout << "flight_plans[ " << i << " ].type[ " << j << " ] = TYPE_PASS_NFZ_WP" << std::endl;
+            } else if (flight_plans_[i].type[j] == aerialcore_msgs::FlightPlan::TYPE_LAND_WP) {
+                std::cout << "flight_plans[ " << i << " ].type[ " << j << " ] = TYPE_LAND_WP" << std::endl;
+            }
         }
     }
     std::cout << std::endl;
@@ -1183,7 +1191,7 @@ void CentralizedPlanner::fillFlightPlansFields(std::vector<aerialcore_msgs::Flig
             // Fill the type of pose:
             if (j==0) {     // The first node, aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION, can be on the air or not:
                 if (UAVs_[ findUavIndexById(_flight_plans[i].uav_id) ].flying_or_landed_initially) {
-                    _flight_plans[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_NODE_WP);
+                    _flight_plans[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_PYLON_WP);
                     previous_iteration_landing = false;
                 } else {
                     _flight_plans[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP);
@@ -1201,7 +1209,7 @@ void CentralizedPlanner::fillFlightPlansFields(std::vector<aerialcore_msgs::Flig
                         previous_iteration_landing = true;
                     }
                 } else if (graph_[ _flight_plans[i].nodes[j] ].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
-                    _flight_plans[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_NODE_WP);
+                    _flight_plans[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_PYLON_WP);
                     previous_iteration_landing = false;
                 }
             }
