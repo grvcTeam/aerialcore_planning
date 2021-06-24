@@ -189,6 +189,10 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
 // Brief method that returns the index of the nearest land station graph node given an inital index.
 void CentralizedPlanner::nearestGraphNodeLandStation(int _from_this_index_graph, int& _index_graph_node_to_return, int _uav_id) {
 
+    if (_from_this_index_graph==-1) {
+        return;
+    }
+
     _index_graph_node_to_return = -1;
     float time_cost = std::numeric_limits<float>::max();
 
@@ -210,6 +214,10 @@ void CentralizedPlanner::nearestGraphNodeLandStation(int _from_this_index_graph,
 
 // Brief method that returns the index of the nearest pylon graph node given an inital index. The new pylon will have edges unserved and will not be directly connected.
 void CentralizedPlanner::nearestGraphNodePylon(int _from_this_index_graph, int& _index_graph_node_to_return, int _uav_id) {
+
+    if (_from_this_index_graph==-1) {
+        return;
+    }
 
     _index_graph_node_to_return = -1;
     float time_cost = std::numeric_limits<float>::max();
@@ -266,7 +274,7 @@ void CentralizedPlanner::mostRewardedPylon(int _initial_pylon_index, int& _index
     float time_cost = 0;
     _index_edge_to_erase = -1;
 
-    if (!graph_[_initial_pylon_index].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
+    if (_initial_pylon_index==-1 || !graph_[_initial_pylon_index].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
         return;
     }
 
@@ -1187,6 +1195,9 @@ void CentralizedPlanner::fillFlightPlansFields(std::vector<aerialcore_msgs::Flig
             pose_to_insert.pose.position.y = graph_[ _flight_plans[i].nodes[j] ].y;
             pose_to_insert.pose.position.z = graph_[ _flight_plans[i].nodes[j] ].altitude - map_origin_geo_.altitude + graph_[ _flight_plans[i].nodes[j] ].z;;
             _flight_plans[i].poses.push_back(pose_to_insert);
+
+std::cout << "_flight_plans[i].poses.back().pose.position.x = " << _flight_plans[i].poses.back().pose.position.x << std::endl << std::endl;
+std::cout << "_flight_plans[i].poses.back().pose.position.y = " << _flight_plans[i].poses.back().pose.position.y << std::endl << std::endl;
 
             // Fill the type of pose:
             if (j==0) {     // The first node, aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION, can be on the air or not:

@@ -82,7 +82,6 @@ private:
   std::vector<aerialcore_msgs::GraphNode> complete_graph_cleaned_;
   std::vector<aerialcore_msgs::GraphNode> specific_subgraph_;
   std::vector<aerialcore_msgs::GraphNode> specific_subgraph_cleaned_;
-  std::vector<aerialcore_msgs::GraphNode> next_current_graph_;
   std::vector<aerialcore_msgs::GraphNode> current_graph_;
   std::mutex current_graph_mutex_;
 

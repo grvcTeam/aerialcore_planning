@@ -224,20 +224,19 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
     std::map<int, std::map<int, std::map<int, float> > > new_battery_drop_matrices;
     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it_k = new_time_cost_matrices.begin(); it_k != new_time_cost_matrices.end(); it_k++) {
         std::map<int, std::map<int, float> > new_battery_drop_matrix;
+        int uav_index = findUavIndexById(it_k->first);
         for (std::map<int, std::map<int, float> >::iterator it_i = it_k->second.begin(); it_i != it_k->second.end(); it_i++) {
             for (std::map<int, float>::iterator it_j = it_i->second.begin(); it_j != it_i->second.end(); it_j++) {
                 if (it_j->second==-1) {
                     new_battery_drop_matrix[ it_i->first ][ it_j->first ] = it_j->second;
                 } else {
-                    // if (UAVs_[ it_k->first ].airframe_type == "MULTICOPTER") {
-                    //     new_battery_drop_matrix[ it_i->first ][ it_j->first ] = batteryDropMulticopter(it_k->first, i, j);
-                    // } else if (UAVs_[ it_k->first ].airframe_type == "FIXED_WING") {
-                    //     new_battery_drop_matrix[ it_i->first ][ it_j->first ] = batteryDropFixedWing(it_k->first, i, j);
-                    // } else if (UAVs_[ it_k->first ].airframe_type == "VTOL") {
-                    //     new_battery_drop_matrix[ it_i->first ][ it_j->first ] = batteryDropVTOL(it_k->first, i, j);
-                    // }
-
-                    new_battery_drop_matrix[ it_i->first ][ it_j->first ] = it_j->second / UAVs_[ it_k->first ].time_max_flying;    // TODO: calculate BETTER (consider WIND and BATTERY HEALTH, UAV type, maybe also mAh?).
+                    if (UAVs_[uav_index].airframe_type == "MULTICOPTER") {
+                        new_battery_drop_matrix[ it_i->first ][ it_j->first ] = batteryDropMulticopter(it_k->first, it_i->first, it_j->first, new_time_cost_matrices);
+                    } else if (UAVs_[uav_index].airframe_type == "FIXED_WING") {
+                        new_battery_drop_matrix[ it_i->first ][ it_j->first ] = batteryDropFixedWing(it_k->first, it_i->first, it_j->first, new_time_cost_matrices);
+                    } else if (UAVs_[uav_index].airframe_type == "VTOL") {
+                        new_battery_drop_matrix[ it_i->first ][ it_j->first ] = batteryDropVTOL(it_k->first, it_i->first, it_j->first, new_time_cost_matrices);
+                    }
                 }
             }
         }
@@ -412,16 +411,31 @@ size_t ParameterEstimator::writeCallback(void *contents, size_t size, size_t nme
 }   // end writeCallback
 
 
-float ParameterEstimator::batteryDropMulticopter(int _uav_id, int _index_i, int _index_j) { // TODO: more parameters needed (propellers radious, mass, etc.)
+float ParameterEstimator::batteryDropMulticopter(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices) { // TODO: more parameters needed (propellers radious, mass, etc.)
+    return _time_cost_matrices.at(_uav_id).at(_index_i).at(_index_j) / UAVs_[ findUavIndexById(_uav_id) ].time_max_flying;    // TODO: calculate BETTER (consider WIND and BATTERY HEALTH, UAV type, maybe also mAh?).
 }
 
 
-float ParameterEstimator::batteryDropFixedWing(int _uav_id, int _index_i, int _index_j) {
+float ParameterEstimator::batteryDropFixedWing(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices) {
+    return _time_cost_matrices.at(_uav_id).at(_index_i).at(_index_j) / UAVs_[ findUavIndexById(_uav_id) ].time_max_flying;    // TODO: calculate BETTER (consider WIND and BATTERY HEALTH, UAV type, maybe also mAh?).
 }
 
 
-float ParameterEstimator::batteryDropVTOL(int _uav_id, int _index_i, int _index_j) {
+float ParameterEstimator::batteryDropVTOL(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices) {
+    return _time_cost_matrices.at(_uav_id).at(_index_i).at(_index_j) / UAVs_[ findUavIndexById(_uav_id) ].time_max_flying;    // TODO: calculate BETTER (consider WIND and BATTERY HEALTH, UAV type, maybe also mAh?).
 }
+
+
+int ParameterEstimator::findUavIndexById(int _UAV_id) {
+    int uav_index = -1;
+    for (int i=0; i<UAVs_.size(); i++) {
+        if (UAVs_[i].id == _UAV_id) {
+            uav_index = i;
+            break;
+        }
+    }
+    return uav_index;
+} // end findUavIndexById
 
 
 } // end namespace aerialcore

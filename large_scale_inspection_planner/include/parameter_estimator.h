@@ -80,9 +80,11 @@ private:
     void getWindFromInternet();
     static size_t writeCallback(void *contents, size_t size, size_t nmemb, void *userp);
 
-    float batteryDropMulticopter(int _uav_id, int _index_i, int _index_j);
-    float batteryDropFixedWing(int _uav_id, int _index_i, int _index_j);
-    float batteryDropVTOL(int _uav_id, int _index_i, int _index_j);
+    float batteryDropMulticopter(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices);
+    float batteryDropFixedWing(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices);
+    float batteryDropVTOL(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices);
+
+    int  findUavIndexById(int _UAV_id);
 
 };  // end ParameterEstimator class
 
