@@ -43,7 +43,7 @@ CentralizedPlanner::~CentralizedPlanner() {}
 std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices) {
 
     graph_.clear();
-    edges_pairs_.clear();
+    connection_edges_.clear();
     edges_.clear();
     flight_plans_.clear();
     time_cost_matrices_.clear();
@@ -77,13 +77,13 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
     constructUAVs(_drone_info);
     constructEdges(_graph);
 
-    // Construct edges_pairs_:
+    // Construct connection_edges_:
     for (int i=0; i<graph_.size(); i++) {
         if (graph_[i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
             for (int j=0; j<graph_[i].connections_indexes.size(); j++) {
                 if (i < graph_[i].connections_indexes[j]) {
                     std::pair <int,int> current_edge (i, graph_[i].connections_indexes[j]);
-                    edges_pairs_.push_back(current_edge);
+                    connection_edges_.push_back(current_edge);
                 }
             }
         }
@@ -131,14 +131,15 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
         // Calculate closest land station from that closest pylon:
         nearestGraphNodeLandStation(index_graph_of_next_pylon, index_graph_land_station_from_next_pylon, current_uav.id);
 
-        while (edges_pairs_.size()>0 && (battery
+        while (connection_edges_.size()>0 && (battery
             - battery_drop_matrices_[ current_uav.id ][ uav_initial_position_graph_index ][ index_graph_of_next_pylon ]
             - battery_drop_matrices_[ current_uav.id ][ index_graph_of_next_pylon ][ index_graph_land_station_from_next_pylon ] ) ) {
+
             // Insert pylon because it can be reached with enough battery to go later to a land station:
             current_flight_plan.nodes.push_back(index_graph_of_next_pylon);
 
             if (index_edge_to_erase != -1) {
-                edges_pairs_.erase( edges_pairs_.begin() + index_edge_to_erase );
+                connection_edges_.erase( connection_edges_.begin() + index_edge_to_erase );
             }
 
             // Update the battery left:            
@@ -186,11 +187,11 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
 } // end getPlanGreedy method
 
 
-// Brief method that returns the index of the nearest land station graph node given an inital index.
-void CentralizedPlanner::nearestGraphNodeLandStation(int _from_this_index_graph, int& _index_graph_node_to_return, int _uav_id) {
+// Brief method that returns the index of the nearest land station graph node given an initial index.
+float CentralizedPlanner::nearestGraphNodeLandStation(int _from_this_index_graph, int& _index_graph_node_to_return, int _uav_id) {
 
     if (_from_this_index_graph==-1) {
-        return;
+        return -1;
     }
 
     _index_graph_node_to_return = -1;
@@ -209,14 +210,73 @@ void CentralizedPlanner::nearestGraphNodeLandStation(int _from_this_index_graph,
         }
     }
 
+    return time_cost;
+
 } // end nearestGraphNodeLandStation method
 
 
-// Brief method that returns the index of the nearest pylon graph node given an inital index. The new pylon will have edges unserved and will not be directly connected.
-void CentralizedPlanner::nearestGraphNodePylon(int _from_this_index_graph, int& _index_graph_node_to_return, int _uav_id) {
+// Brief method that returns the index of the nearest initial position graph node given an initial index.
+float CentralizedPlanner::nearestGraphNodeUAVInitialPosition(int _from_this_index_graph, int& _index_graph_node_to_return, int& _uav_id) {
 
     if (_from_this_index_graph==-1) {
-        return;
+        return -1;
+    }
+
+    _index_graph_node_to_return = -1;
+    _uav_id = -1;
+    float time_cost = std::numeric_limits<float>::max();
+
+    for (int i=0; i<graph_.size(); i++) {
+        float current_time_cost = time_cost_matrices_[ graph_[i].id ][ _from_this_index_graph ][ i ];
+        if (current_time_cost <= 0.001) continue;     // It's the same graph node or path not found, ignore and continue.
+
+        if ( time_cost > current_time_cost ) {
+            _index_graph_node_to_return = i;
+            _uav_id = graph_[i].id;
+            time_cost = current_time_cost;
+        }
+    }
+
+    return time_cost;
+
+} // end nearestGraphNodeUAVInitialPosition method
+
+
+// Brief method that returns the index of the nearest initial position graph node given an initial index.
+float CentralizedPlanner::nearestGraphNodeUAVInitialPositionByTypeString(int _from_this_index_graph, int& _index_graph_node_to_return, int& _uav_id, std::string _type_string) {
+
+    if (_from_this_index_graph==-1) {
+        return -1;
+    }
+
+    _index_graph_node_to_return = -1;
+    _uav_id = -1;
+    float time_cost = std::numeric_limits<float>::max();
+
+    for (int i=0; i<graph_.size(); i++) {
+        if ( graph_[i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && _type_string==uavTypeStringById(graph_[i].id) ) {
+
+            float current_time_cost = time_cost_matrices_[ graph_[i].id ][ _from_this_index_graph ][ i ];
+            if (current_time_cost <= 0.001) continue;     // It's the same graph node or path not found, ignore and continue.
+
+            if ( time_cost > current_time_cost ) {
+                _index_graph_node_to_return = i;
+                _uav_id = graph_[i].id;
+                time_cost = current_time_cost;
+            }
+        }
+    }
+
+    return time_cost;
+
+} // end nearestGraphNodeUAVInitialPositionByTypeString method
+
+
+// Brief method that returns the index of the nearest pylon graph node given an initial index. The new pylon will have edges unserved and will not be directly connected.
+float CentralizedPlanner::nearestGraphNodePylon(int _from_this_index_graph, int& _index_graph_node_to_return, int _uav_id) {
+
+    if (_from_this_index_graph==-1) {
+        return -1;
     }
 
     _index_graph_node_to_return = -1;
@@ -246,8 +306,8 @@ void CentralizedPlanner::nearestGraphNodePylon(int _from_this_index_graph, int& 
                 std::pair <int,int> current_edge;
                 current_edge.first =  i < current_connection_index ? i : current_connection_index;
                 current_edge.second = i < current_connection_index ? current_connection_index : i;
-                for (int j=0; j<edges_pairs_.size(); j++) {
-                    if (edges_pairs_[j] == current_edge) {
+                for (int j=0; j<connection_edges_.size(); j++) {
+                    if (connection_edges_[j] == current_edge) {
                         has_edges_unserved = true;
                         break;
                     }
@@ -264,18 +324,20 @@ void CentralizedPlanner::nearestGraphNodePylon(int _from_this_index_graph, int& 
         }
     }
 
+    return time_cost;
+
 } // end nearestGraphNodePylon method
 
 
 // Brief method that returns the index of the furthest connected pylon from an initial pylon.
-void CentralizedPlanner::mostRewardedPylon(int _initial_pylon_index, int& _index_graph_node_to_return, int& _index_edge_to_erase, int _uav_id) {
+float CentralizedPlanner::mostRewardedPylon(int _initial_pylon_index, int& _index_graph_node_to_return, int& _index_edge_to_erase, int _uav_id) {
 
     _index_graph_node_to_return = -1;
     float time_cost = 0;
     _index_edge_to_erase = -1;
 
     if (_initial_pylon_index==-1 || !graph_[_initial_pylon_index].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
-        return;
+        return -1;
     }
 
     for (const int& current_connection_index : graph_[_initial_pylon_index].connections_indexes) {
@@ -288,8 +350,8 @@ void CentralizedPlanner::mostRewardedPylon(int _initial_pylon_index, int& _index
         // If current edge not found means it has already been served, so continue.
         bool edge_found = false;
         int i = 0;
-        for (i=0; i<edges_pairs_.size(); i++) {
-            if (edges_pairs_[i] == current_edge) {
+        for (i=0; i<connection_edges_.size(); i++) {
+            if (connection_edges_[i] == current_edge) {
                 edge_found = true;
                 break;
             }
@@ -307,6 +369,8 @@ void CentralizedPlanner::mostRewardedPylon(int _initial_pylon_index, int& _index
             _index_edge_to_erase = i;
         }
     }
+
+    return time_cost;
 
 } // end mostRewardedPylon method
 
@@ -1093,27 +1157,335 @@ int CentralizedPlanner::findUavIndexById(int _UAV_id) {
 } // end findUavIndexById
 
 
-std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanHeuristic(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices) {
+int CentralizedPlanner::findTourIndexById(int _tour_id, const std::vector<Tour>& _R_tours_array) {
+    int tour_index = -1;
+    for (int i=0; i<_R_tours_array.size(); i++) {
+        if (_R_tours_array[i].tour_id == _tour_id) {
+            tour_index = i;
+            break;
+        }
+    }
+    if (tour_index == -1) {
+        ROS_ERROR("Centralized Planner: tour id=%d provided not found on the Mission Controller.", _tour_id);
+    }
+    return tour_index;
+} // end findTourIndexById
+
+
+std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanVNS(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices) {
 
     // Get the initial plan with the greedy method:
     getPlanGreedy(_graph, _drone_info, _no_fly_zones, _geofence, _time_cost_matrices, _battery_drop_matrices);
     std::vector<aerialcore_msgs::FlightPlan> greedy_flight_plans = flight_plans_;
     flight_plans_.clear();
 
-    // TODO:
-    // 1) Agarwal: Merge-Embed-Merge algorithm
-    // 1) VNS CTU
-    // 3) Dubins for navigations with VTOL or fixed wing, may be needed navigations between non-parallel inspection edges.
-    // 4) Compare with similar problems (maybe ask for the code or just do it myself)
-    // 5) Online
-    // 6) Wind adapt
-    // 7) Problem with paths in the cost matrix (wind doesn't affect the same with paths)
+    // TODO
 
     fillFlightPlansFields(flight_plans_);
 
     return flight_plans_;
 
-} // end getPlanHeuristic
+} // end getPlanVNS
+
+
+std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMEM(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices) {
+
+    graph_.clear();
+    connection_edges_.clear();
+    edges_.clear();
+    flight_plans_.clear();
+    time_cost_matrices_.clear();
+    battery_drop_matrices_.clear();
+
+    graph_ = _graph;
+    time_cost_matrices_ = _time_cost_matrices;
+    battery_drop_matrices_ = _battery_drop_matrices;
+
+    if (_geofence.points.size()>0 && _no_fly_zones.size()>0) {
+        std::vector< std::vector<geographic_msgs::GeoPoint> > obstacle_polygon_vector_geo;
+        std::vector<geographic_msgs::GeoPoint> geofence_polygon_geo;
+
+        for (geometry_msgs::Polygon no_fly_zone: _no_fly_zones) {
+            std::vector<geographic_msgs::GeoPoint> no_fly_zone_geo;
+            for (geometry_msgs::Point32 nfz_point: no_fly_zone.points) {
+                geographic_msgs::GeoPoint nfz_point_geo = cartesian_to_geographic(nfz_point, map_origin_geo_);
+                no_fly_zone_geo.push_back(nfz_point_geo);
+            }
+            obstacle_polygon_vector_geo.push_back(no_fly_zone_geo);
+        }
+
+        for (geometry_msgs::Point32 geofence_point: _geofence.points) {
+            geographic_msgs::GeoPoint nfz_point_geo = cartesian_to_geographic(geofence_point, map_origin_geo_);
+            geofence_polygon_geo.push_back(nfz_point_geo);
+        }
+
+        path_planner_ = grvc::PathPlanner(obstacle_polygon_vector_geo, geofence_polygon_geo);
+    }
+
+    constructUAVs(_drone_info);
+    constructEdges(_graph);
+
+    // MEM algorithm (Agarwal, Line Coverage with Multiple Robots, ICRA 2020):
+    // Modified for accepting heterogeneous fleet of UAVs.
+
+    std::vector<Tour> R_tours_array;
+
+    std::vector<Saving> S_savings;
+
+    int latest_tour_id = 0;
+
+    // std::vector<std::string> UAV_types;
+    // for (int i=0; i<UAVs_.size(); i++) {
+    //     UAV_types.push_back( uavTypeStringByIndex(i) );
+    // }
+
+    // Initialization of tours:
+    for (int i=0; i<connection_edges_.size(); i++) {
+        Tour new_tour;
+
+        int first_node_direct,  first_node_reversed;
+        int second_node_direct, second_node_reversed;
+        int uav_id_direct,      uav_id_reversed;
+        float cost_direct = 0;  float cost_reversed = 0;
+
+        cost_direct += nearestGraphNodeUAVInitialPosition(connection_edges_[i].first, first_node_direct, uav_id_direct);
+        cost_direct += time_cost_matrices_[uav_id_direct][connection_edges_[i].first][connection_edges_[i].second];
+        cost_direct += nearestGraphNodeLandStation(connection_edges_[i].second, second_node_direct, uav_id_direct);
+
+        cost_reversed += nearestGraphNodeUAVInitialPosition(connection_edges_[i].second, first_node_reversed, uav_id_reversed);
+        cost_reversed += time_cost_matrices_[uav_id_reversed][connection_edges_[i].second][connection_edges_[i].first];
+        cost_reversed += nearestGraphNodeLandStation(connection_edges_[i].first, second_node_reversed, uav_id_reversed);
+
+        if (cost_direct < cost_reversed) {
+            new_tour.uav_id = uav_id_direct;
+            new_tour.nodes.push_back(first_node_direct);
+            new_tour.nodes.push_back(connection_edges_[i].first);
+            new_tour.nodes.push_back(connection_edges_[i].second);
+            new_tour.nodes.push_back(second_node_direct);
+            new_tour.cost = cost_direct;
+        } else {
+            new_tour.uav_id = uav_id_reversed;
+            new_tour.nodes.push_back(first_node_reversed);
+            new_tour.nodes.push_back(connection_edges_[i].second);
+            new_tour.nodes.push_back(connection_edges_[i].first);
+            new_tour.nodes.push_back(second_node_reversed);
+            new_tour.cost = cost_reversed;
+        }
+
+        new_tour.demand = 0;
+        new_tour.demand += battery_drop_matrices_[new_tour.uav_id][new_tour.nodes[0]][new_tour.nodes[1]];
+        new_tour.demand += battery_drop_matrices_[new_tour.uav_id][new_tour.nodes[1]][new_tour.nodes[2]];
+        new_tour.demand += battery_drop_matrices_[new_tour.uav_id][new_tour.nodes[2]][new_tour.nodes[3]];
+
+        new_tour.tour_id = latest_tour_id++;
+
+        R_tours_array.push_back(new_tour);
+    }
+
+    // Compute savings:
+    for (int i=0; i<R_tours_array.size()-1; i++) {
+        for (int j=i+1; j<R_tours_array.size(); j++) {
+            if (R_tours_array[i].uav_id==R_tours_array[j].uav_id) {
+
+                Saving new_saving;
+                new_saving.tour_id_1 = R_tours_array[i].tour_id;
+                new_saving.tour_id_2 = R_tours_array[j].tour_id;
+                new_saving.tour_id   = latest_tour_id++;
+
+                Saving best_saving = bestSavingPermutation(new_saving, i, j, R_tours_array);
+                if (best_saving.saving >= 0 && UAVs_[best_saving.uav_id].initial_battery-best_saving.demand>=UAVs_[best_saving.uav_id].minimum_battery) {   // Only insert the saving if it actually saves cost and the battery is enough.
+                    S_savings.push_back(best_saving);
+                }
+
+            }
+        }
+    }
+
+    // Repeated Merge and Embed:
+    while (S_savings.size()>0) {
+        // Find the saving with the most saving, extract it and delete it:
+        float best_saving_value = -1;
+        int best_saving_index = -1;
+        for (int i=0; i<S_savings.size(); i++) {
+            if (S_savings[i].saving > best_saving_value) {
+                best_saving_value = S_savings[i].saving;
+                best_saving_index = i;
+            }
+        }
+        Saving best_saving = S_savings[best_saving_index];
+        S_savings.erase(S_savings.begin()+best_saving_index);
+
+        // If the current saving involves tours already deleted, continue to the next iteration:
+        if ( findTourIndexById(best_saving.tour_id_1, R_tours_array)==-1 || findTourIndexById(best_saving.tour_id_2, R_tours_array)==-1 ) {
+            continue;
+        }
+
+        // Merge: Insert the tour of the best saving...
+        Tour best_tour;
+        best_tour.nodes = best_saving.nodes;
+        best_tour.cost = best_saving.cost;
+        best_tour.demand = best_saving.demand;
+        best_tour.tour_id = best_saving.tour_id;
+        best_tour.uav_id = best_saving.uav_id;
+        R_tours_array.push_back(best_tour);
+
+        // ... and delete the tours that compose it.
+        R_tours_array.erase(R_tours_array.begin() + findTourIndexById(best_saving.tour_id_1, R_tours_array) );
+        R_tours_array.erase(R_tours_array.begin() + findTourIndexById(best_saving.tour_id_2, R_tours_array) );
+
+        // Embed:
+        int last_tour_index = R_tours_array.size()-1;
+        for (int i=0; i<R_tours_array.size()-1; i++) {  // Don't iterate the last tour element (doesn't make sense to calculate the saving embeding it with itself).
+            Saving new_saving;
+            new_saving.tour_id_1 = R_tours_array[last_tour_index].tour_id;
+            new_saving.tour_id_2 = R_tours_array[i].tour_id;
+            new_saving.tour_id   = latest_tour_id++;
+
+            Saving best_new_saving = bestSavingPermutation(new_saving, last_tour_index, i, R_tours_array);
+            if (best_new_saving.saving >= 0 && UAVs_[best_new_saving.uav_id].initial_battery-best_new_saving.demand>=UAVs_[best_new_saving.uav_id].minimum_battery) {   // Only insert the saving if it actually saves cost and the battery is enough.
+                S_savings.push_back(best_new_saving);
+            }
+        }
+
+    }
+
+    flight_plans_ = buildFlightPlansFromTours(R_tours_array);
+
+    return flight_plans_;
+
+} // end getPlanMEM
+
+
+CentralizedPlanner::Saving CentralizedPlanner::bestSavingPermutation(const Saving& _saving_input, int _i, int _j, const std::vector<Tour>& _R_tours_array) {
+
+    std::vector<Saving> saving_permutations;
+
+    // From _i straight to _j straight:
+    Saving saving_permutation_1 = _saving_input;
+    saving_permutation_1.nodes.insert(saving_permutation_1.nodes.end(), _R_tours_array[_i].nodes.begin()+1, _R_tours_array[_i].nodes.end()-1);
+    if (_R_tours_array[_i].nodes[_R_tours_array[_i].nodes.size()-2] == _R_tours_array[_j].nodes[1]) {       // The nodes are the same, so the wires are connected, no need of inserting a navigation in between.
+        saving_permutation_1.nodes.insert(saving_permutation_1.nodes.end(), _R_tours_array[_j].nodes.begin()+2, _R_tours_array[_j].nodes.end()-1);
+    } else {
+        saving_permutation_1.nodes.insert(saving_permutation_1.nodes.end(), _R_tours_array[_j].nodes.begin()+1, _R_tours_array[_j].nodes.end()-1);
+    }
+    calculateSaving(saving_permutation_1, _R_tours_array);
+    saving_permutations.push_back(saving_permutation_1);
+
+    // From _i straight to _j reversed:
+    Saving saving_permutation_2 = _saving_input;
+    saving_permutation_2.nodes.insert(saving_permutation_2.nodes.end(), _R_tours_array[_i].nodes.begin()+1, _R_tours_array[_i].nodes.end()-1);
+    if (_R_tours_array[_i].nodes[_R_tours_array[_i].nodes.size()-2] == _R_tours_array[_j].nodes[_R_tours_array[_j].nodes.size()-2]) {       // The nodes are the same, so the wires are connected, no need of inserting a navigation in between.
+        saving_permutation_2.nodes.insert(saving_permutation_2.nodes.end(), _R_tours_array[_j].nodes.rbegin()-2, _R_tours_array[_j].nodes.rend()+1);
+    } else {
+        saving_permutation_2.nodes.insert(saving_permutation_2.nodes.end(), _R_tours_array[_j].nodes.rbegin()-1, _R_tours_array[_j].nodes.rend()+1);
+    }
+    calculateSaving(saving_permutation_2, _R_tours_array);
+    saving_permutations.push_back(saving_permutation_2);
+
+    // From _i reversed to _j straight:
+    Saving saving_permutation_3 = _saving_input;
+    saving_permutation_3.nodes.insert(saving_permutation_3.nodes.end(), _R_tours_array[_i].nodes.rbegin()-1, _R_tours_array[_i].nodes.rend()+1);
+    if (_R_tours_array[_i].nodes[1] == _R_tours_array[_j].nodes[1]) {       // The nodes are the same, so the wires are connected, no need of inserting a navigation in between.
+        saving_permutation_3.nodes.insert(saving_permutation_3.nodes.end(), _R_tours_array[_j].nodes.begin()+2, _R_tours_array[_j].nodes.end()-1);
+    } else {
+        saving_permutation_3.nodes.insert(saving_permutation_3.nodes.end(), _R_tours_array[_j].nodes.begin()+1, _R_tours_array[_j].nodes.end()-1);
+    }
+    calculateSaving(saving_permutation_3, _R_tours_array);
+    saving_permutations.push_back(saving_permutation_3);
+
+    // From _i reversed to _j reversed:
+    Saving saving_permutation_4 = _saving_input;
+    saving_permutation_4.nodes.insert(saving_permutation_4.nodes.end(), _R_tours_array[_i].nodes.rbegin()-1, _R_tours_array[_i].nodes.rend()+1);
+    if (_R_tours_array[_i].nodes[1] == _R_tours_array[_j].nodes[_R_tours_array[_j].nodes.size()-2]) {       // The nodes are the same, so the wires are connected, no need of inserting a navigation in between.
+        saving_permutation_4.nodes.insert(saving_permutation_4.nodes.end(), _R_tours_array[_j].nodes.rbegin()-2, _R_tours_array[_j].nodes.rend()+1);
+    } else {
+        saving_permutation_4.nodes.insert(saving_permutation_4.nodes.end(), _R_tours_array[_j].nodes.rbegin()-1, _R_tours_array[_j].nodes.rend()+1);
+    }
+    calculateSaving(saving_permutation_4, _R_tours_array);
+    saving_permutations.push_back(saving_permutation_4);
+
+    // From _j straight to _i straight:
+    Saving saving_permutation_5 = _saving_input;
+    saving_permutation_5.nodes.insert(saving_permutation_5.nodes.end(), _R_tours_array[_j].nodes.begin()+1, _R_tours_array[_j].nodes.end()-1);
+    if (_R_tours_array[_j].nodes[_R_tours_array[_j].nodes.size()-2] == _R_tours_array[_i].nodes[1]) {       // The nodes are the same, so the wires are connected, no need of inserting a navigation in between.
+        saving_permutation_5.nodes.insert(saving_permutation_5.nodes.end(), _R_tours_array[_i].nodes.begin()+2, _R_tours_array[_i].nodes.end()-1);
+    } else {
+        saving_permutation_5.nodes.insert(saving_permutation_5.nodes.end(), _R_tours_array[_i].nodes.begin()+1, _R_tours_array[_i].nodes.end()-1);
+    }
+    calculateSaving(saving_permutation_5, _R_tours_array);
+    saving_permutations.push_back(saving_permutation_5);
+
+    // From _j straight to _i reversed:
+    Saving saving_permutation_6 = _saving_input;
+    saving_permutation_6.nodes.insert(saving_permutation_6.nodes.end(), _R_tours_array[_j].nodes.begin()+1, _R_tours_array[_j].nodes.end()-1);
+    if (_R_tours_array[_j].nodes[_R_tours_array[_j].nodes.size()-2] == _R_tours_array[_i].nodes[_R_tours_array[_i].nodes.size()-2]) {       // The nodes are the same, so the wires are connected, no need of inserting a navigation in between.
+        saving_permutation_6.nodes.insert(saving_permutation_6.nodes.end(), _R_tours_array[_i].nodes.rbegin()-2, _R_tours_array[_i].nodes.rend()+1);
+    } else {
+        saving_permutation_6.nodes.insert(saving_permutation_6.nodes.end(), _R_tours_array[_i].nodes.rbegin()-1, _R_tours_array[_i].nodes.rend()+1);
+    }
+    calculateSaving(saving_permutation_6, _R_tours_array);
+    saving_permutations.push_back(saving_permutation_6);
+
+    // From _j reversed to _i straight:
+    Saving saving_permutation_7 = _saving_input;
+    saving_permutation_7.nodes.insert(saving_permutation_7.nodes.end(), _R_tours_array[_j].nodes.rbegin()-1, _R_tours_array[_j].nodes.rend()+1);
+    if (_R_tours_array[_j].nodes[1] == _R_tours_array[_i].nodes[1]) {       // The nodes are the same, so the wires are connected, no need of inserting a navigation in between.
+        saving_permutation_7.nodes.insert(saving_permutation_7.nodes.end(), _R_tours_array[_i].nodes.begin()+2, _R_tours_array[_i].nodes.end()-1);
+    } else {
+        saving_permutation_7.nodes.insert(saving_permutation_7.nodes.end(), _R_tours_array[_i].nodes.begin()+1, _R_tours_array[_i].nodes.end()-1);
+    }
+    calculateSaving(saving_permutation_7, _R_tours_array);
+    saving_permutations.push_back(saving_permutation_7);
+
+    // From _j reversed to _i reversed:
+    Saving saving_permutation_8 = _saving_input;
+    saving_permutation_8.nodes.insert(saving_permutation_8.nodes.end(), _R_tours_array[_j].nodes.rbegin()-1, _R_tours_array[_j].nodes.rend()+1);
+    if (_R_tours_array[_j].nodes[1] == _R_tours_array[_i].nodes[_R_tours_array[_i].nodes.size()-2]) {       // The nodes are the same, so the wires are connected, no need of inserting a navigation in between.
+        saving_permutation_8.nodes.insert(saving_permutation_8.nodes.end(), _R_tours_array[_i].nodes.rbegin()-2, _R_tours_array[_i].nodes.rend()+1);
+    } else {
+        saving_permutation_8.nodes.insert(saving_permutation_8.nodes.end(), _R_tours_array[_i].nodes.rbegin()-1, _R_tours_array[_i].nodes.rend()+1);
+    }
+    calculateSaving(saving_permutation_8, _R_tours_array);
+    saving_permutations.push_back(saving_permutation_8);
+
+
+    // Calculate the permutation with the most saving and return it:
+    float best_saving_value = -1;
+    int best_saving_index = -1;
+    for (int i=0; i<saving_permutations.size(); i++) {
+        if (saving_permutations[i].saving > best_saving_value) {
+            best_saving_value = saving_permutations[i].saving;
+            best_saving_index = i;
+        }
+    }
+    return saving_permutations[best_saving_index];
+
+} // end bestSavingPermutation
+
+
+void CentralizedPlanner::calculateSaving(Saving& _saving, const std::vector<Tour>& _R_tours_array) {
+
+    int first_node;
+    int last_node;
+    _saving.cost = 0;
+    _saving.demand = 0;
+
+    _saving.cost += nearestGraphNodeUAVInitialPosition(_saving.nodes.front(), first_node, _saving.uav_id);
+    for (int i=0; i<_saving.nodes.size()-1; i++) {
+        _saving.cost += time_cost_matrices_[_saving.uav_id][_saving.nodes[i]][_saving.nodes[i+1]];
+    }
+    _saving.cost += nearestGraphNodeLandStation(_saving.nodes.back(), last_node, _saving.uav_id);
+
+    _saving.nodes.insert(_saving.nodes.begin(), first_node);
+    _saving.nodes.push_back(last_node);
+
+    for (int i=0; i<_saving.nodes.size()-1; i++) {
+        _saving.demand += battery_drop_matrices_[_saving.uav_id][_saving.nodes[i]][_saving.nodes[i+1]];
+    }
+
+    _saving.saving = _R_tours_array[ findTourIndexById(_saving.tour_id_1, _R_tours_array) ].cost + _R_tours_array[ findTourIndexById(_saving.tour_id_2, _R_tours_array) ].cost - _saving.cost;
+
+} // end calculateSaving
 
 
 float CentralizedPlanner::solutionTimeCost(std::vector<aerialcore_msgs::FlightPlan> _flight_plans) {
@@ -1196,9 +1568,6 @@ void CentralizedPlanner::fillFlightPlansFields(std::vector<aerialcore_msgs::Flig
             pose_to_insert.pose.position.z = graph_[ _flight_plans[i].nodes[j] ].altitude - map_origin_geo_.altitude + graph_[ _flight_plans[i].nodes[j] ].z;;
             _flight_plans[i].poses.push_back(pose_to_insert);
 
-std::cout << "_flight_plans[i].poses.back().pose.position.x = " << _flight_plans[i].poses.back().pose.position.x << std::endl << std::endl;
-std::cout << "_flight_plans[i].poses.back().pose.position.y = " << _flight_plans[i].poses.back().pose.position.y << std::endl << std::endl;
-
             // Fill the type of pose:
             if (j==0) {     // The first node, aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION, can be on the air or not:
                 if (UAVs_[ findUavIndexById(_flight_plans[i].uav_id) ].flying_or_landed_initially) {
@@ -1269,6 +1638,42 @@ std::cout << "_flight_plans[i].poses.back().pose.position.y = " << _flight_plans
     }
 
 } // end fillFlightPlansFields
+
+
+std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::buildFlightPlansFromTours(const std::vector<Tour>& _R_tours_array) {
+    std::vector<aerialcore_msgs::FlightPlan> flight_plans;
+
+    for (int i=0; i<_R_tours_array.size(); i++) {
+        aerialcore_msgs::FlightPlan current_flight_plan;
+        current_flight_plan.uav_id = _R_tours_array[i].uav_id;
+        for (int j=0; j<_R_tours_array[i].nodes.size(); j++) {
+            current_flight_plan.nodes.push_back(_R_tours_array[i].nodes[j]);
+        }
+        flight_plans.push_back(current_flight_plan);
+    }
+
+    fillFlightPlansFields(flight_plans);
+
+    return flight_plans;
+} // buildFlightPlansFromTours
+
+
+// Types of UAVs are calculated by appending their technical specifications:
+std::string CentralizedPlanner::uavTypeStringByIndex(int _uav_index) {
+    std::string uav_type;
+    uav_type.append(std::to_string( UAVs_[_uav_index].speed_xy ).c_str());
+    uav_type.append(std::to_string( UAVs_[_uav_index].speed_z_down ).c_str());
+    uav_type.append(std::to_string( UAVs_[_uav_index].speed_z_up ).c_str());
+    uav_type.append(std::to_string( UAVs_[_uav_index].minimum_battery ).c_str());
+    uav_type.append(std::to_string( UAVs_[_uav_index].time_until_fully_charged ).c_str());
+    uav_type.append(std::to_string( UAVs_[_uav_index].time_max_flying ).c_str());
+    return uav_type;
+} // uavTypeStringByIndex
+
+
+std::string CentralizedPlanner::uavTypeStringById(int _uav_id) {
+    return uavTypeStringByIndex( findUavIndexById(_uav_id) );
+} // uavTypeStringById
 
 
 } // end namespace aerialcore
