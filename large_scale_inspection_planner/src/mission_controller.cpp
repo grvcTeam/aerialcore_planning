@@ -345,6 +345,7 @@ void MissionController::parameterEstimatorThread(void) {
 
 // Plan thread:
 void MissionController::planThread(void) {
+
     std::vector<aerialcore_msgs::GraphNode> planner_current_graph;
 
     ros::Rate loop_rate(1.0/plan_monitor_time_);        // [Hz, inverse of seconds]
@@ -409,22 +410,37 @@ void MissionController::planThread(void) {
             }
         }
 
-#ifdef DEBUG
-        printCurrentGraph();
-#endif
-
-        // Wait until the parameter_estimator_ calculate the matrices:
-        while (parameter_estimator_.getTimeCostMatrices().size()==0 && ros::ok()) {
+        // Wait until the parameter_estimator_ calculate the matrices and it calculates the costs of the initial UAVs:
+        bool sleep_flag;
+        do {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        }
+
+            sleep_flag = false;
+            if (parameter_estimator_.getTimeCostMatrices().size()==0) {
+                sleep_flag = true;
+            } else {
+                for (int i=0; i<planner_current_graph.size(); i++) {
+                    if (planner_current_graph[i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && parameter_estimator_.getTimeCostMatrices().at( planner_current_graph[i].id ).count( i )==0) {
+                        sleep_flag = true;
+                        break;
+                    }
+                }
+            }
+        } while (sleep_flag);
 
         bool plan_from_scratch = flight_plans_.size()==0;
         bool replan = false;
         if (!plan_from_scratch) {
+            std::cout << "Start the Plan Monitor enoughDeviationToReplan check." << std::endl;
             replan = plan_monitor_.enoughDeviationToReplan(planner_current_graph, flight_plans_, drone_info, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
+            std::cout << "Plan Monitor enoughDeviationToReplan ended = " << replan << std::endl;
         }
 
         if (plan_from_scratch || replan) {
+
+#ifdef DEBUG
+            printCurrentGraph();
+#endif
 
             // Calculate the solution with computation time:
 

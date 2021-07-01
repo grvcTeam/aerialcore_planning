@@ -75,7 +75,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
     }
 
     constructUAVs(_drone_info);
-    constructEdges(_graph);
+    // constructEdges(_graph);
 
     // Construct connection_edges_:
     for (int i=0; i<graph_.size(); i++) {
@@ -153,8 +153,9 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
             if (index_graph_of_next_pylon == -1) { // No next pylon connected with unserved edges, search pylons not connected to this one.
                 int index_pylon_connected_with_unserved_edge;
                 nearestGraphNodePylon(current_flight_plan.nodes.back(), index_graph_of_next_pylon, current_uav.id);
-                if (index_graph_of_next_pylon == -1) break; // No next pylon at all with unserved edges.
-                else {  // Pylon has edges unserved connected.
+                if (index_graph_of_next_pylon == -1) {
+                    break; // No next pylon at all with unserved edges.
+                } else {   // Pylon has edges unserved connected.
                     mostRewardedPylon(index_graph_of_next_pylon, index_pylon_connected_with_unserved_edge, index_edge_to_erase, current_uav.id);
                     nearestGraphNodeLandStation(index_pylon_connected_with_unserved_edge, index_graph_land_station_from_next_pylon, current_uav.id);
                     if ( (index_pylon_connected_with_unserved_edge!=-1) && (index_graph_land_station_from_next_pylon!=-1) && (battery
@@ -360,7 +361,7 @@ float CentralizedPlanner::mostRewardedPylon(int _initial_pylon_index, int& _inde
             continue;
         }
 
-        float current_time_cost = time_cost_matrices_[_uav_id][ _initial_pylon_index ][ i ];
+        float current_time_cost = time_cost_matrices_[_uav_id][ _initial_pylon_index ][ current_connection_index ];
         if (current_time_cost <= 0.001) continue;     // It's the same graph node or path not found, ignore and continue.
 
         if ( time_cost < current_time_cost ) {
@@ -1604,6 +1605,11 @@ void CentralizedPlanner::fillFlightPlansFields(std::vector<aerialcore_msgs::Flig
                 std::cout << "test_point_2.longitude = " << test_point_2.longitude << std::endl;
                 std::cout << "test_point_2.altitude  = " << test_point_2.altitude << std::endl;
 # endif
+
+                if (graph_[ _flight_plans[i].nodes[j+1] ].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION || graph_[ _flight_plans[i].nodes[j+1] ].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION) {
+                    test_point_2.altitude  = test_point_1.altitude;
+                }
+
                 std::vector<geographic_msgs::GeoPoint> path = path_planner_.getPathWithRelativeAltitude(test_point_1, test_point_2, map_origin_geo_.altitude);
                 int path_size = path.size();    // If not like this .size() treated as unsigned int and can't be negative.
 

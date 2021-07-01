@@ -47,7 +47,7 @@ private:
     std::map<int, std::map<int, std::map<int, float> > > time_cost_matrices_;      // One square symetrical matrix for each UAV (map by id and by graph nodes indexes). The elements are the time (in seconds) to cover that edge, if the edge doesn't make sense or there is no connection possible then the value is -1.
     std::map<int, std::map<int, std::map<int, float> > > battery_drop_matrices_;   // One square non-symetrical matrix for each UAV (map by id and by graph nodes indexes). The elements are the battery drop (per unit, not %) to cover that edge, if the edge doesn't make sense or there is no connection possible then the value is -1.
 
-    std::vector<float> nodes_indexes_in_order_;
+    std::vector<int> nodes_indexes_in_order_;
 
     grvc::PathPlanner path_planner_;
 
