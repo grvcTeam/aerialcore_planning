@@ -43,8 +43,8 @@ CentralizedPlanner::~CentralizedPlanner() {}
 std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices) {
 
     graph_.clear();
-    connection_edges_.clear();
     edges_.clear();
+    connection_edges_.clear();
     flight_plans_.clear();
     time_cost_matrices_.clear();
     battery_drop_matrices_.clear();
@@ -75,19 +75,8 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
     }
 
     constructUAVs(_drone_info);
+    constructConnectionEdges(_graph);
     // constructEdges(_graph);
-
-    // Construct connection_edges_:
-    for (int i=0; i<graph_.size(); i++) {
-        if (graph_[i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
-            for (int j=0; j<graph_[i].connections_indexes.size(); j++) {
-                if (i < graph_[i].connections_indexes[j]) {
-                    std::pair <int,int> current_edge (i, graph_[i].connections_indexes[j]);
-                    connection_edges_.push_back(current_edge);
-                }
-            }
-        }
-    }
 
     for (const UAV& current_uav : UAVs_) {
 
@@ -403,6 +392,26 @@ void CentralizedPlanner::printPlan() {
         }
     }
     std::cout << std::endl;
+
+    std::cout << "Planner's results:" << std::endl;
+    float total_time_cost = 0;
+    float total_battery_cost = 0;
+    for (int i=0; i<flight_plans_.size(); i++) {
+        std::cout << "flight_plans[ " << i << " ].uav_id       = " << flight_plans_[i].uav_id << std::endl;
+        float time_cost = 0;
+        float battery_cost = 0;
+        for (int j=0; j<flight_plans_[i].nodes.size()-1; j++) {
+            time_cost += time_cost_matrices_[flight_plans_[i].uav_id][ flight_plans_[i].nodes[j] ][ flight_plans_[i].nodes[j+1] ];
+            battery_cost += battery_drop_matrices_[flight_plans_[i].uav_id][ flight_plans_[i].nodes[j] ][ flight_plans_[i].nodes[j+1] ];
+        }
+        std::cout << "flight_plans[ " << i << " ].time_cost    = " << time_cost << std::endl;
+        std::cout << "flight_plans[ " << i << " ].battery_cost = " << battery_cost << std::endl;
+        total_time_cost += time_cost;
+        total_battery_cost += battery_cost;
+    }
+    std::cout << "Total plan time cost:    " << total_time_cost << std::endl;
+    std::cout << "Total plan battery cost: " << total_battery_cost << std::endl;
+    std::cout << "UAVs involved:           " << flight_plans_.size() << std::endl << std::endl;
 } // end printPlan method
 
 
@@ -1143,6 +1152,22 @@ void CentralizedPlanner::constructEdges(std::vector<aerialcore_msgs::GraphNode>&
 } // end constructEdges
 
 
+void CentralizedPlanner::constructConnectionEdges(const std::vector<aerialcore_msgs::GraphNode>& _graph) {
+    // Construct connection_edges_:
+    connection_edges_.clear();
+    for (int i=0; i<_graph.size(); i++) {
+        if (_graph[i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
+            for (int j=0; j<_graph[i].connections_indexes.size(); j++) {
+                if (i < _graph[i].connections_indexes[j]) {
+                    std::pair <int,int> current_edge (i, _graph[i].connections_indexes[j]);
+                    connection_edges_.push_back(current_edge);
+                }
+            }
+        }
+    }
+} // end constructConnectionEdges
+
+
 int CentralizedPlanner::findUavIndexById(int _UAV_id) {
     int uav_index = -1;
     for (int i=0; i<UAVs_.size(); i++) {
@@ -1165,9 +1190,6 @@ int CentralizedPlanner::findTourIndexById(int _tour_id, const std::vector<Tour>&
             tour_index = i;
             break;
         }
-    }
-    if (tour_index == -1) {
-        ROS_ERROR("Centralized Planner: tour id=%d provided not found on the Mission Controller.", _tour_id);
     }
     return tour_index;
 } // end findTourIndexById
@@ -1224,7 +1246,8 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMEM(std::vec
     }
 
     constructUAVs(_drone_info);
-    constructEdges(_graph);
+    constructConnectionEdges(_graph);
+    // constructEdges(_graph);
 
     // MEM algorithm (Agarwal, Line Coverage with Multiple Robots, ICRA 2020):
     // Modified for accepting heterogeneous fleet of UAVs.
@@ -1291,16 +1314,38 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMEM(std::vec
                 Saving new_saving;
                 new_saving.tour_id_1 = R_tours_array[i].tour_id;
                 new_saving.tour_id_2 = R_tours_array[j].tour_id;
-                new_saving.tour_id   = latest_tour_id++;
 
                 Saving best_saving = bestSavingPermutation(new_saving, i, j, R_tours_array);
-                if (best_saving.saving >= 0 && UAVs_[best_saving.uav_id].initial_battery-best_saving.demand>=UAVs_[best_saving.uav_id].minimum_battery) {   // Only insert the saving if it actually saves cost and the battery is enough.
+                if (best_saving.saving >= 0 && UAVs_[ findUavIndexById(best_saving.uav_id) ].initial_battery-best_saving.demand>=UAVs_[ findUavIndexById(best_saving.uav_id) ].minimum_battery) {   // Only insert the saving if it actually saves cost and the battery is enough.
                     S_savings.push_back(best_saving);
                 }
 
             }
         }
     }
+
+# ifdef DEBUG
+    for (int i=0; i<R_tours_array.size(); i++) {
+        std::cout << "R_tours_array["<< i <<"].cost     = " << R_tours_array[i].cost << std::endl;
+        std::cout << "R_tours_array["<< i <<"].demand   = " << R_tours_array[i].demand << std::endl;
+        std::cout << "R_tours_array["<< i <<"].tour_id  = " << R_tours_array[i].tour_id << std::endl;
+        std::cout << "R_tours_array["<< i <<"].uav_id   = " << R_tours_array[i].uav_id << std::endl;
+        for (int j=0; j<R_tours_array[i].nodes.size(); j++) {
+            std::cout << "R_tours_array["<< i <<"].nodes["<< j << "] = " << R_tours_array[i].nodes[j] << std::endl;
+        }
+    }
+    for (int i=0; i<S_savings.size(); i++) {
+        std::cout << "S_savings["<< i <<"].cost      = " << S_savings[i].cost << std::endl;
+        std::cout << "S_savings["<< i <<"].demand    = " << S_savings[i].demand << std::endl;
+        std::cout << "S_savings["<< i <<"].uav_id    = " << S_savings[i].uav_id << std::endl;
+        std::cout << "S_savings["<< i <<"].saving    = " << S_savings[i].saving << std::endl;
+        std::cout << "S_savings["<< i <<"].tour_id_1 = " << S_savings[i].tour_id_1 << std::endl;
+        std::cout << "S_savings["<< i <<"].tour_id_2 = " << S_savings[i].tour_id_2 << std::endl;
+        for (int j=0; j<S_savings[i].nodes.size(); j++) {
+            std::cout << "S_savings["<< i <<"].nodes["<< j << "] = " << S_savings[i].nodes[j] << std::endl;
+        }
+    }
+# endif
 
     // Repeated Merge and Embed:
     while (S_savings.size()>0) {
@@ -1326,7 +1371,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMEM(std::vec
         best_tour.nodes = best_saving.nodes;
         best_tour.cost = best_saving.cost;
         best_tour.demand = best_saving.demand;
-        best_tour.tour_id = best_saving.tour_id;
+        best_tour.tour_id = latest_tour_id++;
         best_tour.uav_id = best_saving.uav_id;
         R_tours_array.push_back(best_tour);
 
@@ -1338,12 +1383,12 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMEM(std::vec
         int last_tour_index = R_tours_array.size()-1;
         for (int i=0; i<R_tours_array.size()-1; i++) {  // Don't iterate the last tour element (doesn't make sense to calculate the saving embeding it with itself).
             Saving new_saving;
-            new_saving.tour_id_1 = R_tours_array[last_tour_index].tour_id;
-            new_saving.tour_id_2 = R_tours_array[i].tour_id;
-            new_saving.tour_id   = latest_tour_id++;
+            new_saving.tour_id_1 = R_tours_array[i].tour_id;
+            new_saving.tour_id_2 = R_tours_array[last_tour_index].tour_id;
 
-            Saving best_new_saving = bestSavingPermutation(new_saving, last_tour_index, i, R_tours_array);
-            if (best_new_saving.saving >= 0 && UAVs_[best_new_saving.uav_id].initial_battery-best_new_saving.demand>=UAVs_[best_new_saving.uav_id].minimum_battery) {   // Only insert the saving if it actually saves cost and the battery is enough.
+            Saving best_new_saving = bestSavingPermutation(new_saving, i, last_tour_index, R_tours_array);
+
+            if (best_new_saving.saving >= 0 && UAVs_[ findUavIndexById(best_new_saving.uav_id) ].initial_battery-best_new_saving.demand>=UAVs_[ findUavIndexById(best_new_saving.uav_id) ].minimum_battery) {   // Only insert the saving if it actually saves cost and the battery is enough.
                 S_savings.push_back(best_new_saving);
             }
         }
@@ -1361,105 +1406,159 @@ CentralizedPlanner::Saving CentralizedPlanner::bestSavingPermutation(const Savin
 
     std::vector<Saving> saving_permutations;
 
+    std::vector<int> aux_nodes_i, aux_nodes_j;  // vector of nodes without the first and last ones.
+    for (int i=1; i<_R_tours_array[_i].nodes.size()-1; i++) {
+        aux_nodes_i.push_back( _R_tours_array[_i].nodes[i] );
+    }
+    for (int i=1; i<_R_tours_array[_j].nodes.size()-1; i++) {
+        aux_nodes_j.push_back( _R_tours_array[_j].nodes[i] );
+    }
+
     // From _i straight to _j straight:
     Saving saving_permutation_1 = _saving_input;
-    saving_permutation_1.nodes.insert(saving_permutation_1.nodes.end(), _R_tours_array[_i].nodes.begin()+1, _R_tours_array[_i].nodes.end()-1);
-    if (_R_tours_array[_i].nodes[_R_tours_array[_i].nodes.size()-2] == _R_tours_array[_j].nodes[1]) {       // The nodes are the same, so the wires are connected, no need of inserting a navigation in between.
-        saving_permutation_1.nodes.insert(saving_permutation_1.nodes.end(), _R_tours_array[_j].nodes.begin()+2, _R_tours_array[_j].nodes.end()-1);
-    } else {
-        saving_permutation_1.nodes.insert(saving_permutation_1.nodes.end(), _R_tours_array[_j].nodes.begin()+1, _R_tours_array[_j].nodes.end()-1);
+    saving_permutation_1.nodes.clear();
+    saving_permutation_1.nodes.insert(saving_permutation_1.nodes.end(), aux_nodes_i.begin(), aux_nodes_i.end());
+    saving_permutation_1.nodes.insert(saving_permutation_1.nodes.end(), aux_nodes_j.begin(), aux_nodes_j.end());
+    for (int i=0; i<saving_permutation_1.nodes.size()-1; i++) {
+        if (saving_permutation_1.nodes[i]==saving_permutation_1.nodes[i+1]) {
+            saving_permutation_1.nodes.erase( saving_permutation_1.nodes.begin() + i );
+            break;
+        }
     }
     calculateSaving(saving_permutation_1, _R_tours_array);
     saving_permutations.push_back(saving_permutation_1);
 
     // From _i straight to _j reversed:
     Saving saving_permutation_2 = _saving_input;
-    saving_permutation_2.nodes.insert(saving_permutation_2.nodes.end(), _R_tours_array[_i].nodes.begin()+1, _R_tours_array[_i].nodes.end()-1);
-    if (_R_tours_array[_i].nodes[_R_tours_array[_i].nodes.size()-2] == _R_tours_array[_j].nodes[_R_tours_array[_j].nodes.size()-2]) {       // The nodes are the same, so the wires are connected, no need of inserting a navigation in between.
-        saving_permutation_2.nodes.insert(saving_permutation_2.nodes.end(), _R_tours_array[_j].nodes.rbegin()-2, _R_tours_array[_j].nodes.rend()+1);
-    } else {
-        saving_permutation_2.nodes.insert(saving_permutation_2.nodes.end(), _R_tours_array[_j].nodes.rbegin()-1, _R_tours_array[_j].nodes.rend()+1);
+    saving_permutation_2.nodes.clear();
+    saving_permutation_2.nodes.insert(saving_permutation_2.nodes.end(), aux_nodes_i.begin(), aux_nodes_i.end());
+    saving_permutation_2.nodes.insert(saving_permutation_2.nodes.end(), aux_nodes_j.rbegin(), aux_nodes_j.rend());
+    for (int i=0; i<saving_permutation_2.nodes.size()-1; i++) {
+        if (saving_permutation_2.nodes[i]==saving_permutation_2.nodes[i+1]) {
+            saving_permutation_2.nodes.erase( saving_permutation_2.nodes.begin() + i );
+            break;
+        }
     }
     calculateSaving(saving_permutation_2, _R_tours_array);
     saving_permutations.push_back(saving_permutation_2);
 
-    // From _i reversed to _j straight:
+    // From _i reversed to _j straight HERERBEGIN:
     Saving saving_permutation_3 = _saving_input;
-    saving_permutation_3.nodes.insert(saving_permutation_3.nodes.end(), _R_tours_array[_i].nodes.rbegin()-1, _R_tours_array[_i].nodes.rend()+1);
-    if (_R_tours_array[_i].nodes[1] == _R_tours_array[_j].nodes[1]) {       // The nodes are the same, so the wires are connected, no need of inserting a navigation in between.
-        saving_permutation_3.nodes.insert(saving_permutation_3.nodes.end(), _R_tours_array[_j].nodes.begin()+2, _R_tours_array[_j].nodes.end()-1);
-    } else {
-        saving_permutation_3.nodes.insert(saving_permutation_3.nodes.end(), _R_tours_array[_j].nodes.begin()+1, _R_tours_array[_j].nodes.end()-1);
+    saving_permutation_3.nodes.clear();
+    saving_permutation_3.nodes.insert(saving_permutation_3.nodes.end(), aux_nodes_i.rbegin(), aux_nodes_i.rend());
+    saving_permutation_3.nodes.insert(saving_permutation_3.nodes.end(), aux_nodes_j.begin(), aux_nodes_j.end());
+    for (int i=0; i<saving_permutation_3.nodes.size()-1; i++) {
+        if (saving_permutation_3.nodes[i]==saving_permutation_3.nodes[i+1]) {
+            saving_permutation_3.nodes.erase( saving_permutation_3.nodes.begin() + i );
+            break;
+        }
     }
     calculateSaving(saving_permutation_3, _R_tours_array);
     saving_permutations.push_back(saving_permutation_3);
 
-    // From _i reversed to _j reversed:
+    // From _i reversed to _j reversed HERERBEGIN:
     Saving saving_permutation_4 = _saving_input;
-    saving_permutation_4.nodes.insert(saving_permutation_4.nodes.end(), _R_tours_array[_i].nodes.rbegin()-1, _R_tours_array[_i].nodes.rend()+1);
-    if (_R_tours_array[_i].nodes[1] == _R_tours_array[_j].nodes[_R_tours_array[_j].nodes.size()-2]) {       // The nodes are the same, so the wires are connected, no need of inserting a navigation in between.
-        saving_permutation_4.nodes.insert(saving_permutation_4.nodes.end(), _R_tours_array[_j].nodes.rbegin()-2, _R_tours_array[_j].nodes.rend()+1);
-    } else {
-        saving_permutation_4.nodes.insert(saving_permutation_4.nodes.end(), _R_tours_array[_j].nodes.rbegin()-1, _R_tours_array[_j].nodes.rend()+1);
+    saving_permutation_4.nodes.clear();
+    saving_permutation_4.nodes.insert(saving_permutation_4.nodes.end(), aux_nodes_i.rbegin(), aux_nodes_i.rend());
+    saving_permutation_4.nodes.insert(saving_permutation_4.nodes.end(), aux_nodes_j.rbegin(), aux_nodes_j.rend());
+    for (int i=0; i<saving_permutation_4.nodes.size()-1; i++) {
+        if (saving_permutation_4.nodes[i]==saving_permutation_4.nodes[i+1]) {
+            saving_permutation_4.nodes.erase( saving_permutation_4.nodes.begin() + i );
+            break;
+        }
     }
     calculateSaving(saving_permutation_4, _R_tours_array);
     saving_permutations.push_back(saving_permutation_4);
 
     // From _j straight to _i straight:
     Saving saving_permutation_5 = _saving_input;
-    saving_permutation_5.nodes.insert(saving_permutation_5.nodes.end(), _R_tours_array[_j].nodes.begin()+1, _R_tours_array[_j].nodes.end()-1);
-    if (_R_tours_array[_j].nodes[_R_tours_array[_j].nodes.size()-2] == _R_tours_array[_i].nodes[1]) {       // The nodes are the same, so the wires are connected, no need of inserting a navigation in between.
-        saving_permutation_5.nodes.insert(saving_permutation_5.nodes.end(), _R_tours_array[_i].nodes.begin()+2, _R_tours_array[_i].nodes.end()-1);
-    } else {
-        saving_permutation_5.nodes.insert(saving_permutation_5.nodes.end(), _R_tours_array[_i].nodes.begin()+1, _R_tours_array[_i].nodes.end()-1);
+    saving_permutation_5.nodes.clear();
+    saving_permutation_5.nodes.insert(saving_permutation_5.nodes.end(), aux_nodes_j.begin(), aux_nodes_j.end());
+    saving_permutation_5.nodes.insert(saving_permutation_5.nodes.end(), aux_nodes_i.begin(), aux_nodes_i.end());
+    for (int i=0; i<saving_permutation_5.nodes.size()-1; i++) {
+        if (saving_permutation_5.nodes[i]==saving_permutation_5.nodes[i+1]) {
+            saving_permutation_5.nodes.erase( saving_permutation_5.nodes.begin() + i );
+            break;
+        }
     }
     calculateSaving(saving_permutation_5, _R_tours_array);
     saving_permutations.push_back(saving_permutation_5);
 
     // From _j straight to _i reversed:
     Saving saving_permutation_6 = _saving_input;
-    saving_permutation_6.nodes.insert(saving_permutation_6.nodes.end(), _R_tours_array[_j].nodes.begin()+1, _R_tours_array[_j].nodes.end()-1);
-    if (_R_tours_array[_j].nodes[_R_tours_array[_j].nodes.size()-2] == _R_tours_array[_i].nodes[_R_tours_array[_i].nodes.size()-2]) {       // The nodes are the same, so the wires are connected, no need of inserting a navigation in between.
-        saving_permutation_6.nodes.insert(saving_permutation_6.nodes.end(), _R_tours_array[_i].nodes.rbegin()-2, _R_tours_array[_i].nodes.rend()+1);
-    } else {
-        saving_permutation_6.nodes.insert(saving_permutation_6.nodes.end(), _R_tours_array[_i].nodes.rbegin()-1, _R_tours_array[_i].nodes.rend()+1);
+    saving_permutation_6.nodes.clear();
+    saving_permutation_6.nodes.insert(saving_permutation_6.nodes.end(), aux_nodes_j.begin(), aux_nodes_j.end());
+    saving_permutation_6.nodes.insert(saving_permutation_6.nodes.end(), aux_nodes_i.rbegin(), aux_nodes_i.rend());
+    for (int i=0; i<saving_permutation_6.nodes.size()-1; i++) {
+        if (saving_permutation_6.nodes[i]==saving_permutation_6.nodes[i+1]) {
+            saving_permutation_6.nodes.erase( saving_permutation_6.nodes.begin() + i );
+            break;
+        }
     }
     calculateSaving(saving_permutation_6, _R_tours_array);
     saving_permutations.push_back(saving_permutation_6);
 
-    // From _j reversed to _i straight:
+    // From _j reversed to _i straight HERERBEGIN:
     Saving saving_permutation_7 = _saving_input;
-    saving_permutation_7.nodes.insert(saving_permutation_7.nodes.end(), _R_tours_array[_j].nodes.rbegin()-1, _R_tours_array[_j].nodes.rend()+1);
-    if (_R_tours_array[_j].nodes[1] == _R_tours_array[_i].nodes[1]) {       // The nodes are the same, so the wires are connected, no need of inserting a navigation in between.
-        saving_permutation_7.nodes.insert(saving_permutation_7.nodes.end(), _R_tours_array[_i].nodes.begin()+2, _R_tours_array[_i].nodes.end()-1);
-    } else {
-        saving_permutation_7.nodes.insert(saving_permutation_7.nodes.end(), _R_tours_array[_i].nodes.begin()+1, _R_tours_array[_i].nodes.end()-1);
+    saving_permutation_7.nodes.clear();
+    saving_permutation_7.nodes.insert(saving_permutation_7.nodes.end(), aux_nodes_j.rbegin(), aux_nodes_j.rend());
+    saving_permutation_7.nodes.insert(saving_permutation_7.nodes.end(), aux_nodes_i.begin(), aux_nodes_i.end());
+    for (int i=0; i<saving_permutation_7.nodes.size()-1; i++) {
+        if (saving_permutation_7.nodes[i]==saving_permutation_7.nodes[i+1]) {
+            saving_permutation_7.nodes.erase( saving_permutation_7.nodes.begin() + i );
+            break;
+        }
     }
     calculateSaving(saving_permutation_7, _R_tours_array);
     saving_permutations.push_back(saving_permutation_7);
 
-    // From _j reversed to _i reversed:
+    // From _j reversed to _i reversed HERERBEGIN:
     Saving saving_permutation_8 = _saving_input;
-    saving_permutation_8.nodes.insert(saving_permutation_8.nodes.end(), _R_tours_array[_j].nodes.rbegin()-1, _R_tours_array[_j].nodes.rend()+1);
-    if (_R_tours_array[_j].nodes[1] == _R_tours_array[_i].nodes[_R_tours_array[_i].nodes.size()-2]) {       // The nodes are the same, so the wires are connected, no need of inserting a navigation in between.
-        saving_permutation_8.nodes.insert(saving_permutation_8.nodes.end(), _R_tours_array[_i].nodes.rbegin()-2, _R_tours_array[_i].nodes.rend()+1);
-    } else {
-        saving_permutation_8.nodes.insert(saving_permutation_8.nodes.end(), _R_tours_array[_i].nodes.rbegin()-1, _R_tours_array[_i].nodes.rend()+1);
+    saving_permutation_8.nodes.clear();
+    saving_permutation_8.nodes.insert(saving_permutation_8.nodes.end(), aux_nodes_j.rbegin(), aux_nodes_j.rend());
+    saving_permutation_8.nodes.insert(saving_permutation_8.nodes.end(), aux_nodes_i.rbegin(), aux_nodes_i.rend());
+    for (int i=0; i<saving_permutation_8.nodes.size()-1; i++) {
+        if (saving_permutation_8.nodes[i]==saving_permutation_8.nodes[i+1]) {
+            saving_permutation_8.nodes.erase( saving_permutation_8.nodes.begin() + i );
+            break;
+        }
     }
     calculateSaving(saving_permutation_8, _R_tours_array);
     saving_permutations.push_back(saving_permutation_8);
 
-
     // Calculate the permutation with the most saving and return it:
-    float best_saving_value = -1;
+    float best_saving_value = 0;
     int best_saving_index = -1;
     for (int i=0; i<saving_permutations.size(); i++) {
-        if (saving_permutations[i].saving > best_saving_value) {
+        if (saving_permutations[i].saving >= best_saving_value) {
             best_saving_value = saving_permutations[i].saving;
             best_saving_index = i;
         }
     }
-    return saving_permutations[best_saving_index];
+
+// # ifdef DEBUG
+//     std::cout << "Permutation _R_tours_array[ " << _i << " ]:"<< std::endl;
+//     for (int i=0; i<_R_tours_array[_i].nodes.size(); i++) {
+//         std::cout << _R_tours_array[_i].nodes[i] << std::endl;
+//     }
+//     std::cout << "Permutation _R_tours_array[ " << _j << " ]:"<< std::endl;
+//     for (int i=0; i<_R_tours_array[_j].nodes.size(); i++) {
+//         std::cout << _R_tours_array[_j].nodes[i] << std::endl;
+//     }
+//     std::cout << "Permutation " << i << " " << saving_permutations[i].saving << std::endl;
+//     for (int i=0; i<saving_permutations.size(); i++) {
+//         for (int j=0; j<saving_permutations[i].nodes.size(); j++) {
+//             std::cout << saving_permutations[i].nodes[j] << std::endl;
+//         }
+//     }
+// # endif
+
+    if (best_saving_index!=-1) {
+        return saving_permutations[best_saving_index];
+    } else {
+        Saving emtpy_saving;
+        return emtpy_saving;
+    }
 
 } // end bestSavingPermutation
 
@@ -1596,15 +1695,15 @@ void CentralizedPlanner::fillFlightPlansFields(std::vector<aerialcore_msgs::Flig
             }
 
             if (!path_planner_.checkIfTwoPointsAreVisible(test_point_1, test_point_2)) {
-# ifdef DEBUG
-                printPlan();
-                std::cout << "test_point_1.latitude  = " << test_point_1.latitude << std::endl;
-                std::cout << "test_point_1.longitude = " << test_point_1.longitude << std::endl;
-                std::cout << "test_point_1.altitude  = " << test_point_1.altitude << std::endl;
-                std::cout << "test_point_2.latitude  = " << test_point_2.latitude << std::endl;
-                std::cout << "test_point_2.longitude = " << test_point_2.longitude << std::endl;
-                std::cout << "test_point_2.altitude  = " << test_point_2.altitude << std::endl;
-# endif
+// # ifdef DEBUG
+//                 printPlan();
+//                 std::cout << "test_point_1.latitude  = " << test_point_1.latitude << std::endl;
+//                 std::cout << "test_point_1.longitude = " << test_point_1.longitude << std::endl;
+//                 std::cout << "test_point_1.altitude  = " << test_point_1.altitude << std::endl;
+//                 std::cout << "test_point_2.latitude  = " << test_point_2.latitude << std::endl;
+//                 std::cout << "test_point_2.longitude = " << test_point_2.longitude << std::endl;
+//                 std::cout << "test_point_2.altitude  = " << test_point_2.altitude << std::endl;
+// # endif
 
                 if (graph_[ _flight_plans[i].nodes[j+1] ].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION || graph_[ _flight_plans[i].nodes[j+1] ].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION) {
                     test_point_2.altitude  = test_point_1.altitude;

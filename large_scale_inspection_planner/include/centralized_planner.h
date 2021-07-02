@@ -102,6 +102,7 @@ private:
     geographic_msgs::GeoPoint map_origin_geo_;
 
     void constructUAVs(const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info);
+    void constructConnectionEdges(const std::vector<aerialcore_msgs::GraphNode>& _graph);
     void constructEdges(std::vector<aerialcore_msgs::GraphNode>& _graph);
 
     // Greedy:
@@ -122,7 +123,6 @@ private:
         std::vector<int> nodes;
         float cost;
         float demand;
-
         int tour_id;
         int uav_id;
     };
@@ -131,11 +131,10 @@ private:
         float cost;
         float demand;
 
-        float saving;
+        float saving = -1;   // Will keep this value if empty saving.
         int tour_id_1;
         int tour_id_2;
 
-        int tour_id;
         int uav_id;
     };
 
