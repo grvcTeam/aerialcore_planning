@@ -32,6 +32,15 @@ MissionController::MissionController() {
     map_origin_geo_.longitude = map_origin_geo_vector[1];
     map_origin_geo_.altitude  = map_origin_geo_vector[2];
 
+    std::string ns_uav_prefix = "";
+    ros::param::param<std::string>("~ns_uav_prefix",ns_uav_prefix,"uav_");
+    std::string node_name_space_prefix = "";
+    if (ros::this_node::getNamespace() == "/") {
+        node_name_space_prefix = "/" + ns_uav_prefix;
+    } else {
+        node_name_space_prefix = ns_uav_prefix;
+    }
+
     // Read and construct parameters of the UAVs (from the yaml):
     std::map<std::string, std::string> drones;
     n_.getParam("drones", drones);              // Dictionary of the actual drones used in the simulation (key: UAV id, value: airframe type).
@@ -43,7 +52,8 @@ MissionController::MissionController() {
         UAV new_uav;
         new_uav.id = stoi(it->first);
         new_uav.airframe_type = it->second;
-        new_uav.mission = new grvc::Mission(new_uav.id);
+        std::string UAV_node_name_space = ns_uav_prefix + std::to_string(new_uav.id)+"/";
+        new_uav.mission = new grvc::Mission(new_uav.id, UAV_node_name_space);
         n_.getParam(it->second+"/time_max_flying", new_uav.time_max_flying);
         n_.getParam(it->second+"/speed_xy", new_uav.speed_xy);
         n_.getParam(it->second+"/speed_z_down", new_uav.speed_z_down);
