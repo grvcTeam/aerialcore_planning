@@ -47,6 +47,13 @@ private:
     std::map<int, std::map<int, std::map<int, float> > > time_cost_matrices_;      // One square symetrical matrix for each UAV (map by id and by graph nodes indexes). The elements are the time (in seconds) to cover that edge, if the edge doesn't make sense or there is no connection possible then the value is -1.
     std::map<int, std::map<int, std::map<int, float> > > battery_drop_matrices_;   // One square non-symetrical matrix for each UAV (map by id and by graph nodes indexes). The elements are the battery drop (per unit, not %) to cover that edge, if the edge doesn't make sense or there is no connection possible then the value is -1.
 
+    struct Wps {            // Wps of the path to go from one graph node to the other. Will be useful to correct the battery drop with the wind.
+        std::vector<geometry_msgs::Point32> path;
+        std::vector<float> angle;                   // Angle in radians (axis 0 is the x or East direction) to go to that wp.
+        std::vector<float> distance;                // Distance to go to that wp. All 3 vectors with the same size.
+    };
+    std::map<int, std::map<int, Wps> > paths_matrix_;     // Matrix similar to distance_cost_matrix_, but stores not only the distance but also the path to go from one node to the other.
+
     std::vector<int> nodes_indexes_in_order_;
 
     grvc::PathPlanner path_planner_;
@@ -55,8 +62,8 @@ private:
     std::mutex time_cost_matrices_mutex_;
     std::mutex battery_drop_matrices_mutex_;
 
-    std::string distance_cost_matrix_yaml_path_;
-    bool construct_distance_cost_matrix_ = true;        // Parameter estimator constructs the distance_cost_matrix from the graph and export it to a default yaml file (if true), or swiftly read the last default yaml file of the graph (if false).
+    // std::string distance_cost_matrix_yaml_path_;
+    // bool construct_distance_cost_matrix_ = true;        // Parameter estimator constructs the distance_cost_matrix from the graph and export it to a default yaml file (if true), or swiftly read the last default yaml file of the graph (if false).
 
     struct UAV {
         std::string airframe_type;  // Not the one from the roslaunch (PX4), but the one in the yaml.
@@ -66,6 +73,15 @@ private:
         float speed_z_up;       // Maximum vertical ascent velocity (m/s) of this specific UAV (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)).
 
         float minimum_battery = 0.2;    // Battery in parts per unit (not percentage or %) considered fully discharged. LiPo batteries should never discharge to less than 20% or else the life span (number of charge/discharge cycles) will be dramatically reduced.
+
+        float takeoff_climb_speed;              // Climb speed (m/s) during takeoff. Only for multicopter and VTOL.
+        float landing_descend_speed;            // Descend speed (m/s) during takeoff. Only for multicopter and VTOL.
+        int time_delay_between_wps;             // Each time the UAV pass by a waypoint, it slowsdown and have to maneuver a little. This is the delay estimation of that.
+        int hardcoded_takeoff_landing_height;   // Only multicopters in mission flight mode. Takeoff and land to a hardcoded height (in meters).
+        int time_delay_landing;                 // Only for fixed wing. Estimation of how much time it takes to land a fixed wing.
+        int time_delay_start_transition;        // Only for VTOL. Time delay because of the transition from MC to VTOL modes.
+        int time_delay_end_transition;          // Only for VTOL. Time delay because of the transition from VTOL to MC modes.
+
         int time_until_fully_charged;   // Used for battery charge time estimation, time expected to charge completely the batteries in the charging pad from discharge state.
 
         int time_max_flying;  // Used for battery drop estimation, this is the estimated maximum flying time (in seconds) of this specific UAV before the drone runs out of battery.

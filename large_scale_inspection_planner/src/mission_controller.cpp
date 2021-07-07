@@ -535,11 +535,27 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
 
                 } else if (flight_plans_for_current_uav.type[i] == aerialcore_msgs::FlightPlan::TYPE_LAND_WP) {
                     if (UAVs_[current_uav_index].mission->airframeType() == grvc::AirframeType::FIXED_WING) {
-                        geometry_msgs::PoseStamped loiter_to_alt_start_landing_pose_pose_stamped;
-                        loiter_to_alt_start_landing_pose_pose_stamped.pose.position.x = pass_poses.back().pose.position.x;
-                        loiter_to_alt_start_landing_pose_pose_stamped.pose.position.y = pass_poses.back().pose.position.y;
-                        loiter_to_alt_start_landing_pose_pose_stamped.pose.position.z = pass_poses.back().pose.position.z;
-                        UAVs_[current_uav_index].mission->addLandWp(loiter_to_alt_start_landing_pose_pose_stamped, current_pose_stamped);
+
+                        // PX4 gives error "adjust landing approach" if the last wp previous to the landing isn't appropriate. So calculate a previous wp to the landing that is at a distance of 200 meters minimum (300 prefered) of the landing spot and 15 meters height.
+                        geometry_msgs::PoseStamped wp_previous_to_landing_1, wp_previous_to_landing_2;
+
+                        float runway_heading;
+                        n_.param<float>("runway_heading", runway_heading, 0);
+
+                        wp_previous_to_landing_1.pose.position.x = current_pose_stamped.pose.position.x + cos(runway_heading * M_PI/180) * 300;
+                        wp_previous_to_landing_1.pose.position.y = current_pose_stamped.pose.position.y + sin(runway_heading * M_PI/180) * 300;
+                        wp_previous_to_landing_1.pose.position.z = current_pose_stamped.pose.position.z + 15;
+
+                        wp_previous_to_landing_2.pose.position.x = current_pose_stamped.pose.position.x - cos(runway_heading * M_PI/180) * 300;
+                        wp_previous_to_landing_2.pose.position.y = current_pose_stamped.pose.position.y - sin(runway_heading * M_PI/180) * 300;
+                        wp_previous_to_landing_2.pose.position.z = current_pose_stamped.pose.position.z + 15;
+
+                        if ( sqrt( pow(wp_previous_to_landing_1.pose.position.x - pass_poses.back().pose.position.x,2) + pow(wp_previous_to_landing_1.pose.position.y - pass_poses.back().pose.position.y,2) ) < sqrt( pow(wp_previous_to_landing_2.pose.position.x - pass_poses.back().pose.position.x,2) + pow(wp_previous_to_landing_2.pose.position.y - pass_poses.back().pose.position.y,2) ) ) {
+                            UAVs_[current_uav_index].mission->addLandWp(wp_previous_to_landing_1, current_pose_stamped);
+                        } else {
+                            UAVs_[current_uav_index].mission->addLandWp(wp_previous_to_landing_2, current_pose_stamped);
+                        }
+
                     } else {
                         UAVs_[current_uav_index].mission->addLandWp(current_pose_stamped);
                     }

@@ -71,11 +71,11 @@
 
     <!-- If construct_distance_cost_matrix is true, the Parameter Estimator will construct the distance_cost_matrix from the graph and export it to a yaml file
     given in the path distance_cost_matrix_yaml_path. If construct_distance_cost_matrix is false then the last yaml file is loaded to save some computing time. -->
-    <arg name="construct_distance_cost_matrix" default="true"/>
+    <!-- <arg name="construct_distance_cost_matrix" default="true"/>
     <arg name="distance_cost_matrix_yaml_path" default="$(find large_scale_inspection_planner)/config/distance_cost_matrix.yaml"/>
     <group if="$(eval arg('construct_distance_cost_matrix') ==false)">
         <rosparam file="$(arg distance_cost_matrix_yaml_path)" command="load" />
-    </group>
+    </group> -->
 
     <!-- Parameters for the mission_lib. -->
     <arg name="pose_frame_id" default="map"/>
@@ -89,8 +89,8 @@
 		<rosparam param="home_pose_parent_frame" subst_value="true">$(arg home_pose_parent_frame)</rosparam>
 		<rosparam param="ns_uav_prefix" subst_value="true">$(arg ns_uav_prefix)</rosparam>
 
-		<rosparam param="construct_distance_cost_matrix" subst_value="true">$(arg construct_distance_cost_matrix)</rosparam>
-		<rosparam param="distance_cost_matrix_yaml_path" subst_value="true">$(arg distance_cost_matrix_yaml_path)</rosparam>
+		<!-- <rosparam param="construct_distance_cost_matrix" subst_value="true">$(arg construct_distance_cost_matrix)</rosparam>
+		<rosparam param="distance_cost_matrix_yaml_path" subst_value="true">$(arg distance_cost_matrix_yaml_path)</rosparam> -->
 	</node>
 
 </launch>

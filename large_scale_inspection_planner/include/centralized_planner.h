@@ -45,11 +45,11 @@ public:
     // _drone_info it's a vector of tuples, each tuple with 10 elements. The first in the tuple is the initial battery, and so on with all the elements in the "UAV" structure defined here below.
 
     // TODO:
-    // 1) Agarwal: Merge-Embed-Merge algorithm
-    // 1) VNS CTU
-    // 3) Dubins for navigations with VTOL or fixed wing, may be needed navigations between non-parallel inspection edges.
-    // 4) Compare with similar problems (maybe ask for the code or just do it myself)
-    // 5) Online
+    // 1) Agarwal: Merge-Embed-Merge algorithm (DONE)
+    // 2) Online replanning
+    // 3) VNS CTU
+    // 4) Dubins for navigations with VTOL or fixed wing, may be needed navigations between non-parallel inspection edges.
+    // 5) Compare with similar problems (maybe ask for the code or just do it myself)
     // 6) Wind adapt
     // 7) Problem with paths in the cost matrix (wind doesn't affect the same with paths)
 

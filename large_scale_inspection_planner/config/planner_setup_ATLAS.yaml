@@ -5,7 +5,7 @@
 drones: {"1": "MULTICOPTER"} #, "2": "FIXED_WING", "3": "VTOL"}
 
 
-# Airframe types, each one with its own parameter values (time in seconds, speed in m/s, battery in in parts per unit):
+# Airframe types, each one with its own parameter values (time in seconds, speed in m/s, battery in in parts per unit, height in meters):
 MULTICOPTER:
   time_max_flying: 1800
   speed_xy: 5.5
@@ -13,6 +13,10 @@ MULTICOPTER:
   speed_z_up: 3.0
   minimum_battery: 0.2
   time_until_fully_charged: 1800
+  takeoff_climb_speed: 1.5
+  landing_descend_speed: 0.7
+  time_delay_between_wps: 1         # Each time the UAV pass by a waypoint, it slowsdown and have to maneuver a little. This is the delay estimation of that.
+  hardcoded_takeoff_landing_height: 30  # Only multicopters in mission flight mode. Takeoff and land to a hardcoded height (in meters).
 
 FIXED_WING:
   time_max_flying: 5400
@@ -21,6 +25,8 @@ FIXED_WING:
   speed_z_up: 3.0
   minimum_battery: 0.2
   time_until_fully_charged: 1800
+  time_delay_between_wps: 1         # Each time the UAV pass by a waypoint, it slowsdown and have to maneuver a little. This is the delay estimation of that.
+  time_delay_landing: 30
 
 VTOL:
   time_max_flying: 5400
@@ -29,6 +35,11 @@ VTOL:
   speed_z_up: 3.0
   minimum_battery: 0.2
   time_until_fully_charged: 1800
+  takeoff_climb_speed: 1.5
+  landing_descend_speed: 0.7
+  time_delay_between_wps: 1         # Each time the UAV pass by a waypoint, it slowsdown and have to maneuver a little. This is the delay estimation of that.
+  time_delay_start_transition: 10   # Only for VTOL. Time delay because of the transition from MC to VTOL modes.
+  time_delay_end_transition: 13     # Only for VTOL. Time delay because of the transition from VTOL to MC modes.
 
 
 # Time (in seconds) between iterations for the Parameter Estimator thread and Plan Monitor thread in the Mission Controller:
@@ -42,6 +53,10 @@ deviation_limit: 0.1
 
 # Geographic coordinate (latitude, longitude, altitude) that makes (x,y,z) = (0,0,0) meters in cartesian coordinates:
 map_origin_geo: [38.138728, -3.173825, 444]
+
+
+# Degrees of inclination of the ATLAS runway from the x axis (East direction):
+runway_heading: 18.0
 
 
 # List of closed polygons (list of waypoints which first and end point must be the same) in geographic coordinates. Each polygon is an obstacle or no-fly zone:
@@ -66,6 +81,14 @@ no_fly_zones_geo: [
     [38.135402, -3.181809],
     [38.136153, -3.180090],
     [38.135994, -3.179585],
+  ],[
+    [38.139643, -3.165427],
+    [38.139686, -3.164757],
+    [38.138392, -3.163927],
+    [38.136966, -3.169446],
+    [38.138090, -3.169962],
+    [38.138817, -3.168479],
+    [38.139643, -3.165427],
   ]
 ]
 
