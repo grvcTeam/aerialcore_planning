@@ -54,7 +54,7 @@ private:
 
 
         // Specific of the Plan Monitor:
-        int last_segment = 0;      // First node of the segment that this UAV was doing for this plan the last time the Plan Monitor was called. // TODO: 0 when mission finished.
+        int last_pose = 0;      // First pose of the pair of poses of the segment that this UAV was doing for this plan the last time the Plan Monitor was called. // TODO: 0 when mission finished.
 
 
         int id;

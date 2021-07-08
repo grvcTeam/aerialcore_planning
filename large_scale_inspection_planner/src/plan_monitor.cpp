@@ -10,6 +10,12 @@
 #include <ros/ros.h>
 #include <math.h>
 
+// #define PLOT_GRAPH              // Uncoment for plotting a graphic (using matplotlib-cpp) of the perpendicular to the segment.
+#ifdef PLOT_GRAPH
+#include "matplotlibcpp.h"      // matplotlib-cpp has a MIT License (MIT), Copyright (c) 2014 Benno Evers. The full license description of matplotlib, matplotlib-cpp and its README can be found at its root.
+namespace plt = matplotlibcpp;
+#endif
+
 namespace aerialcore {
 
 #define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
@@ -27,33 +33,36 @@ PlanMonitor::~PlanMonitor() {}
 
 // Method called periodically in an external thread, located in the Mission Controller, that will call the planner in the same thread if it returns true:
 bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices) {
+    ROS_INFO("Plan Monitor: checking if enoughDeviationToReplan.");
 
     ros::Time time_now = ros::Time::now();
 
     constructUAVs(_drone_info);
 
-    float total_duration_planned = 0;   // Current planned duration up until the place where this method is called (for all UAVs).
-    float total_duration_real = 0;      // Real current duration up until the place where this method is called (for all UAVs).
-    std::map<int, float> duration_planned;  // Current planned duration up until the place where this method is called (for each UAV).
-    std::map<int, float> duration_real;     // Real current duration up until the place where this method is called (for each UAV).
+    double total_duration_planned = 0;   // Current planned duration up until the place where this method is called (for all UAVs).
+    double total_duration_real = 0;      // Real current duration up until the place where this method is called (for all UAVs).
+    std::map<int, double> duration_planned;  // Current planned duration up until the place where this method is called (for each UAV).
+    std::map<int, double> duration_real;     // Real current duration up until the place where this method is called (for each UAV).
 
     // Iterate the planned UAVs to calculate the duration planned and real for each one of them and all of them in total:
     for (int i=0; i<_flight_plans.size(); i++) {
         int uav_index = findUavIndexById(_flight_plans[i].uav_id);
 
         // Search for the initial node in the graph of the current UAV of the plan:
-        float x_ini, y_ini;   // Define the x-y variables for the initial UAV position.
+        float x_ini, y_ini/*, z_ini*/;   // Define the x-y variables for the initial UAV position.
         for (int g_i=0; g_i<_graph.size(); g_i++) {
             if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && _graph[g_i].id==_flight_plans[i].uav_id) {
                 x_ini = _graph[g_i].x;
                 y_ini = _graph[g_i].y;
+                // z_ini = _graph[g_i].z;
                 break;
             }
         }
 
         // Calculate the segment (first pose of the segment) where the UAV is right now:
         std::vector<float> perpendicular_distances;
-        for (int j=UAVs_[uav_index].last_segment; j<_flight_plans[i].poses.size()-1; j++) {
+        std::vector<int> indexes;
+        for (int j=UAVs_[uav_index].last_pose; j<_flight_plans[i].poses.size()-1; j++) {
 
             // Find the intersection point between the two following lines: segment of the current pair of nodes, and the perpendicular line to that previous line passing by the UAV pose:
 
@@ -61,7 +70,7 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
             float alpha = atan2(_flight_plans[i].poses[j+1].pose.position.y - _flight_plans[i].poses[j].pose.position.y, _flight_plans[i].poses[j+1].pose.position.x - _flight_plans[i].poses[j].pose.position.x);
 
             // x-y for the intersection point between the two lines:
-            float x_inter = (y_ini - tan(alpha + M_PI/2) * x_ini) / (tan(alpha) - tan(alpha + M_PI/2));
+            float x_inter = (y_ini-_flight_plans[i].poses[j].pose.position.y - tan(alpha + M_PI/2) * (x_ini-_flight_plans[i].poses[j].pose.position.x)) / (tan(alpha) - tan(alpha + M_PI/2))+_flight_plans[i].poses[j].pose.position.x;
             float y_inter = y_ini + tan(alpha + M_PI/2) * (x_inter - x_ini);
 
             // With that intersection calculate its perpendicular distance:
@@ -69,52 +78,42 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
              || _flight_plans[i].poses[j].pose.position.x>=_flight_plans[i].poses[j+1].pose.position.x && x_inter<=_flight_plans[i].poses[j].pose.position.x && x_inter>=_flight_plans[i].poses[j+1].pose.position.x) {
                 perpendicular_distances.push_back(sqrt( pow(x_ini-x_inter,2) + pow(y_ini-y_inter,2) ));
             } else {
-                perpendicular_distances.push_back(std::numeric_limits<float>::max());
+                // If the initial point isn't in the projection of the segment, push its distance to the start of the segment.
+                perpendicular_distances.push_back( sqrt( pow(x_ini - _flight_plans[i].poses[j].pose.position.x,2) + pow(y_ini - _flight_plans[i].poses[j].pose.position.y,2) ) );
             }
-
-            // Iterate only the first 3 segments, usually the first or second one will be the closest:
-            if (perpendicular_distances.size()==3) {
-                if (perpendicular_distances[2]<perpendicular_distances[1] && perpendicular_distances[2]<perpendicular_distances[0]) {
-                    UAVs_[uav_index].last_segment = j;
-                    break;
-                } else if (perpendicular_distances[1]<perpendicular_distances[2] && perpendicular_distances[1]<perpendicular_distances[0]) {
-                    UAVs_[uav_index].last_segment = j-1;
-                    break;
-                } else {
-                    UAVs_[uav_index].last_segment = j-2;
-                    break;
-                }
-            }
+            indexes.push_back(j);
         }
+        int minimum_perpendicular_distance_index = std::min_element(perpendicular_distances.begin(),perpendicular_distances.end()) - perpendicular_distances.begin();
+        UAVs_[uav_index].last_pose = indexes[minimum_perpendicular_distance_index];
 
         // Now we know the first pose of the segment, let's find out its node and the next one:
-        int last_index_node_in_poses = -1;
-        for (int j=UAVs_[uav_index].last_segment; j>=0; j--) {
+        int last_node_in_poses = -1;
+        for (int j=UAVs_[uav_index].last_pose; j>=0; j--) {
             if (_flight_plans[i].type[j]!=aerialcore_msgs::FlightPlan::TYPE_PASS_NFZ_WP) {
-                last_index_node_in_poses = j;
+                last_node_in_poses = j;
                 break;
             }
         }
-        int next_index_node_in_poses = -1;
-        for (int j= UAVs_[uav_index].last_segment+1<_flight_plans[i].poses.size() ? UAVs_[uav_index].last_segment+1 : UAVs_[uav_index].last_segment ; j<_flight_plans[i].poses.size(); j++) {
+        int next_node_in_poses = -1;
+        for (int j= UAVs_[uav_index].last_pose+1<_flight_plans[i].poses.size() ? UAVs_[uav_index].last_pose+1 : UAVs_[uav_index].last_pose ; j<_flight_plans[i].poses.size(); j++) {
             if (_flight_plans[i].type[j]!=aerialcore_msgs::FlightPlan::TYPE_PASS_NFZ_WP) {
-                next_index_node_in_poses = j;
+                next_node_in_poses = j;
                 break;
             }
         }
-        int last_index_node_in_graph = -1;
+        int last_node_in_graph = -1;
         for (int g_i=0; g_i<_graph.size(); g_i++) {
-            if (last_index_node_in_poses==0 && _graph[g_i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && _graph[g_i].id==_flight_plans[i].uav_id
-             || _graph[g_i].x==_flight_plans[i].poses[last_index_node_in_poses].pose.position.x && _graph[g_i].y==_flight_plans[i].poses[last_index_node_in_poses].pose.position.y) {
-                last_index_node_in_graph = g_i;
+            if (last_node_in_poses==0 && _graph[g_i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && _graph[g_i].id==_flight_plans[i].uav_id
+             || _graph[g_i].x==_flight_plans[i].poses[last_node_in_poses].pose.position.x && _graph[g_i].y==_flight_plans[i].poses[last_node_in_poses].pose.position.y) {
+                last_node_in_graph = g_i;
                 break;
             }
         }
-        int next_index_node_in_graph = -1;
+        int next_node_in_graph = -1;
         for (int g_i=0; g_i<_graph.size(); g_i++) {
-            if (next_index_node_in_poses==0 && _graph[g_i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && _graph[g_i].id==_flight_plans[i].uav_id
-             || _graph[g_i].x==_flight_plans[i].poses[next_index_node_in_poses].pose.position.x && _graph[g_i].y==_flight_plans[i].poses[next_index_node_in_poses].pose.position.y) {
-                next_index_node_in_graph = g_i;
+            if (next_node_in_poses==0 && _graph[g_i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && _graph[g_i].id==_flight_plans[i].uav_id
+             || _graph[g_i].x==_flight_plans[i].poses[next_node_in_poses].pose.position.x && _graph[g_i].y==_flight_plans[i].poses[next_node_in_poses].pose.position.y) {
+                next_node_in_graph = g_i;
                 break;
             }
         }
@@ -122,45 +121,92 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
         // Calculate the duration planned:
         duration_planned[uav_index] = 0;
         for (int j=0; j<_flight_plans[i].nodes.size()-1; j++) {
-            duration_planned[uav_index] += _time_cost_matrices.at( _flight_plans[i].uav_id ).at( _flight_plans[i].nodes[j] ).at( _flight_plans[i].nodes[j+1] );
-            if (_flight_plans[i].nodes[j]==last_index_node_in_graph) {
+            if (_flight_plans[i].nodes[j]==last_node_in_graph) {
                 break;
             }
+            duration_planned[uav_index] += _time_cost_matrices.at( _flight_plans[i].uav_id ).at( _flight_plans[i].nodes[j] ).at( _flight_plans[i].nodes[j+1] );
         }
-        if (_flight_plans[i].type[ UAVs_[uav_index].last_segment ]==aerialcore_msgs::FlightPlan::TYPE_PASS_NFZ_WP) {
-            float distance_up_until_next_node = 0;
-            float distance_up_until_intersection = 0;
-            for (int j=last_index_node_in_poses; j<=next_index_node_in_poses-1; j++) {
-                float segment_distance = sqrt( pow(_flight_plans[i].poses[j+1].pose.position.x-_flight_plans[i].poses[j].pose.position.x,2) + pow(_flight_plans[i].poses[j+1].pose.position.y-_flight_plans[i].poses[j].pose.position.y,2) );
-                distance_up_until_next_node += segment_distance;
-                if (j<UAVs_[uav_index].last_segment) {
-                    distance_up_until_intersection += segment_distance;
-                } else if (j==UAVs_[uav_index].last_segment) {
-                    // Angle of the current segment (the one perpendicular to this one will be alpha + M_PI/2):
-                    float alpha = atan2(_flight_plans[i].poses[j+1].pose.position.y - _flight_plans[i].poses[j].pose.position.y, _flight_plans[i].poses[j+1].pose.position.x - _flight_plans[i].poses[j].pose.position.x);
+        float distance_from_last_to_next_node = 0;
+        float distance_from_last_node_to_intersection = 0;
+        for (int j=last_node_in_poses; j<next_node_in_poses; j++) {
+            float segment_distance;
+            // if (j==0) { // The initial position of the UAV is not in the pose path, but should be taken into account:
+            //     segment_distance = sqrt( pow(_flight_plans[i].poses[0].pose.position.x - x_ini,2) + pow(_flight_plans[i].poses[0].pose.position.y - y_ini,2) + pow(_flight_plans[i].poses[0].pose.position.z - z_ini,2) );
+            //     distance_from_last_to_next_node += segment_distance;
+            //     distance_from_last_node_to_intersection += segment_distance;
+            // }
+            segment_distance = sqrt( pow(_flight_plans[i].poses[j+1].pose.position.x-_flight_plans[i].poses[j].pose.position.x,2) + pow(_flight_plans[i].poses[j+1].pose.position.y-_flight_plans[i].poses[j].pose.position.y,2) );
+            distance_from_last_to_next_node += segment_distance;
+            if (j<UAVs_[uav_index].last_pose) {
+                distance_from_last_node_to_intersection += segment_distance;
+            } else if (j==UAVs_[uav_index].last_pose) {
+                // Angle of the current segment (the one perpendicular to this one will be alpha + M_PI/2):
+                float alpha = atan2(_flight_plans[i].poses[j+1].pose.position.y - _flight_plans[i].poses[j].pose.position.y, _flight_plans[i].poses[j+1].pose.position.x - _flight_plans[i].poses[j].pose.position.x);
 
-                    // x-y for the intersection point between the two lines:
-                    float x_inter = (y_ini - tan(alpha + M_PI/2) * x_ini) / (tan(alpha) - tan(alpha + M_PI/2));
-                    float y_inter = y_ini + tan(alpha + M_PI/2) * (x_inter - x_ini);
+                // x-y for the intersection point between the two lines:
+                float x_inter = (y_ini-_flight_plans[i].poses[j].pose.position.y - tan(alpha + M_PI/2) * (x_ini-_flight_plans[i].poses[j].pose.position.x)) / (tan(alpha) - tan(alpha + M_PI/2))+_flight_plans[i].poses[j].pose.position.x;
+                float y_inter = y_ini + tan(alpha + M_PI/2) * (x_inter - x_ini);
 
-                    distance_up_until_intersection += sqrt( pow(x_inter-_flight_plans[i].poses[j].pose.position.x,2) + pow(y_inter-_flight_plans[i].poses[j].pose.position.y,2) );
-                }
+                distance_from_last_node_to_intersection += sqrt( pow(x_inter-_flight_plans[i].poses[j].pose.position.x,2) + pow(y_inter-_flight_plans[i].poses[j].pose.position.y,2) );
+
+#ifdef PLOT_GRAPH
+                std::vector<double> x_plot_segment, y_plot_segment;
+                x_plot_segment.push_back( _flight_plans[i].poses[j].pose.position.x );
+                x_plot_segment.push_back( _flight_plans[i].poses[j+1].pose.position.x );
+                y_plot_segment.push_back( _flight_plans[i].poses[j].pose.position.y );
+                y_plot_segment.push_back( _flight_plans[i].poses[j+1].pose.position.y );
+                plt::plot(x_plot_segment,y_plot_segment,"r");
+
+                std::vector<double> x_plot_perp, y_plot_perp;
+                x_plot_perp.push_back( x_ini );
+                x_plot_perp.push_back( x_inter );
+                y_plot_perp.push_back( y_ini );
+                y_plot_perp.push_back( y_inter );
+                plt::plot(x_plot_perp,y_plot_perp,"b");
+
+                plt::axis("equal");
+
+                std::cout << "x_ini   = " << x_ini << std::endl;
+                std::cout << "y_ini   = " << y_ini << std::endl;
+                std::cout << "x_inter = " << x_inter << std::endl;
+                std::cout << "y_inter = " << y_inter << std::endl;
+                std::cout << "_flight_plans[i].poses[j].pose.position.x   = " << _flight_plans[i].poses[j].pose.position.x << std::endl;
+                std::cout << "_flight_plans[i].poses[j].pose.position.y   = " << _flight_plans[i].poses[j].pose.position.y << std::endl;
+                std::cout << "_flight_plans[i].poses[j+1].pose.position.x = " << _flight_plans[i].poses[j+1].pose.position.x << std::endl;
+                std::cout << "_flight_plans[i].poses[j+1].pose.position.y = " << _flight_plans[i].poses[j+1].pose.position.y << std::endl;
+
+                plt::show();
+#endif
             }
-            duration_planned[uav_index] += distance_up_until_intersection/distance_up_until_next_node * _time_cost_matrices.at( _flight_plans[i].uav_id ).at(last_index_node_in_graph).at(next_index_node_in_graph);   // TODO: wind considered properly up until the last node, for poses of no-fly zones (middle cost inside the edge) wind cost calculated with a rule of three by distances.
         }
-        total_duration_planned += duration_planned[uav_index];
 
-# ifdef DEBUG
-        std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> last_segment pose        = " << UAVs_[uav_index].last_segment << std::endl;
-        std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> last_index_node_in_poses = " << last_index_node_in_poses << std::endl;
-        std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> next_index_node_in_poses = " << next_index_node_in_poses << std::endl;
-        std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> last_index_node_in_graph = " << last_index_node_in_graph << std::endl;
-        std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> next_index_node_in_graph = " << next_index_node_in_graph << std::endl;
-# endif
+// # ifdef DEBUG
+//         std::cout << "duration_planned[uav_index]             = " << duration_planned[uav_index] << std::endl;
+//         std::cout << "distance_from_last_node_to_intersection = " << distance_from_last_node_to_intersection << std::endl;
+//         std::cout << "distance_from_last_to_next_node         = " << distance_from_last_to_next_node << std::endl;
+//         float aux_1 = distance_from_last_node_to_intersection/distance_from_last_to_next_node;
+//         std::cout << "distance_from_last_node_to_intersection/distance_from_last_to_next_node = " << aux_1 << std::endl;
+//         std::cout << "_time_cost_matrices.at( _flight_plans[i].uav_id ).at(last_node_in_graph).at(next_node_in_graph) = " << _time_cost_matrices.at( _flight_plans[i].uav_id ).at(last_node_in_graph).at(next_node_in_graph) << std::endl;
+//         float aux_2 = distance_from_last_node_to_intersection/distance_from_last_to_next_node * _time_cost_matrices.at( _flight_plans[i].uav_id ).at(last_node_in_graph).at(next_node_in_graph);
+//         std::cout << "distance_from_last_node_to_intersection/distance_from_last_to_next_node * _time_cost_matrices.at( _flight_plans[i].uav_id ).at(last_node_in_graph).at(next_node_in_graph) = " << aux_2 << std::endl;
+// # endif
+
+        duration_planned[uav_index] += distance_from_last_node_to_intersection/distance_from_last_to_next_node * _time_cost_matrices.at( _flight_plans[i].uav_id ).at(last_node_in_graph).at(next_node_in_graph);   // TODO: wind considered properly up until the last node, for poses of no-fly zones (middle cost inside the edge) wind cost calculated with a rule of three by distances.
+        total_duration_planned += duration_planned[uav_index];
 
         // Calculate the real duration:
         duration_real[uav_index] = time_now.toSec() - _flight_plans[i].header.stamp.toSec();
         total_duration_real += duration_real[uav_index];
+
+# ifdef DEBUG
+        // std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> last_node_in_poses = " << last_node_in_poses << std::endl;
+        // std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> last_pose          = " << UAVs_[uav_index].last_pose << std::endl;
+        // std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> next_node_in_poses = " << next_node_in_poses << std::endl;
+        // std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> last_node_in_graph = " << last_node_in_graph << std::endl;
+        // std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> next_node_in_graph = " << next_node_in_graph << std::endl;
+        std::cout << "duration_planned [ " << _flight_plans[i].uav_id << " ] = " << duration_planned[uav_index] << std::endl;
+        std::cout << "duration_real    [ " << _flight_plans[i].uav_id << " ] = " << duration_real[uav_index] << std::endl;
+# endif
 
     }
 
@@ -173,8 +219,7 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
     if (total_duration_planned<total_duration_real*(1-deviation_limit_)
      || total_duration_planned>total_duration_real*(1+deviation_limit_)) {
         ROS_INFO("Plan Monitor: Replanning true.");
-        return false;
-        // return true;
+        return true;
     } else {
         // Compare the planned duration of each UAV with the real one:
         for (int i=0; i<_flight_plans.size(); i++) {
@@ -188,8 +233,7 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
             if (duration_planned[uav_index]<duration_real[uav_index]*(1-deviation_limit_)
              || duration_planned[uav_index]>duration_real[uav_index]*(1+deviation_limit_)) {
                 ROS_INFO("Plan Monitor: Replanning true.");
-                return false;
-                // return true;
+                return true;
             }
         }
         ROS_INFO("Plan Monitor: Replanning false.");
@@ -242,7 +286,7 @@ void PlanMonitor::constructUAVs(const std::vector< std::tuple<float, float, int,
         actual_UAV.flying_or_landed_initially = std::get<8>(current_drone);
         actual_UAV.recharging_initially = std::get<9>(current_drone);
         int uav_index = findUavIndexById(actual_UAV.id);
-        actual_UAV.last_segment = uav_index==-1 ? 0 : UAVs_[uav_index].last_segment;
+        actual_UAV.last_pose = uav_index==-1 ? 0 : UAVs_[uav_index].last_pose;
         UAVs_new.push_back(actual_UAV);
     }
 

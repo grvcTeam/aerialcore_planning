@@ -83,7 +83,9 @@ private:
   std::vector<aerialcore_msgs::GraphNode> specific_subgraph_;
   std::vector<aerialcore_msgs::GraphNode> specific_subgraph_cleaned_;
   std::vector<aerialcore_msgs::GraphNode> current_graph_;
+
   std::mutex current_graph_mutex_;
+  std::mutex update_matrices_mutex_;
 
   CentralizedPlanner centralized_planner_;  // Planner that assigns nodes to inspect of the electric grid graph for each UAV.
   ParameterEstimator parameter_estimator_;  // Module to estimate the time_cost_matrices and battery_drop_matrices between edges.
@@ -94,6 +96,7 @@ private:
 
   bool commanding_UAV_with_mission_lib_or_DJI_SDK_ = true;  // Use mission_lib for commanding UAVs (true) or output a yaml string for using the DJI SDK (false).
   std::atomic<bool> stop_current_supervising_ = {false};
+  std::atomic<bool> replan_ = {false};
 
   geographic_msgs::GeoPoint map_origin_geo_;
   std::vector<geometry_msgs::Polygon> no_fly_zones_;

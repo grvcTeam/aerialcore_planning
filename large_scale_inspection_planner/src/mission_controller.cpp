@@ -327,6 +327,7 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
     if(plan_thread_.joinable()) plan_thread_.join();
 
     stop_current_supervising_ = false;
+    replan_ = true;
 
     // Start the supervising threads, consisting on the parameter estimator (module of same name) and plan thread (plan monitor and planner modules):
     parameter_estimator_thread_ = std::thread(&MissionController::parameterEstimatorThread, this);
@@ -347,7 +348,10 @@ void MissionController::parameterEstimatorThread(void) {
         estimator_current_graph = current_graph_;
         current_graph_mutex_.unlock();
 
-        parameter_estimator_.updateMatrices(estimator_current_graph, no_fly_zones_, geofence_);
+        update_matrices_mutex_.lock();
+        parameter_estimator_.updateMatrices(estimator_current_graph, no_fly_zones_, geofence_, replan_);
+        update_matrices_mutex_.unlock();
+
         loop_rate.sleep();
     }
 } // end parameterEstimatorThread
@@ -420,33 +424,18 @@ void MissionController::planThread(void) {
             }
         }
 
-        // Wait until the parameter_estimator_ calculate the matrices and it calculates the costs of the initial UAVs:
-        bool sleep_flag;
-        do {
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-
-            sleep_flag = false;
-            if (parameter_estimator_.getTimeCostMatrices().size()==0) {
-                sleep_flag = true;
-            } else {
-                for (int i=0; i<planner_current_graph.size(); i++) {
-                    if (planner_current_graph[i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && parameter_estimator_.getTimeCostMatrices().at( planner_current_graph[i].id ).count( i )==0) {
-                        sleep_flag = true;
-                        break;
-                    }
-                }
-            }
-        } while (sleep_flag);
+        // Force the parameter_estimator_ calculate the matrices with calculates the costs of the initial UAVs:
+        update_matrices_mutex_.lock();
+        parameter_estimator_.updateMatrices(planner_current_graph, no_fly_zones_, geofence_, replan_);
+        update_matrices_mutex_.unlock();
 
         bool plan_from_scratch = flight_plans_.size()==0;
-        bool replan = false;
+
         if (!plan_from_scratch) {
-            std::cout << "Start the Plan Monitor enoughDeviationToReplan check." << std::endl;
-            replan = plan_monitor_.enoughDeviationToReplan(planner_current_graph, flight_plans_, drone_info, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
-            std::cout << "Plan Monitor enoughDeviationToReplan ended = " << replan << std::endl;
+            replan_ = plan_monitor_.enoughDeviationToReplan(planner_current_graph, flight_plans_, drone_info, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
         }
 
-        if (plan_from_scratch || replan) {
+        if (replan_ || plan_from_scratch) {
 
 #ifdef DEBUG
             printCurrentGraph();
@@ -498,6 +487,9 @@ void MissionController::planThread(void) {
                     ROS_WARN("Mission Controller: yaml not sent to DJI SDK, service didn't answer.");
                 }
             }
+
+            // After a replanning wait for 3x the plan_monitor_time_ before checking again if it needs replanning:
+            std::this_thread::sleep_for(std::chrono::seconds((int) plan_monitor_time_*3));
         }
 
         loop_rate.sleep();

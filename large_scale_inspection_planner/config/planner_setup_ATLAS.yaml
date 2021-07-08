@@ -43,8 +43,8 @@ VTOL:
 
 
 # Time (in seconds) between iterations for the Parameter Estimator thread and Plan Monitor thread in the Mission Controller:
-parameter_estimator_time: 5.0
-plan_monitor_time: 5.0
+parameter_estimator_time: 30.0
+plan_monitor_time: 30.0         # Just after replanning it will be waited this amount of time x3 for the time estimation to settle.
 
 
 # Deviation limit (in parts per unit of the duration of the plans), if this is surpassed (greater or lower) the Plan Monitor will tell the planner to trigger the replanning:

@@ -89,13 +89,13 @@ const std::map<int, std::map<int, std::map<int, float> > >& ParameterEstimator::
 
 
 // Method called periodically in an external thread, located in the Mission Controller, that will update both the cost and battery drop matrices with the last prediction:
-void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector<geometry_msgs::Polygon>& _no_fly_zones, const geometry_msgs::Polygon& _geofence /* poses, batteries, plan, wind sensor?*/) {
+void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector<geometry_msgs::Polygon>& _no_fly_zones, const geometry_msgs::Polygon& _geofence, bool _recalculate_initial_UAV_points) {
 
     std::map<int, std::map<int, float> > new_distance_cost_matrix;
     std::map<int, std::map<int, Wps> > new_paths_matrix;
     std::map<int, std::map<int, std::map<int, float> > > new_time_cost_matrices;
 
-    if (distance_cost_matrix_.size()==0 || true /* bypass this */) {  // Only enter the first time this method is called. // TODO: initial position changing all the time.
+    if (distance_cost_matrix_.size()==0 || _recalculate_initial_UAV_points) {  // Only enter the first time this method is called. // TODO: only recalculate initial UAV points
         // if (construct_distance_cost_matrix_) {
             // Construct the distance_cost_matrix and export it to a default yaml file.
 
@@ -322,8 +322,9 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
     }   // End of building cost matrices the first time this method is called.
 
     // Construct the battery_drop_matrices.
+    time_cost_matrices_mutex_.lock();
     std::map<int, std::map<int, std::map<int, float> > > new_battery_drop_matrices;
-    for (std::map<int, std::map<int, std::map<int, float> > >::iterator it_k = new_time_cost_matrices.begin(); it_k != new_time_cost_matrices.end(); it_k++) {
+    for (std::map<int, std::map<int, std::map<int, float> > >::iterator it_k = time_cost_matrices_.begin(); it_k != time_cost_matrices_.end(); it_k++) {
         std::map<int, std::map<int, float> > new_battery_drop_matrix;
         int uav_index = findUavIndexById(it_k->first);
         for (std::map<int, std::map<int, float> >::iterator it_i = it_k->second.begin(); it_i != it_k->second.end(); it_i++) {
@@ -332,17 +333,18 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
                     new_battery_drop_matrix[ it_i->first ][ it_j->first ] = it_j->second;
                 } else {
                     if (UAVs_[uav_index].airframe_type == "MULTICOPTER") {
-                        new_battery_drop_matrix[ it_i->first ][ it_j->first ] = batteryDropMulticopter(it_k->first, it_i->first, it_j->first, new_time_cost_matrices);
+                        new_battery_drop_matrix[ it_i->first ][ it_j->first ] = batteryDropMulticopter(it_k->first, it_i->first, it_j->first, time_cost_matrices_);
                     } else if (UAVs_[uav_index].airframe_type == "FIXED_WING") {
-                        new_battery_drop_matrix[ it_i->first ][ it_j->first ] = batteryDropFixedWing(it_k->first, it_i->first, it_j->first, new_time_cost_matrices);
+                        new_battery_drop_matrix[ it_i->first ][ it_j->first ] = batteryDropFixedWing(it_k->first, it_i->first, it_j->first, time_cost_matrices_);
                     } else if (UAVs_[uav_index].airframe_type == "VTOL") {
-                        new_battery_drop_matrix[ it_i->first ][ it_j->first ] = batteryDropVTOL(it_k->first, it_i->first, it_j->first, new_time_cost_matrices);
+                        new_battery_drop_matrix[ it_i->first ][ it_j->first ] = batteryDropVTOL(it_k->first, it_i->first, it_j->first, time_cost_matrices_);
                     }
                 }
             }
         }
         new_battery_drop_matrices[ it_k->first ] = new_battery_drop_matrix;
     }
+    time_cost_matrices_mutex_.unlock();
     battery_drop_matrices_mutex_.lock();
     battery_drop_matrices_.clear();
     battery_drop_matrices_ = new_battery_drop_matrices;
