@@ -96,7 +96,6 @@ private:
 
   bool commanding_UAV_with_mission_lib_or_DJI_SDK_ = true;  // Use mission_lib for commanding UAVs (true) or output a yaml string for using the DJI SDK (false).
   std::atomic<bool> stop_current_supervising_ = {false};
-  std::atomic<bool> replan_ = {false};
 
   geographic_msgs::GeoPoint map_origin_geo_;
   std::vector<geometry_msgs::Polygon> no_fly_zones_;

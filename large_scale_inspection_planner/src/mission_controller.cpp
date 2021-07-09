@@ -327,7 +327,6 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
     if(plan_thread_.joinable()) plan_thread_.join();
 
     stop_current_supervising_ = false;
-    replan_ = true;
 
     // Start the supervising threads, consisting on the parameter estimator (module of same name) and plan thread (plan monitor and planner modules):
     parameter_estimator_thread_ = std::thread(&MissionController::parameterEstimatorThread, this);
@@ -349,7 +348,7 @@ void MissionController::parameterEstimatorThread(void) {
         current_graph_mutex_.unlock();
 
         update_matrices_mutex_.lock();
-        parameter_estimator_.updateMatrices(estimator_current_graph, no_fly_zones_, geofence_, replan_);
+        parameter_estimator_.updateMatrices(estimator_current_graph, no_fly_zones_, geofence_, false);  // Don't update here the UAVs initial costs.
         update_matrices_mutex_.unlock();
 
         loop_rate.sleep();
@@ -424,22 +423,30 @@ void MissionController::planThread(void) {
             }
         }
 
-        // Force the parameter_estimator_ calculate the matrices with calculates the costs of the initial UAVs:
-        update_matrices_mutex_.lock();
-        parameter_estimator_.updateMatrices(planner_current_graph, no_fly_zones_, geofence_, replan_);
-        update_matrices_mutex_.unlock();
-
         bool plan_from_scratch = flight_plans_.size()==0;
+        bool replan = false;
 
-        if (!plan_from_scratch) {
-            replan_ = plan_monitor_.enoughDeviationToReplan(planner_current_graph, flight_plans_, drone_info, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
+        if (plan_from_scratch) {
+            // For the first time, force the parameter_estimator_ calculate the matrices with new costs of the initial UAVs:
+            update_matrices_mutex_.lock();
+            parameter_estimator_.updateMatrices(planner_current_graph, no_fly_zones_, geofence_, true);
+            update_matrices_mutex_.unlock();
+        } else {
+            replan = plan_monitor_.enoughDeviationToReplan(planner_current_graph, flight_plans_, drone_info, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
         }
 
-        if (replan_ || plan_from_scratch) {
+        if (replan || plan_from_scratch) {
 
 #ifdef DEBUG
             printCurrentGraph();
 #endif
+
+            // Force the parameter_estimator_ calculate the matrices with new costs of the initial UAVs only if replanning:
+            if (replan) {
+                update_matrices_mutex_.lock();
+                parameter_estimator_.updateMatrices(planner_current_graph, no_fly_zones_, geofence_, true);
+                update_matrices_mutex_.unlock();
+            }
 
             // Calculate the solution with computation time:
 
@@ -718,9 +725,10 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
                 int current_uav_index = findUavIndexById(id);
                 if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
 
-                initial_graph_node.x = UAVs_[current_uav_index].mission->pose().pose.position.x;
-                initial_graph_node.y = UAVs_[current_uav_index].mission->pose().pose.position.y;
-                initial_graph_node.z = UAVs_[current_uav_index].mission->pose().pose.position.z;
+                const geometry_msgs::PoseStamped uav_pose = UAVs_[current_uav_index].mission->pose();
+                initial_graph_node.x = uav_pose.pose.position.x;
+                initial_graph_node.y = uav_pose.pose.position.y;
+                initial_graph_node.z = uav_pose.pose.position.z;
             } else {
                 // // HARDCODED INITIAL POSES ?
             }

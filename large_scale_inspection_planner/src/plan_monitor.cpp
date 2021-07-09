@@ -62,7 +62,7 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
         // Calculate the segment (first pose of the segment) where the UAV is right now:
         std::vector<float> perpendicular_distances;
         std::vector<int> indexes;
-        for (int j=UAVs_[uav_index].last_pose; j<_flight_plans[i].poses.size()-1; j++) {
+        for (int j=UAVs_[uav_index].last_pose_index; j<_flight_plans[i].poses.size()-1; j++) {
 
             // Find the intersection point between the two following lines: segment of the current pair of nodes, and the perpendicular line to that previous line passing by the UAV pose:
 
@@ -84,18 +84,18 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
             indexes.push_back(j);
         }
         int minimum_perpendicular_distance_index = std::min_element(perpendicular_distances.begin(),perpendicular_distances.end()) - perpendicular_distances.begin();
-        UAVs_[uav_index].last_pose = indexes[minimum_perpendicular_distance_index];
+        UAVs_[uav_index].last_pose_index = indexes[minimum_perpendicular_distance_index];
 
         // Now we know the first pose of the segment, let's find out its node and the next one:
         int last_node_in_poses = -1;
-        for (int j=UAVs_[uav_index].last_pose; j>=0; j--) {
+        for (int j=UAVs_[uav_index].last_pose_index; j>=0; j--) {
             if (_flight_plans[i].type[j]!=aerialcore_msgs::FlightPlan::TYPE_PASS_NFZ_WP) {
                 last_node_in_poses = j;
                 break;
             }
         }
         int next_node_in_poses = -1;
-        for (int j= UAVs_[uav_index].last_pose+1<_flight_plans[i].poses.size() ? UAVs_[uav_index].last_pose+1 : UAVs_[uav_index].last_pose ; j<_flight_plans[i].poses.size(); j++) {
+        for (int j= UAVs_[uav_index].last_pose_index+1<_flight_plans[i].poses.size() ? UAVs_[uav_index].last_pose_index+1 : UAVs_[uav_index].last_pose_index ; j<_flight_plans[i].poses.size(); j++) {
             if (_flight_plans[i].type[j]!=aerialcore_msgs::FlightPlan::TYPE_PASS_NFZ_WP) {
                 next_node_in_poses = j;
                 break;
@@ -137,9 +137,9 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
             // }
             segment_distance = sqrt( pow(_flight_plans[i].poses[j+1].pose.position.x-_flight_plans[i].poses[j].pose.position.x,2) + pow(_flight_plans[i].poses[j+1].pose.position.y-_flight_plans[i].poses[j].pose.position.y,2) );
             distance_from_last_to_next_node += segment_distance;
-            if (j<UAVs_[uav_index].last_pose) {
+            if (j<UAVs_[uav_index].last_pose_index) {
                 distance_from_last_node_to_intersection += segment_distance;
-            } else if (j==UAVs_[uav_index].last_pose) {
+            } else if (j==UAVs_[uav_index].last_pose_index) {
                 // Angle of the current segment (the one perpendicular to this one will be alpha + M_PI/2):
                 float alpha = atan2(_flight_plans[i].poses[j+1].pose.position.y - _flight_plans[i].poses[j].pose.position.y, _flight_plans[i].poses[j+1].pose.position.x - _flight_plans[i].poses[j].pose.position.x);
 
@@ -200,7 +200,7 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
 
 # ifdef DEBUG
         // std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> last_node_in_poses = " << last_node_in_poses << std::endl;
-        // std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> last_pose          = " << UAVs_[uav_index].last_pose << std::endl;
+        // std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> last_pose_index          = " << UAVs_[uav_index].last_pose_index << std::endl;
         // std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> next_node_in_poses = " << next_node_in_poses << std::endl;
         // std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> last_node_in_graph = " << last_node_in_graph << std::endl;
         // std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> next_node_in_graph = " << next_node_in_graph << std::endl;
@@ -286,7 +286,7 @@ void PlanMonitor::constructUAVs(const std::vector< std::tuple<float, float, int,
         actual_UAV.flying_or_landed_initially = std::get<8>(current_drone);
         actual_UAV.recharging_initially = std::get<9>(current_drone);
         int uav_index = findUavIndexById(actual_UAV.id);
-        actual_UAV.last_pose = uav_index==-1 ? 0 : UAVs_[uav_index].last_pose;
+        actual_UAV.last_pose_index = uav_index==-1 ? 0 : UAVs_[uav_index].last_pose_index;
         UAVs_new.push_back(actual_UAV);
     }
 

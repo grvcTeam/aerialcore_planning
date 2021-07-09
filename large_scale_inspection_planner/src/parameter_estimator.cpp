@@ -96,143 +96,125 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
     std::map<int, std::map<int, std::map<int, float> > > new_time_cost_matrices;
 
     if (distance_cost_matrix_.size()==0 || _recalculate_initial_UAV_points) {  // Only enter the first time this method is called. // TODO: only recalculate initial UAV points
-        // if (construct_distance_cost_matrix_) {
-            // Construct the distance_cost_matrix and export it to a default yaml file.
 
-            // Construct the path_planner_:
-            if (_geofence.points.size()>0 && _no_fly_zones.size()>0) {
-                path_planner_ = grvc::PathPlanner(_no_fly_zones, _geofence);
-            }
+        // Construct the path_planner_:
+        if (_geofence.points.size()>0 && _no_fly_zones.size()>0) {
+            path_planner_ = grvc::PathPlanner(_no_fly_zones, _geofence);
+        }
 
-            // Create the vector with the nodes, which has this order: UAV initial positions, regular land stations, recharging land stations and pylons.
-            std::vector<int> uav_initial_positions_indexes, uav_regular_land_stations_indexes, uav_recharging_land_stations_indexes, pylons_indexes;
-            for (int i=0; i<_graph.size(); i++) {
-                if (_graph[i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION) {
-                    uav_initial_positions_indexes.push_back(i);
-                } else if (_graph[i].type == aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION) {
-                    uav_regular_land_stations_indexes.push_back(i);
-                } else if (_graph[i].type == aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) {
-                    uav_recharging_land_stations_indexes.push_back(i);
-                } else if (_graph[i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
-                    pylons_indexes.push_back(i);
+        // If recalculate initial UAVs (and there is already something in the matrices):
+        if (_recalculate_initial_UAV_points && distance_cost_matrix_.size()>0) {
+
+            distance_cost_matrix_mutex_.lock();
+            new_distance_cost_matrix = distance_cost_matrix_;
+            new_paths_matrix = paths_matrix_;
+            distance_cost_matrix_mutex_.unlock();
+
+            std::vector<int> indexes_to_erase;  // Build the vector of indexes to erase, which is formed from the previous existing initial UAVs in the matrices.
+            for (std::map<int, std::map<int, float> >::iterator it = new_distance_cost_matrix.begin(); it != new_distance_cost_matrix.end(); it++) {
+                if (_graph[it->first].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION) {
+                    indexes_to_erase.push_back(it->first);
                 }
             }
-            nodes_indexes_in_order_.clear();
-            nodes_indexes_in_order_.insert(nodes_indexes_in_order_.end(), uav_initial_positions_indexes.begin(), uav_initial_positions_indexes.end());
-            nodes_indexes_in_order_.insert(nodes_indexes_in_order_.end(), uav_regular_land_stations_indexes.begin(), uav_regular_land_stations_indexes.end());
-            nodes_indexes_in_order_.insert(nodes_indexes_in_order_.end(), uav_recharging_land_stations_indexes.begin(), uav_recharging_land_stations_indexes.end());
-            nodes_indexes_in_order_.insert(nodes_indexes_in_order_.end(), pylons_indexes.begin(), pylons_indexes.end());
 
-            // Initialize the distance_cost_matrix with -1 in all elements:
-            for (int i=0; i<nodes_indexes_in_order_.size(); i++) {
-                for (int j=0; j<nodes_indexes_in_order_.size(); j++) {
+            // Erase the previous initial UAVs row and columns from the new_distance_cost_matrix:
+            for (int i=0; i<indexes_to_erase.size(); i++) {
+                new_distance_cost_matrix.erase(indexes_to_erase[i]);
+                for (std::map<int, std::map<int, float> >::iterator it_i = new_distance_cost_matrix.begin(); it_i != new_distance_cost_matrix.end(); it_i++) {
+                    it_i->second.erase(indexes_to_erase[i]);
+                }
+            }
+
+            // Erase the previous initial UAVs row and columns from the new_paths_matrix:
+            for (int i=0; i<indexes_to_erase.size(); i++) {
+                new_paths_matrix.erase(indexes_to_erase[i]);
+                for (std::map<int, std::map<int, Wps> >::iterator it_i = new_paths_matrix.begin(); it_i != new_paths_matrix.end(); it_i++) {
+                    it_i->second.erase(indexes_to_erase[i]);
+                }
+            }
+
+            // We could also erase only the UAV initial positions from time_cost_matrices_, but is easier to don't do it.
+
+            // The battery_drop_matrices_ need to be calculated entirely so no need to erase anything.
+        }
+
+        // Create the vector with the nodes, which has this order: UAV initial positions, regular land stations, recharging land stations and pylons.
+        std::vector<int> uav_initial_positions_indexes, uav_regular_land_stations_indexes, uav_recharging_land_stations_indexes, pylons_indexes;
+        for (int i=0; i<_graph.size(); i++) {
+            if (_graph[i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION) {
+                uav_initial_positions_indexes.push_back(i);
+            } else if (_graph[i].type == aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION) {
+                uav_regular_land_stations_indexes.push_back(i);
+            } else if (_graph[i].type == aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) {
+                uav_recharging_land_stations_indexes.push_back(i);
+            } else if (_graph[i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
+                pylons_indexes.push_back(i);
+            }
+        }
+        nodes_indexes_in_order_.clear();
+        nodes_indexes_in_order_.insert(nodes_indexes_in_order_.end(), uav_initial_positions_indexes.begin(), uav_initial_positions_indexes.end());
+        nodes_indexes_in_order_.insert(nodes_indexes_in_order_.end(), uav_regular_land_stations_indexes.begin(), uav_regular_land_stations_indexes.end());
+        nodes_indexes_in_order_.insert(nodes_indexes_in_order_.end(), uav_recharging_land_stations_indexes.begin(), uav_recharging_land_stations_indexes.end());
+        nodes_indexes_in_order_.insert(nodes_indexes_in_order_.end(), pylons_indexes.begin(), pylons_indexes.end());
+
+        // Initialize the distance_cost_matrix with -1 in all elements:
+        for (int i=0; i<nodes_indexes_in_order_.size(); i++) {
+            for (int j=0; j<nodes_indexes_in_order_.size(); j++) {
+                if (_recalculate_initial_UAV_points && distance_cost_matrix_.size()>0) {
+                    if (_graph[ nodes_indexes_in_order_[i] ].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION || _graph[ nodes_indexes_in_order_[j] ].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION) {
+                        new_distance_cost_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ] = -1;
+                    }       // Not change to -1 if recalculating but edge without UAV initial position
+                } else {    // If not recalculate, evertything initialized to -1.
                     new_distance_cost_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ] = -1;
                 }
             }
+        }
 
-            // Call the path planner between initial UAV poses and landing stations to pylons, and between pylons:
-            geometry_msgs::Point32 from_here;
-            geometry_msgs::Point32 to_here;
-            for (int i=0; i<nodes_indexes_in_order_.size(); i++) {
-                for (int j= i >= uav_initial_positions_indexes.size()+uav_regular_land_stations_indexes.size()+uav_recharging_land_stations_indexes.size() ? i+1 : uav_initial_positions_indexes.size()+uav_regular_land_stations_indexes.size()+uav_recharging_land_stations_indexes.size() ; j<nodes_indexes_in_order_.size(); j++) {
-                    from_here.x = _graph[ nodes_indexes_in_order_[i] ].x;
-                    from_here.y = _graph[ nodes_indexes_in_order_[i] ].y;
-                    from_here.z = _graph[ nodes_indexes_in_order_[i] ].z;
-                    to_here.x =   _graph[ nodes_indexes_in_order_[j] ].x;
-                    to_here.y =   _graph[ nodes_indexes_in_order_[j] ].y;
-                    to_here.z =   _graph[ nodes_indexes_in_order_[j] ].z;
-                    auto path = path_planner_.getPath(from_here, to_here);
-                    if (path.size() == 0) { // No path found.
-                        new_distance_cost_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ] = -1;
-                        new_distance_cost_matrix[ nodes_indexes_in_order_[j] ][ nodes_indexes_in_order_[i] ] = -1;
+        // Call the path planner between initial UAV poses and landing stations to pylons, and between pylons:
+        geometry_msgs::Point32 from_here;
+        geometry_msgs::Point32 to_here;
+        for (int i=0; i<nodes_indexes_in_order_.size(); i++) {
+            if (_recalculate_initial_UAV_points && distance_cost_matrix_.size()>0 && _graph[ nodes_indexes_in_order_[i] ].type!=aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION) {
+                continue;       // Not recalculate the edge if rebuild only the UAVs initial position and the edge doesn't involve a UAV initial position.
+            }
+            for (int j= i >= uav_initial_positions_indexes.size()+uav_regular_land_stations_indexes.size()+uav_recharging_land_stations_indexes.size() ? i+1 : uav_initial_positions_indexes.size()+uav_regular_land_stations_indexes.size()+uav_recharging_land_stations_indexes.size() ; j<nodes_indexes_in_order_.size(); j++) {
+                from_here.x = _graph[ nodes_indexes_in_order_[i] ].x;
+                from_here.y = _graph[ nodes_indexes_in_order_[i] ].y;
+                from_here.z = _graph[ nodes_indexes_in_order_[i] ].z;
+                to_here.x =   _graph[ nodes_indexes_in_order_[j] ].x;
+                to_here.y =   _graph[ nodes_indexes_in_order_[j] ].y;
+                to_here.z =   _graph[ nodes_indexes_in_order_[j] ].z;
+                auto path = path_planner_.getPath(from_here, to_here);
+                if (path.size() == 0) { // No path found.
+                    new_distance_cost_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ] = -1;
+                    new_distance_cost_matrix[ nodes_indexes_in_order_[j] ][ nodes_indexes_in_order_[i] ] = -1;
 
-                        Wps empty_wps;
-                        new_paths_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ] = empty_wps;
-                        new_paths_matrix[ nodes_indexes_in_order_[j] ][ nodes_indexes_in_order_[i] ] = empty_wps;
-                    } else {
-                        new_distance_cost_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ] = path_planner_.getFlatDistance();   // TODO: more precise path with also precise height distances?
-                        new_distance_cost_matrix[ nodes_indexes_in_order_[j] ][ nodes_indexes_in_order_[i] ] = path_planner_.getFlatDistance();
+                    Wps empty_wps;
+                    new_paths_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ] = empty_wps;
+                    new_paths_matrix[ nodes_indexes_in_order_[j] ][ nodes_indexes_in_order_[i] ] = empty_wps;
+                } else {
+                    new_distance_cost_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ] = path_planner_.getFlatDistance();   // TODO: more precise path with also precise height distances?
+                    new_distance_cost_matrix[ nodes_indexes_in_order_[j] ][ nodes_indexes_in_order_[i] ] = path_planner_.getFlatDistance();
 
-                        Wps new_wps, new_wps_reversed;
-                        new_wps.path = path;
-                        path.insert(path.begin(), from_here);   // Path returned doesn' contain the first wp, but it will be convenient to have it.
-                        for (int k=1; k<path.size(); k++) {
-                            new_wps.angle.push_back( atan2(path[k].y-path[k-1].y, path[k].x-path[k-1].x) );
-                            new_wps.distance.push_back( sqrt( pow(path[k].y-path[k-1].y,2) + pow(path[k].x-path[k-1].x,2) ) );
-                        }
-                        new_paths_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ] = new_wps;
-                        for (int k=path.size()-2; k>=0; k--) {
-                            new_wps_reversed.path.push_back( path[k] );
-                            new_wps_reversed.angle.push_back( M_PI + new_wps.angle[k] );
-                            new_wps_reversed.distance.push_back( new_wps.distance[k] );
-                        }
-                        new_paths_matrix[ nodes_indexes_in_order_[j] ][ nodes_indexes_in_order_[i] ] = new_wps_reversed;
-
+                    Wps new_wps, new_wps_reversed;
+                    new_wps.path = path;
+                    path.insert(path.begin(), from_here);   // Path returned doesn' contain the first wp, but it will be convenient to have it.
+                    for (int k=1; k<path.size(); k++) {
+                        new_wps.angle.push_back( atan2(path[k].y-path[k-1].y, path[k].x-path[k-1].x) );
+                        new_wps.distance.push_back( sqrt( pow(path[k].y-path[k-1].y,2) + pow(path[k].x-path[k-1].x,2) ) );
                     }
+                    new_paths_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ] = new_wps;
+                    for (int k=path.size()-2; k>=0; k--) {
+                        new_wps_reversed.path.push_back( path[k] );
+                        new_wps_reversed.angle.push_back( M_PI + new_wps.angle[k] );
+                        new_wps_reversed.distance.push_back( new_wps.distance[k] );
+                    }
+                    new_paths_matrix[ nodes_indexes_in_order_[j] ][ nodes_indexes_in_order_[i] ] = new_wps_reversed;
+
                 }
             }
+        }
 
-        //     // Now save this new distance_cost_matrix into the yaml file:
-        //     std::string new_distance_cost_matrix_file_string = "distance_cost_matrix: [\n";
-        //     for (int i=0; i<nodes_indexes_in_order_.size(); i++) {
-        //         new_distance_cost_matrix_file_string.append("  [");
-        //         if (i==0) {
-        //             new_distance_cost_matrix_file_string.append(std::to_string(-1.0).c_str());
-        //             new_distance_cost_matrix_file_string.append(", ");
-        //             for (int j=0; j<nodes_indexes_in_order_.size(); j++) {
-        //                 if (j>0) {
-        //                     new_distance_cost_matrix_file_string.append(", ");
-        //                 }
-        //                 new_distance_cost_matrix_file_string.append(std::to_string( nodes_indexes_in_order_[j] ).c_str());
-        //             }
-        //             new_distance_cost_matrix_file_string.append("],\n  [");
-        //         }
-        //         new_distance_cost_matrix_file_string.append(std::to_string( nodes_indexes_in_order_[i] ).c_str());
-        //         new_distance_cost_matrix_file_string.append(", ");
-        //         for (int j=0; j<nodes_indexes_in_order_.size(); j++) {
-        //             if (j>0) {
-        //                 new_distance_cost_matrix_file_string.append(", ");
-        //             }
-        //             new_distance_cost_matrix_file_string.append(std::to_string(new_distance_cost_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ]).c_str());
-        //         }
-        //         new_distance_cost_matrix_file_string.append("],\n");
-        //     }
-        //     new_distance_cost_matrix_file_string.append("]");
-        //     std::ofstream distance_cost_matrix_yaml_file(distance_cost_matrix_yaml_path_, std::ofstream::trunc);
-        //     distance_cost_matrix_yaml_file << new_distance_cost_matrix_file_string;
-        //     distance_cost_matrix_yaml_file.close();
-        // } else {
-        //     std::vector< std::vector<float> > new_distance_cost_matrix_vector;
-        //     // Import the distance_cost_matrix from the default yaml file:
-        //     XmlRpc::XmlRpcValue distance_cost_matrix_XmlRpc;
-        //     ros::param::get("distance_cost_matrix", distance_cost_matrix_XmlRpc);
-        //     if (distance_cost_matrix_XmlRpc.getType()==XmlRpc::XmlRpcValue::TypeArray) {
-        //         for (int i=0; i<distance_cost_matrix_XmlRpc.size(); i++) {
-        //             if (distance_cost_matrix_XmlRpc[i].getType()==XmlRpc::XmlRpcValue::TypeArray) {
-        //                 std::vector<float> current_time_cost_row;
-        //                 for (int j=0; j<distance_cost_matrix_XmlRpc[i].size(); j++) {
-        //                     if (distance_cost_matrix_XmlRpc[i][j].getType()==XmlRpc::XmlRpcValue::TypeArray) {
-        //                         std::string::size_type sz;
-
-        //                         std::stringstream time_cost_element_stringstream;
-        //                         time_cost_element_stringstream << distance_cost_matrix_XmlRpc[i][j];
-        //                         float time_cost_element = (float) std::stod ( time_cost_element_stringstream.str() , &sz);
-
-        //                         current_time_cost_row.push_back(time_cost_element);
-        //                     }
-        //                 }
-        //                 new_distance_cost_matrix_vector.push_back(current_time_cost_row);
-        //             }
-        //         }
-        //     }
-
-        //     // Once buildt the distance matrix with vectors, pass it to maps:
-        //     for (int i=1; i<new_distance_cost_matrix_vector.size(); i++) {
-        //         for (int j=1; j<new_distance_cost_matrix_vector.size(); j++) {
-        //             new_distance_cost_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ] = new_distance_cost_matrix_vector[i][j];
-        //         }
-        //     }
-        // }
         distance_cost_matrix_mutex_.lock();
         distance_cost_matrix_.clear();
         distance_cost_matrix_ = new_distance_cost_matrix;
@@ -252,8 +234,8 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
                         if (UAVs_[k].airframe_type == "MULTICOPTER") {
 
                             if (_graph[it_i->first].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION
-                            || _graph[it_i->first].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION
-                            || _graph[it_i->first].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) { // Takeoff edge with navigation for a multicopter.
+                             || _graph[it_i->first].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION
+                             || _graph[it_i->first].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) { // Takeoff edge with navigation for a multicopter.
                                 new_time_cost_matrix[ it_i->first ][ it_j->first ] = UAVs_[k].hardcoded_takeoff_landing_height / UAVs_[k].takeoff_climb_speed
                                 + new_distance_cost_matrix[ it_i->first ][ it_j->first ] / UAVs_[k].speed_xy
                                 + UAVs_[k].time_delay_between_wps * (new_paths_matrix[ it_i->first ][ it_j->first ].path.size() + 1);
@@ -276,7 +258,7 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
                         } else if (UAVs_[k].airframe_type == "FIXED_WING") {
 
                             if (_graph[it_j->first].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION
-                            || _graph[it_j->first].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) { // Landing edge with navigation for a fixed wing.
+                             || _graph[it_j->first].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) { // Landing edge with navigation for a fixed wing.
                                 new_time_cost_matrix[ it_i->first ][ it_j->first ] = new_distance_cost_matrix[ it_i->first ][ it_j->first ] / UAVs_[k].speed_xy
                                 + UAVs_[k].time_delay_between_wps * (new_paths_matrix[ it_i->first ][ it_j->first ].path.size() + 1)
                                 + UAVs_[k].time_delay_landing;
@@ -289,8 +271,8 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
                         } else if (UAVs_[k].airframe_type == "VTOL") {
 
                             if (_graph[it_i->first].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION
-                            || _graph[it_i->first].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION
-                            || _graph[it_i->first].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) { // Takeoff edge with navigation for a VTOL.
+                             || _graph[it_i->first].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION
+                             || _graph[it_i->first].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) { // Takeoff edge with navigation for a VTOL.
                                 new_time_cost_matrix[ it_i->first ][ it_j->first ] = (_graph[it_j->first].z-_graph[it_i->first].z) / UAVs_[k].takeoff_climb_speed
                                 + new_distance_cost_matrix[ it_i->first ][ it_j->first ] / UAVs_[k].speed_xy
                                 + UAVs_[k].time_delay_between_wps * (new_paths_matrix[ it_i->first ][ it_j->first ].path.size() + 1)
@@ -352,6 +334,34 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
 
 # ifdef DEBUG
     getWindFromInternet();
+
+    std::string distance_cost_matrix_string = "distance_cost_matrix: [\n";
+    for (int i=0; i<nodes_indexes_in_order_.size(); i++) {
+        distance_cost_matrix_string.append("  [");
+        if (i==0) {
+            distance_cost_matrix_string.append(std::to_string(-1.0).c_str());
+            distance_cost_matrix_string.append(", ");
+            for (int j=0; j<nodes_indexes_in_order_.size(); j++) {
+                if (j>0) {
+                    distance_cost_matrix_string.append(", ");
+                }
+                distance_cost_matrix_string.append(std::to_string( nodes_indexes_in_order_[j] ).c_str());
+            }
+            distance_cost_matrix_string.append("],\n  [");
+        }
+        distance_cost_matrix_string.append(std::to_string( nodes_indexes_in_order_[i] ).c_str());
+        distance_cost_matrix_string.append(", ");
+        for (int j=0; j<nodes_indexes_in_order_.size(); j++) {
+            if (j>0) {
+                distance_cost_matrix_string.append(", ");
+            }
+            distance_cost_matrix_mutex_.lock();
+            distance_cost_matrix_string.append(std::to_string( distance_cost_matrix_[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ]).c_str());
+            distance_cost_matrix_mutex_.unlock();
+        }
+        distance_cost_matrix_string.append("],\n");
+    }
+    distance_cost_matrix_string.append("]");
 
     std::string time_cost_matrices_string = "time_cost_matrices: [\n";
     time_cost_matrices_mutex_.lock();
@@ -421,6 +431,7 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
     battery_drop_matrices_string.append("]");
     battery_drop_matrices_mutex_.unlock();
 
+    std::cout << distance_cost_matrix_string << std::endl << std::endl;
     std::cout << time_cost_matrices_string << std::endl << std::endl;
     std::cout << battery_drop_matrices_string << std::endl << std::endl;
 #endif
@@ -473,8 +484,8 @@ void ParameterEstimator::getWindFromInternet() {
         // std::cout << "wind_speed_end_found = "<< wind_speed_end_found << std::endl;
         // std::cout << "wind_direction_deg_found = "<< wind_direction_deg_found << std::endl;
         // std::cout << "wind_direction_deg_end_found = "<< wind_direction_deg_end_found << std::endl;
-        std::cout << std::endl << "wind_speed_string = " << wind_speed_string << std::endl;
-        std::cout << "wind_direction_deg_string = " << wind_direction_deg_string << std::endl << std::endl;
+        // std::cout << std::endl << "wind_speed_string = " << wind_speed_string << std::endl;
+        // std::cout << "wind_direction_deg_string = " << wind_direction_deg_string << std::endl << std::endl;
 #endif
 
         std::string::size_type sz;
