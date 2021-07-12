@@ -26,7 +26,7 @@ FIXED_WING:
   minimum_battery: 0.2
   time_until_fully_charged: 1800
   time_delay_between_wps: 1         # Each time the UAV pass by a waypoint, it slowsdown and have to maneuver a little. This is the delay estimation of that.
-  time_delay_landing: 30
+  time_delay_landing: 106
 
 VTOL:
   time_max_flying: 5400
@@ -44,7 +44,7 @@ VTOL:
 
 # Time (in seconds) between iterations for the Parameter Estimator thread and Plan Monitor thread in the Mission Controller:
 parameter_estimator_time: 20.0
-plan_monitor_time: 30.0         # Just after replanning it will be waited this amount of time x3 for the time estimation to settle.
+plan_monitor_time: 30.0         # Just after replanning it will be waited this amount of time x4 for the time estimation to settle.
 
 
 # Deviation limit (in parts per unit of the duration of the plans), if this is surpassed (greater or lower) the Plan Monitor will tell the planner to trigger the replanning:
