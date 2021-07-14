@@ -31,21 +31,21 @@ public:
     ~PlanMonitor();
 
     // Method called periodically in an external thread, located in the Mission Controller, that will call the planner (in the same thread) if it returns true:
-    bool enoughDeviationToReplan(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices);
+    bool enoughDeviationToReplan(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans, const std::vector< std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices);
 
     std::map<int, int> lastFlightPlanGraphNode();
 
 private:
 
-    // bool checkIfPlansHaveChanged (const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) const;
-    void constructUAVs(const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info);
+    void constructUAVs(const std::vector< std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> >& _drone_info);
     int  findUavIndexById(int _UAV_id);
 
     std::vector<aerialcore_msgs::FlightPlan> previous_flight_plans_;
 
     // UAVs:
     struct UAV {
-        float initial_battery;  // Current battery in parts per unit (not percentage or %). Updated continuously.
+        float battery;          // Current battery in parts per unit (not percentage or %). Updated continuously.
+        float initial_battery;  // Battery level when the current plan was first computed. Will be used to calculate the real battery drop.
 
         float speed_xy;         // Maximum horizontal velocity (m/s) of this specific UAV (in AUTO mode, if higher speeds are commanded in a mission they will be capped to this velocity).
         float speed_z_down;     // Maximum vertical descent velocity (m/s) of this specific UAV (in AUTO mode and endpoint for stabilized modes (ALTCTRL, POSCTRL)).

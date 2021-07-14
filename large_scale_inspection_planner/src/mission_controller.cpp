@@ -363,6 +363,8 @@ void MissionController::planThread(void) {
 
     centralized_planner_.resetInspectedEdges();
 
+    std::map<int, float> battery_level_when_planned;
+
     ros::Rate loop_rate(1.0/plan_monitor_time_);        // [Hz, inverse of seconds]
     while (!stop_current_supervising_) {
 
@@ -373,20 +375,26 @@ void MissionController::planThread(void) {
             planner_current_graph = specific_subgraph_cleaned_;
         }
 
-        std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> > drone_info;
+        bool plan_from_scratch = flight_plans_.size()==0;
+
+        std::vector< std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> > drone_info;
         for (const UAV& current_uav : UAVs_) {
             if (current_uav.enabled_to_supervise == true) {
-                std::tuple<float, float, int, int, int, int, int, int, bool, bool> new_tuple;
-                std::get<0>(new_tuple) = commanding_UAV_with_mission_lib_or_DJI_SDK_ ? current_uav.mission->battery() : 1.0;
-                std::get<1>(new_tuple) = current_uav.minimum_battery;
-                std::get<2>(new_tuple) = current_uav.time_until_fully_charged;
-                std::get<3>(new_tuple) = current_uav.time_max_flying;
-                std::get<4>(new_tuple) = current_uav.speed_xy;
-                std::get<5>(new_tuple) = current_uav.speed_z_down;
-                std::get<6>(new_tuple) = current_uav.speed_z_up;
-                std::get<7>(new_tuple) = current_uav.id;
-                std::get<8>(new_tuple) = commanding_UAV_with_mission_lib_or_DJI_SDK_ ? current_uav.mission->armed() : false;  // TODO: better way to know if flying?
-                std::get<9>(new_tuple) = current_uav.recharging;
+                std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> new_tuple;
+                std::get<0>(new_tuple) = commanding_UAV_with_mission_lib_or_DJI_SDK_ ? current_uav.mission->battery() : 1;
+
+                battery_level_when_planned[current_uav.id] = !plan_from_scratch ? battery_level_when_planned[current_uav.id] : commanding_UAV_with_mission_lib_or_DJI_SDK_ ? current_uav.mission->battery() : 1;
+                std::get<1>(new_tuple) = battery_level_when_planned[current_uav.id];
+
+                std::get<2>(new_tuple) = current_uav.minimum_battery;
+                std::get<3>(new_tuple) = current_uav.time_until_fully_charged;
+                std::get<4>(new_tuple) = current_uav.time_max_flying;
+                std::get<5>(new_tuple) = current_uav.speed_xy;
+                std::get<6>(new_tuple) = current_uav.speed_z_down;
+                std::get<7>(new_tuple) = current_uav.speed_z_up;
+                std::get<8>(new_tuple) = current_uav.id;
+                std::get<9>(new_tuple) = commanding_UAV_with_mission_lib_or_DJI_SDK_ ? current_uav.mission->armed() : false;  // TODO: better way to know if flying?
+                std::get<10>(new_tuple) = current_uav.recharging;
                 drone_info.push_back(new_tuple);
 
                 aerialcore_msgs::GraphNode initial_position_graph_node;
@@ -425,7 +433,6 @@ void MissionController::planThread(void) {
             }
         }
 
-        bool plan_from_scratch = flight_plans_.size()==0;
         bool replan = false;
 
         if (plan_from_scratch) {
@@ -479,7 +486,10 @@ void MissionController::planThread(void) {
                     // TODO: do waits right.
                     // if (flight_plans_for_current_uav.uav_id==2) sleep(10);
                     // if (flight_plans_for_current_uav.uav_id==3) sleep(74);
+
                     int current_uav_index = findUavIndexById(flight_plans_for_current_uav.uav_id);
+                    battery_level_when_planned[ flight_plans_for_current_uav.uav_id ] = UAVs_[current_uav_index].mission->battery();
+
                     if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
 #ifdef DEBUG
                     UAVs_[current_uav_index].mission->print();

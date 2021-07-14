@@ -236,10 +236,10 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
                             if (_graph[it_i->first].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION
                              || _graph[it_i->first].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION
                              || _graph[it_i->first].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) { // Takeoff edge with navigation for a multicopter.
-                                new_time_cost_matrix[ it_i->first ][ it_j->first ] = UAVs_[k].hardcoded_takeoff_landing_height / UAVs_[k].takeoff_climb_speed
-                                + new_distance_cost_matrix[ it_i->first ][ it_j->first ] / UAVs_[k].speed_xy
+                                new_time_cost_matrix[ it_i->first ][ it_j->first ] = new_distance_cost_matrix[ it_i->first ][ it_j->first ] / UAVs_[k].speed_xy
                                 + UAVs_[k].time_delay_between_wps * (new_paths_matrix[ it_i->first ][ it_j->first ].path.size() + 1);
 
+                                new_time_cost_matrix[ it_i->first ][ it_j->first ] += _graph[it_i->first].z > 1 ? 0 : UAVs_[k].hardcoded_takeoff_landing_height / UAVs_[k].takeoff_climb_speed ;    // TODO: better way to know if flying?
                                 new_time_cost_matrix[ it_i->first ][ it_j->first ] += _graph[it_j->first].z > UAVs_[k].hardcoded_takeoff_landing_height ? (_graph[it_j->first].z - UAVs_[k].hardcoded_takeoff_landing_height)/UAVs_[k].speed_z_up : (UAVs_[k].hardcoded_takeoff_landing_height - _graph[it_j->first].z)/UAVs_[k].speed_z_down ;
 
                             } else if (_graph[it_j->first].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION

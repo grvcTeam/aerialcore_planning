@@ -40,7 +40,7 @@ CentralizedPlanner::CentralizedPlanner() {
 CentralizedPlanner::~CentralizedPlanner() {}
 
 
-std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices, std::map<int, int> _last_flight_plan_graph_node) {
+std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices, std::map<int, int> _last_flight_plan_graph_node) {
 
     graph_.clear();
     edges_.clear();
@@ -419,7 +419,7 @@ void CentralizedPlanner::printPlan() {
 } // end printPlan method
 
 
-std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices, std::map<int, int> _last_flight_plan_graph_node) {
+std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices, std::map<int, int> _last_flight_plan_graph_node) {
 
 //     time_cost_matrices_.clear();
 //     battery_drop_matrices_.clear();
@@ -1042,23 +1042,24 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 } // end getPlanMILP method
 
 
-void CentralizedPlanner::constructUAVs(const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info) {
+void CentralizedPlanner::constructUAVs(const std::vector< std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> >& _drone_info) {
 
     UAVs_.clear();
 
     // _drone_info it's a vector of tuples, each tuple with 10 elements. The first in the tuple is the initial battery, and so on with all the elements in the "UAV" structure defined here below.
-    for (const std::tuple<float, float, int, int, int, int, int, int, bool, bool>& current_drone : _drone_info) {
+    for (const std::tuple<float, float, float, int, int, int, int, int, int, bool, bool>& current_drone : _drone_info) {
         UAV actual_UAV;
         actual_UAV.initial_battery = std::get<0>(current_drone);
-        actual_UAV.minimum_battery = std::get<1>(current_drone);
-        actual_UAV.time_until_fully_charged = std::get<2>(current_drone);
-        actual_UAV.time_max_flying = std::get<3>(current_drone);
-        actual_UAV.speed_xy = std::get<4>(current_drone);
-        actual_UAV.speed_z_down = std::get<5>(current_drone);
-        actual_UAV.speed_z_up = std::get<6>(current_drone);
-        actual_UAV.id = std::get<7>(current_drone);
-        actual_UAV.flying_or_landed_initially = std::get<8>(current_drone);
-        actual_UAV.recharging_initially = std::get<9>(current_drone);
+        // std::get<1>(current_drone) not being used.
+        actual_UAV.minimum_battery = std::get<2>(current_drone);
+        actual_UAV.time_until_fully_charged = std::get<3>(current_drone);
+        actual_UAV.time_max_flying = std::get<4>(current_drone);
+        actual_UAV.speed_xy = std::get<5>(current_drone);
+        actual_UAV.speed_z_down = std::get<6>(current_drone);
+        actual_UAV.speed_z_up = std::get<7>(current_drone);
+        actual_UAV.id = std::get<8>(current_drone);
+        actual_UAV.flying_or_landed_initially = std::get<9>(current_drone);
+        actual_UAV.recharging_initially = std::get<10>(current_drone);
         UAVs_.push_back(actual_UAV);
     }
 } // end constructUAVs
@@ -1247,7 +1248,7 @@ int CentralizedPlanner::findTourIndexById(int _tour_id, const std::vector<Tour>&
 } // end findTourIndexById
 
 
-std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanVNS(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices, std::map<int, int> _last_flight_plan_graph_node) {
+std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanVNS(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices, std::map<int, int> _last_flight_plan_graph_node) {
 
     // Get the initial plan with the greedy method:
     getPlanGreedy(_graph, _drone_info, _no_fly_zones, _geofence, _time_cost_matrices, _battery_drop_matrices, _last_flight_plan_graph_node);
@@ -1263,7 +1264,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanVNS(std::vec
 } // end getPlanVNS
 
 
-std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMEM(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices, std::map<int, int> _last_flight_plan_graph_node) {
+std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMEM(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices, std::map<int, int> _last_flight_plan_graph_node) {
 
     graph_.clear();
     edges_.clear();
@@ -1724,7 +1725,7 @@ void CentralizedPlanner::fillFlightPlansFields(std::vector<aerialcore_msgs::Flig
             // Fill the type of pose:
             if (j==0) {     // The first node, aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION, can be on the air or not:
                 if (UAVs_[ findUavIndexById(_flight_plans[i].uav_id) ].flying_or_landed_initially) {
-                    _flight_plans[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_NFZ_WP);
+                    _flight_plans[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_PYLON_WP);
                     previous_iteration_landing = false;
                     _flight_plans[i].poses.back().pose.position.z = graph_[ _flight_plans[i].nodes[j] ].z;
                 } else {
