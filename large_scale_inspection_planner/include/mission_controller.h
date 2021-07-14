@@ -49,12 +49,15 @@ private:
   ros::NodeHandle n_;
   ros::NodeHandle pnh_;
 
-  bool continuous_or_specific_supervision_ = true; // True if continuous supervision (default), false if specific.
+  bool complete_or_specific_graph_supervision_ = true;  // True if complete graph supervision (default), false if specific.
+  bool continuous_or_fast_supervision_ = true;          // True if continuous supervision (slow, default, one UAV at the time), false if fast with all the UAVs flying together.
 
   bool startSupervisingServiceCallback(aerialcore_msgs::StartSupervising::Request& _req, aerialcore_msgs::StartSupervising::Response& _res);
   bool stopSupervisingServiceCallback(aerialcore_msgs::StopSupervising::Request& _req, aerialcore_msgs::StopSupervising::Response& _res);
+  bool doCompleteSupervisionServiceCallback(std_srvs::Trigger::Request& _req, std_srvs::Trigger::Response& _res);
   bool doSpecificSupervisionServiceCallback(aerialcore_msgs::DoSpecificSupervision::Request& _req, aerialcore_msgs::DoSpecificSupervision::Response& _res);
   bool doContinuousSupervisionServiceCallback(std_srvs::Trigger::Request& _req, std_srvs::Trigger::Response& _res);
+  bool doFastSupervisionServiceCallback(std_srvs::Trigger::Request& _req, std_srvs::Trigger::Response& _res);
   bool startSpecificSupervisionPlanServiceCallback(aerialcore_msgs::PostString::Request& _req, aerialcore_msgs::PostString::Response& _res);
 
   void parameterEstimatorThread(void);
@@ -66,14 +69,16 @@ private:
 
   void removeGraphNodesAndEdgesAboveNoFlyZones(std::vector<aerialcore_msgs::GraphNode>& _graph_to_edit);
 
-  void translateFlightPlanIntoUAVMission(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
+  void translateFlightPlanIntoUAVMission(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
   std::string translateFlightPlanIntoDJIyaml(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
   std::string translateFlightPlanIntoYaml(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
 
   ros::ServiceServer start_supervising_srv_;
   ros::ServiceServer stop_supervising_srv_;
+  ros::ServiceServer do_complete_supervision_srv_;
   ros::ServiceServer do_specific_supervision_srv_;
   ros::ServiceServer do_continuous_supervision_srv_;
+  ros::ServiceServer do_fast_supervision_srv_;
   ros::ServiceServer start_specific_supervision_plan_srv_;
   ros::ServiceClient post_yaml_client_;
 

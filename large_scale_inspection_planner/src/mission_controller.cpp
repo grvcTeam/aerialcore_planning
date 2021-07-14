@@ -271,8 +271,10 @@ MissionController::MissionController() {
     // Advertised services:
     start_supervising_srv_ = n_.advertiseService("mission_controller/start_supervising", &MissionController::startSupervisingServiceCallback, this);
     stop_supervising_srv_ = n_.advertiseService("mission_controller/stop_supervising", &MissionController::stopSupervisingServiceCallback, this);
+    do_complete_supervision_srv_ = n_.advertiseService("mission_controller/do_complete_supervision", &MissionController::doCompleteSupervisionServiceCallback, this);
     do_specific_supervision_srv_ = n_.advertiseService("mission_controller/do_specific_supervision", &MissionController::doSpecificSupervisionServiceCallback, this);
     do_continuous_supervision_srv_ = n_.advertiseService("mission_controller/do_continuous_supervision", &MissionController::doContinuousSupervisionServiceCallback, this);
+    do_fast_supervision_srv_ = n_.advertiseService("mission_controller/do_fast_supervision", &MissionController::doFastSupervisionServiceCallback, this);
     start_specific_supervision_plan_srv_ = n_.advertiseService("mission_controller/start_specific_supervision_plan", &MissionController::startSpecificSupervisionPlanServiceCallback, this);
 
     // Clients:
@@ -369,7 +371,7 @@ void MissionController::planThread(void) {
     while (!stop_current_supervising_) {
 
         // Reset the next current graph:
-        if (continuous_or_specific_supervision_) {
+        if (complete_or_specific_graph_supervision_) {
             planner_current_graph = complete_graph_cleaned_;
         } else {
             planner_current_graph = specific_subgraph_cleaned_;
@@ -481,14 +483,10 @@ void MissionController::planThread(void) {
             if (commanding_UAV_with_mission_lib_or_DJI_SDK_) {
                 translateFlightPlanIntoUAVMission(flight_plans_);
 
-                for (const aerialcore_msgs::FlightPlan& flight_plans_for_current_uav : flight_plans_) {
-                    // // HARDCODED WAITS BETWEEN TAKEOFFS FOR NOVEMBER EXPERIMENTS:
-                    // TODO: do waits right.
-                    // if (flight_plans_for_current_uav.uav_id==2) sleep(10);
-                    // if (flight_plans_for_current_uav.uav_id==3) sleep(74);
+                for (const aerialcore_msgs::FlightPlan& flight_plan : flight_plans_) {
 
-                    int current_uav_index = findUavIndexById(flight_plans_for_current_uav.uav_id);
-                    battery_level_when_planned[ flight_plans_for_current_uav.uav_id ] = UAVs_[current_uav_index].mission->battery();
+                    int current_uav_index = findUavIndexById(flight_plan.uav_id);
+                    battery_level_when_planned[ flight_plan.uav_id ] = UAVs_[current_uav_index].mission->battery();
 
                     if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
 #ifdef DEBUG
@@ -517,24 +515,29 @@ void MissionController::planThread(void) {
 } // end planThread
 
 
-void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
-    for (const aerialcore_msgs::FlightPlan& flight_plans_for_current_uav : _flight_plans) {
-        int current_uav_index = findUavIndexById(flight_plans_for_current_uav.uav_id);
+void MissionController::translateFlightPlanIntoUAVMission(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
+    float takeoff_delay = 0;    // Only used if several UAVs and continous supervision.
+    auto time_cost_matrices = parameter_estimator_.getTimeCostMatrices();
+
+    for (aerialcore_msgs::FlightPlan& flight_plan : _flight_plans) {
+        int current_uav_index = findUavIndexById(flight_plan.uav_id);
         if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
 
         UAVs_[current_uav_index].mission->clear();
 
         std::vector<geometry_msgs::PoseStamped> pass_poses;
 
-        if (flight_plans_for_current_uav.poses.size() != flight_plans_for_current_uav.type.size()) {
-            ROS_ERROR("Mission Controller: UAV id=%d has a faulty FlightPlan which poses and type vectors have different sizes.", flight_plans_for_current_uav.uav_id);
+        if (flight_plan.poses.size() != flight_plan.type.size()) {
+            ROS_ERROR("Mission Controller: UAV id=%d has a faulty FlightPlan which poses and type vectors have different sizes.", flight_plan.uav_id);
         }
 
-        for (int i=0; i<flight_plans_for_current_uav.poses.size(); i++) {
-            geometry_msgs::PoseStamped current_pose_stamped = flight_plans_for_current_uav.poses[i];
+        bool only_sum_delay_once = true;
 
-            if (flight_plans_for_current_uav.type[i] == aerialcore_msgs::FlightPlan::TYPE_PASS_PYLON_WP
-             || flight_plans_for_current_uav.type[i] == aerialcore_msgs::FlightPlan::TYPE_PASS_NFZ_WP) {
+        for (int i=0; i<flight_plan.poses.size(); i++) {
+            geometry_msgs::PoseStamped current_pose_stamped = flight_plan.poses[i];
+
+            if (flight_plan.type[i] == aerialcore_msgs::FlightPlan::TYPE_PASS_PYLON_WP
+             || flight_plan.type[i] == aerialcore_msgs::FlightPlan::TYPE_PASS_NFZ_WP) {
                 pass_poses.push_back(current_pose_stamped);
 
             } else {
@@ -542,10 +545,22 @@ void MissionController::translateFlightPlanIntoUAVMission(const std::vector<aeri
                     UAVs_[current_uav_index].mission->addPassWpList(pass_poses);
                 }
 
-                if (flight_plans_for_current_uav.type[i] == aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP) {
-                    UAVs_[current_uav_index].mission->addTakeOffWp(current_pose_stamped);
+                if (flight_plan.type[i] == aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP) {
+                    if (i==0) {     // Only delay the first takeoff.
+                        UAVs_[current_uav_index].mission->addTakeOffWp(current_pose_stamped, takeoff_delay);
+                        flight_plan.header.stamp.sec += takeoff_delay;
+                    } else {
+                        UAVs_[current_uav_index].mission->addTakeOffWp(current_pose_stamped, 0);
+                    }
 
-                } else if (flight_plans_for_current_uav.type[i] == aerialcore_msgs::FlightPlan::TYPE_LAND_WP) {
+                    if (continuous_or_fast_supervision_ && only_sum_delay_once) {  // Delay the takeoff of the next UAV if the inspection mode is set to continuous, which is not fast (one UAV at the time).
+                        for (int j=0; j<flight_plan.nodes.size()-1; j++) {
+                            takeoff_delay += time_cost_matrices.at( flight_plan.uav_id ).at( flight_plan.nodes[j] ).at( flight_plan.nodes[j+1] );
+                        }
+                        only_sum_delay_once = false;
+                    }
+
+                } else if (flight_plan.type[i] == aerialcore_msgs::FlightPlan::TYPE_LAND_WP) {
                     if (UAVs_[current_uav_index].mission->airframeType() == grvc::AirframeType::FIXED_WING) {
 
                         // PX4 gives error "adjust landing approach" if the last wp previous to the landing isn't appropriate. So calculate a previous wp to the landing that is at a distance of 200 meters minimum (500 prefered) of the landing spot and 15 meters height.
@@ -591,20 +606,20 @@ std::string MissionController::translateFlightPlanIntoDJIyaml(const std::vector<
 uav_n: )"};
     yaml_to_return.append(std::to_string(_flight_plans.size()).c_str());
     yaml_to_return.append("\n\n");
-    for (const aerialcore_msgs::FlightPlan& flight_plans_for_current_uav : _flight_plans) {
+    for (const aerialcore_msgs::FlightPlan& flight_plan : _flight_plans) {
         yaml_to_return.append("uav_");
-        yaml_to_return.append(std::to_string(flight_plans_for_current_uav.uav_id).c_str());
+        yaml_to_return.append(std::to_string(flight_plan.uav_id).c_str());
         yaml_to_return.append({R"(:
   wp_n: )"});
-        yaml_to_return.append(std::to_string(flight_plans_for_current_uav.poses.size()-2 ).c_str());
-        for (int i=1; i<flight_plans_for_current_uav.poses.size()-1; i++) {
+        yaml_to_return.append(std::to_string(flight_plan.poses.size()-2 ).c_str());
+        for (int i=1; i<flight_plan.poses.size()-1; i++) {
             geometry_msgs::Point32 aux_point32;
-            aux_point32.x = flight_plans_for_current_uav.poses[i].pose.position.x;
-            aux_point32.y = flight_plans_for_current_uav.poses[i].pose.position.y;
-            aux_point32.z = flight_plans_for_current_uav.poses[i].pose.position.z;
+            aux_point32.x = flight_plan.poses[i].pose.position.x;
+            aux_point32.y = flight_plan.poses[i].pose.position.y;
+            aux_point32.z = flight_plan.poses[i].pose.position.z;
 
             geographic_msgs::GeoPoint current_geopoint = cartesian_to_geographic(aux_point32, map_origin_geo_);
-            current_geopoint.altitude = flight_plans_for_current_uav.poses[i].pose.position.z;
+            current_geopoint.altitude = flight_plan.poses[i].pose.position.z;
 
             yaml_to_return.append({R"(
   wp_)"});
@@ -628,11 +643,11 @@ uav_n: )"};
 
 std::string MissionController::translateFlightPlanIntoYaml(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
     std::string yaml_to_return;
-    for (const aerialcore_msgs::FlightPlan& flight_plans_for_current_uav : _flight_plans) {
+    for (const aerialcore_msgs::FlightPlan& flight_plan : _flight_plans) {
         yaml_to_return.append("waypoints_");
-        yaml_to_return.append(std::to_string(flight_plans_for_current_uav.uav_id).c_str());
+        yaml_to_return.append(std::to_string(flight_plan.uav_id).c_str());
         yaml_to_return.append(": \"");
-        for (const geometry_msgs::PoseStamped& current_pose : flight_plans_for_current_uav.poses) {
+        for (const geometry_msgs::PoseStamped& current_pose : flight_plan.poses) {
             yaml_to_return.append(std::to_string(current_pose.pose.position.x).c_str());
             yaml_to_return.append(" ");
             yaml_to_return.append(std::to_string(current_pose.pose.position.y).c_str());
@@ -676,8 +691,23 @@ bool MissionController::stopSupervisingServiceCallback(aerialcore_msgs::StopSupe
 } // end stopSupervisingServiceCallback
 
 
+bool MissionController::doCompleteSupervisionServiceCallback(std_srvs::Trigger::Request& _req, std_srvs::Trigger::Response& _res) {
+    complete_or_specific_graph_supervision_ = true;
+
+    current_graph_mutex_.lock();
+    current_graph_.clear();
+    current_graph_ = complete_graph_cleaned_;
+    current_graph_mutex_.unlock();
+
+    centralized_planner_.resetInspectedEdges();
+
+    _res.success=true;
+    return true;
+} // end doCompleteSupervisionServiceCallback
+
+
 bool MissionController::doSpecificSupervisionServiceCallback(aerialcore_msgs::DoSpecificSupervision::Request& _req, aerialcore_msgs::DoSpecificSupervision::Response& _res) {
-    continuous_or_specific_supervision_ = false;
+    complete_or_specific_graph_supervision_ = false;
     specific_subgraph_.clear();
     for (const aerialcore_msgs::GraphNode& current_graph_node : _req.specific_subgraph) {
         specific_subgraph_.push_back(current_graph_node);
@@ -697,18 +727,23 @@ bool MissionController::doSpecificSupervisionServiceCallback(aerialcore_msgs::Do
 
 
 bool MissionController::doContinuousSupervisionServiceCallback(std_srvs::Trigger::Request& _req, std_srvs::Trigger::Response& _res) {
-    continuous_or_specific_supervision_ = true;
-
-    current_graph_mutex_.lock();
-    current_graph_.clear();
-    current_graph_ = complete_graph_cleaned_;
-    current_graph_mutex_.unlock();
+    continuous_or_fast_supervision_ = true;
 
     centralized_planner_.resetInspectedEdges();
 
     _res.success=true;
     return true;
 } // end doContinuousSupervisionServiceCallback
+
+
+bool MissionController::doFastSupervisionServiceCallback(std_srvs::Trigger::Request& _req, std_srvs::Trigger::Response& _res) {
+    continuous_or_fast_supervision_ = false;
+
+    centralized_planner_.resetInspectedEdges();
+
+    _res.success=true;
+    return true;
+} // end doFastSupervisionServiceCallback
 
 
 bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_msgs::PostString::Request& _req, aerialcore_msgs::PostString::Response& _res) {
@@ -831,11 +866,8 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
     if (commanding_UAV_with_mission_lib_or_DJI_SDK_) {
         translateFlightPlanIntoUAVMission(flight_plans_);
 
-        for (const aerialcore_msgs::FlightPlan& flight_plans_for_current_uav : flight_plans_) {
-            // // HARDCODED WAITS BETWEEN TAKEOFFS FOR NOVEMBER EXPERIMENTS:
-            // if (flight_plans_for_current_uav.uav_id==2) sleep(10);
-            // if (flight_plans_for_current_uav.uav_id==3) sleep(74);
-            int current_uav_index = findUavIndexById(flight_plans_for_current_uav.uav_id);
+        for (const aerialcore_msgs::FlightPlan& flight_plan : flight_plans_) {
+            int current_uav_index = findUavIndexById(flight_plan.uav_id);
             if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
             UAVs_[current_uav_index].enabled_to_supervise = true;
 #ifdef DEBUG

@@ -17,9 +17,11 @@ def main_menu():
     print "\nMain menu of the pydashboard. Please choose the option to send:"
     print "1. Start supervising"
     print "2. Stop supervising"
-    print "3. Do specific supervision"
-    print "4. Do continuous supervision"
+    print "3. Do complete supervision"
+    print "4. Do specific supervision"
     print "5. Start specific supervision plan"
+    print "6. Do continuous supervision"
+    print "7. Do fast supervision"
 
     selected = raw_input(" >> ")
     system("clear")
@@ -28,11 +30,15 @@ def main_menu():
     elif selected == "2":
         stop_supervising_menu()
     elif selected == "3":
-        do_specific_supervision_menu()
+        do_complete_supervision_menu()
     elif selected == "4":
-        do_continuous_supervision_menu()
+        do_specific_supervision_menu()
     elif selected == "5":
         start_specific_supervision_plan_menu()
+    elif selected == "6":
+        do_continuous_supervision_menu()
+    elif selected == "7":
+        start_fast_supervision_plan_menu()
 
     else:
         system("clear")
@@ -77,7 +83,17 @@ def stop_supervising_menu():
         print "\nService call failed: %s"%e
 
 
-# 3. Do specific supervision:
+# 3. Do complete supervision:
+def do_complete_supervision_menu():
+    system("clear")
+    print "Do complete supervision selected."
+    try:
+        print do_complete_supervision_client.call()
+    except rospy.ServiceException, e:
+        print "\nService call failed: %s"%e
+
+
+# 4. Do specific supervision:
 def do_specific_supervision_menu():
     system("clear")
     print "Do specific supervision."
@@ -247,16 +263,6 @@ def do_specific_supervision_menu():
         print "\nService call failed: %s"%e
 
 
-# 4. Do continuous supervision:
-def do_continuous_supervision_menu():
-    system("clear")
-    print "Do continuous supervision selected."
-    try:
-        print do_continuous_supervision_client.call()
-    except rospy.ServiceException, e:
-        print "\nService call failed: %s"%e
-
-
 # 5. Start specific supervision plan:
 def start_specific_supervision_plan_menu():
     system("clear")
@@ -290,6 +296,26 @@ def start_specific_supervision_plan_menu():
         print "Not a valid option."
 
 
+# 6. Do continuous supervision:
+def do_continuous_supervision_menu():
+    system("clear")
+    print "Do continuous supervision selected."
+    try:
+        print do_continuous_supervision_client.call()
+    except rospy.ServiceException, e:
+        print "\nService call failed: %s"%e
+
+
+# 7. Do fast supervision:
+def do_fast_supervision_menu():
+    system("clear")
+    print "Do fast supervision selected."
+    try:
+        print do_fast_supervision_client.call()
+    except rospy.ServiceException, e:
+        print "\nService call failed: %s"%e
+
+
 # Finish the execution directly when Ctrl+C is pressed (signal.SIGINT received), without escalating to SIGTERM.
 def signal_handler(sig, frame):
     print('Ctrl+C pressed, signal.SIGINT received.')
@@ -301,8 +327,10 @@ if __name__ == "__main__":
     plans_path = rospy.get_param('~plans_path')
     start_supervising_client = rospy.ServiceProxy('mission_controller/start_supervising',StartSupervising)
     stop_supervising_client = rospy.ServiceProxy('mission_controller/stop_supervising',StopSupervising)
+    do_complete_supervision_client = rospy.ServiceProxy('mission_controller/do_complete_supervision',Trigger)
     do_specific_supervision_client = rospy.ServiceProxy('mission_controller/do_specific_supervision',DoSpecificSupervision)
     do_continuous_supervision_client = rospy.ServiceProxy('mission_controller/do_continuous_supervision',Trigger)
+    do_fast_supervision_client = rospy.ServiceProxy('mission_controller/do_fast_supervision',Trigger)
     start_specific_supervision_plan_client = rospy.ServiceProxy('mission_controller/start_specific_supervision_plan',PostString)
     signal.signal(signal.SIGINT, signal_handler)    # Associate signal SIGINT (Ctrl+C pressed) to handler (function "signal_handler")
 
