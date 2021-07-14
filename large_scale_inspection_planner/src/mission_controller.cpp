@@ -361,6 +361,8 @@ void MissionController::planThread(void) {
 
     std::vector<aerialcore_msgs::GraphNode> planner_current_graph;
 
+    centralized_planner_.resetInspectedEdges();
+
     ros::Rate loop_rate(1.0/plan_monitor_time_);        // [Hz, inverse of seconds]
     while (!stop_current_supervising_) {
 
@@ -454,10 +456,10 @@ void MissionController::planThread(void) {
             clock_t t_begin, t_end;
             t_begin = clock();
 
-            // flight_plans_ = centralized_planner_.getPlanGreedy(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
-            flight_plans_ = centralized_planner_.getPlanMEM(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
-            // flight_plans_ =  centralized_planner_.getPlanMILP(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
-            // flight_plans_ =  centralized_planner_.getPlanHeuristic(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
+            // flight_plans_ = centralized_planner_.getPlanGreedy(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.lastFlightPlanGraphNode());
+            flight_plans_ = centralized_planner_.getPlanMEM(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.lastFlightPlanGraphNode());
+            // flight_plans_ =  centralized_planner_.getPlanMILP(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.lastFlightPlanGraphNode());
+            // flight_plans_ =  centralized_planner_.getPlanVNS(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.lastFlightPlanGraphNode());
 
             t_end = clock();
 
@@ -497,6 +499,7 @@ void MissionController::planThread(void) {
 
             // After a replanning wait for 3x the plan_monitor_time_ before checking again if it needs replanning:
             std::this_thread::sleep_for(std::chrono::seconds((int) plan_monitor_time_*4));
+            continue;
         }
 
         loop_rate.sleep();
@@ -676,6 +679,8 @@ bool MissionController::doSpecificSupervisionServiceCallback(aerialcore_msgs::Do
     specific_subgraph_cleaned_ = current_graph_;
     current_graph_mutex_.unlock();
 
+    centralized_planner_.resetInspectedEdges();
+
     _res.success=true;
     return true;
 } // end doSpecificSupervisionServiceCallback
@@ -688,6 +693,8 @@ bool MissionController::doContinuousSupervisionServiceCallback(std_srvs::Trigger
     current_graph_.clear();
     current_graph_ = complete_graph_cleaned_;
     current_graph_mutex_.unlock();
+
+    centralized_planner_.resetInspectedEdges();
 
     _res.success=true;
     return true;

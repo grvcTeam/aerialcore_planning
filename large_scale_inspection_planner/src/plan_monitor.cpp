@@ -37,6 +37,11 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
 
     ros::Time time_now = ros::Time::now();
 
+    if (previous_flight_plans_ != _flight_plans) {
+        UAVs_.clear();
+    }
+    previous_flight_plans_ = _flight_plans;
+
     constructUAVs(_drone_info);
 
     double total_duration_planned = 0;   // Current planned duration up until the place where this method is called (for all UAVs).
@@ -109,6 +114,7 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
                 break;
             }
         }
+        UAVs_[uav_index].last_flight_plan_graph_node = last_node_in_graph;
         int next_node_in_graph = -1;
         for (int g_i=0; g_i<_graph.size(); g_i++) {
             if (next_node_in_poses==0 && _graph[g_i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && _graph[g_i].id==_flight_plans[i].uav_id
@@ -287,6 +293,7 @@ void PlanMonitor::constructUAVs(const std::vector< std::tuple<float, float, int,
         actual_UAV.recharging_initially = std::get<9>(current_drone);
         int uav_index = findUavIndexById(actual_UAV.id);
         actual_UAV.last_pose_index = uav_index==-1 ? 0 : UAVs_[uav_index].last_pose_index;
+        actual_UAV.last_flight_plan_graph_node = uav_index==-1 ? -1 : UAVs_[uav_index].last_flight_plan_graph_node;
         UAVs_new.push_back(actual_UAV);
     }
 
@@ -305,6 +312,15 @@ int PlanMonitor::findUavIndexById(int _UAV_id) {
     }
     return uav_index;
 } // end findUavIndexById
+
+
+std::map<int, int> PlanMonitor::lastFlightPlanGraphNode() {
+    std::map<int, int> map_to_return;
+    for (int i=0; i<UAVs_.size(); i++) {
+        map_to_return[ UAVs_[i].id ] = UAVs_[i].last_flight_plan_graph_node;
+    }
+    return map_to_return;
+} // end lastFlightPlanGraphNode
 
 
 } // end namespace aerialcore
