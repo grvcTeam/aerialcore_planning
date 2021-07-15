@@ -64,6 +64,7 @@ private:
   void planThread(void);
 
   int findUavIndexById(int _UAV_id);
+  static bool compareFlightPlanById(const aerialcore_msgs::FlightPlan &a, const aerialcore_msgs::FlightPlan &b);
 
   void printCurrentGraph();
 

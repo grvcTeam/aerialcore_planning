@@ -2,12 +2,12 @@
 
 
 # Dictionary of the actual drones used in the simulation or reality (key: UAV id, value: airframe type):
-drones: {"1": "MULTICOPTER"} #, "2": "FIXED_WING", "3": "VTOL"}
+drones: {"1": "MULTICOPTER", "2": "MULTICOPTER"} #, "2": "FIXED_WING", "3": "VTOL"}
 
 
 # Airframe types, each one with its own parameter values (time in seconds, speed in m/s, battery in in parts per unit, height in meters):
 MULTICOPTER:
-  time_max_flying: 1800
+  time_max_flying: 1000
   speed_xy: 5.5
   speed_z_down: 1.5
   speed_z_up: 3.0

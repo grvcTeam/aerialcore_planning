@@ -37,6 +37,19 @@
     </include>
 
     <!-- Launch robot id=2 -->
+    <include file="$(find px4_bringup)/launch/spawn_robot.launch" ns="$(arg ns_uav_prefix)2">
+        <arg name="id" value="2"/>
+        <arg name="material" value="Orange"/>
+        <arg name="mode" value="$(arg mode)"/>
+        <arg name="description_package" value="robots_description"/>
+        <arg name="x" value="38.8"/>
+        <arg name="y" value="65"/>
+        <arg name="z" value="0"/>
+        <arg name="yaw" value="1.895919"/>
+        <arg name="robot_model" value="mbzirc"/>
+    </include>
+
+    <!-- Launch robot id=2 -->
     <!-- <include file="$(find px4_bringup)/launch/spawn_robot.launch" ns="$(arg ns_uav_prefix)2">
         <arg name="id" value="2"/>
         <arg name="material" value="Orange"/>

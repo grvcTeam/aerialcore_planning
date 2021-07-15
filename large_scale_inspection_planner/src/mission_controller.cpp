@@ -9,6 +9,7 @@
 
 #include <XmlRpcValue.h>
 #include <time.h>
+#include <algorithm>
 
 #define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
 
@@ -294,10 +295,13 @@ MissionController::MissionController() {
 // Brief Destructor
 MissionController::~MissionController() {
     if(spin_thread_.joinable()) spin_thread_.join();
+
     stop_current_supervising_ = true;
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     if(parameter_estimator_thread_.joinable()) parameter_estimator_thread_.join();
     if(plan_thread_.joinable()) plan_thread_.join();
     stop_current_supervising_ = false;
+
     for (UAV& uav : UAVs_) {
         delete uav.mission;
     }
@@ -325,9 +329,9 @@ bool MissionController::startSupervisingServiceCallback(aerialcore_msgs::StartSu
 
     // Stop the current supervising threads, consisting on the parameter estimator (module of same name) and plan thread (plan monitor and planner modules):
     stop_current_supervising_ = true;
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     if(parameter_estimator_thread_.joinable()) parameter_estimator_thread_.join();
     if(plan_thread_.joinable()) plan_thread_.join();
-
     stop_current_supervising_ = false;
 
     // Start the supervising threads, consisting on the parameter estimator (module of same name) and plan thread (plan monitor and planner modules):
@@ -465,10 +469,27 @@ void MissionController::planThread(void) {
             clock_t t_begin, t_end;
             t_begin = clock();
 
-            // flight_plans_ = centralized_planner_.getPlanGreedy(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.lastFlightPlanGraphNode());
-            flight_plans_ = centralized_planner_.getPlanMEM(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.lastFlightPlanGraphNode());
-            // flight_plans_ =  centralized_planner_.getPlanMILP(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.lastFlightPlanGraphNode());
-            // flight_plans_ =  centralized_planner_.getPlanVNS(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.lastFlightPlanGraphNode());
+            // std::vector<aerialcore_msgs::FlightPlan> flight_plans_new = centralized_planner_.getPlanGreedy(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.lastFlightPlanGraphNode());
+            std::vector<aerialcore_msgs::FlightPlan> flight_plans_new = centralized_planner_.getPlanMEM(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.lastFlightPlanGraphNode());
+            // std::vector<aerialcore_msgs::FlightPlan> flight_plans_new =  centralized_planner_.getPlanMILP(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.lastFlightPlanGraphNode());
+            // std::vector<aerialcore_msgs::FlightPlan> flight_plans_new =  centralized_planner_.getPlanVNS(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.lastFlightPlanGraphNode());
+
+            // Before saving the new plan, check if there are drones not used in this new plan, in which case clear its plan:
+            for (const aerialcore_msgs::FlightPlan& flight_plan_original : flight_plans_) {
+                bool uav_match_found = false;
+                for (const aerialcore_msgs::FlightPlan& flight_plan_new : flight_plans_new) {
+                    if (flight_plan_original.uav_id == flight_plan_new.uav_id) {
+                        uav_match_found = true;
+                        break;
+                    }
+                }
+                if (!uav_match_found) {
+                    UAVs_[ findUavIndexById(flight_plan_original.uav_id) ].mission->clear();
+                    UAVs_[ findUavIndexById(flight_plan_original.uav_id) ].mission->pushClear();
+                }
+            }
+            std::sort(flight_plans_new.begin(), flight_plans_new.end(), compareFlightPlanById);
+            flight_plans_ = flight_plans_new;
 
             t_end = clock();
 
@@ -553,12 +574,6 @@ void MissionController::translateFlightPlanIntoUAVMission(std::vector<aerialcore
                         UAVs_[current_uav_index].mission->addTakeOffWp(current_pose_stamped, 0);
                     }
 
-                    if (continuous_or_fast_supervision_ && only_sum_delay_once) {  // Delay the takeoff of the next UAV if the inspection mode is set to continuous, which is not fast (one UAV at the time).
-                        for (int j=0; j<flight_plan.nodes.size()-1; j++) {
-                            takeoff_delay += time_cost_matrices.at( flight_plan.uav_id ).at( flight_plan.nodes[j] ).at( flight_plan.nodes[j+1] );
-                        }
-                        only_sum_delay_once = false;
-                    }
 
                 } else if (flight_plan.type[i] == aerialcore_msgs::FlightPlan::TYPE_LAND_WP) {
                     if (UAVs_[current_uav_index].mission->airframeType() == grvc::AirframeType::FIXED_WING) {
@@ -594,6 +609,13 @@ void MissionController::translateFlightPlanIntoUAVMission(std::vector<aerialcore
                 }
 
                 pass_poses.clear();
+            }
+
+            if (i==0 && continuous_or_fast_supervision_ && only_sum_delay_once) {  // Delay the takeoff of the next UAV if the inspection mode is set to continuous, which is not fast (one UAV at the time).
+                for (int j=0; j<flight_plan.nodes.size()-1; j++) {
+                    takeoff_delay += time_cost_matrices.at( flight_plan.uav_id ).at( flight_plan.nodes[j] ).at( flight_plan.nodes[j+1] );
+                }
+                only_sum_delay_once = false;
             }
         }
     }
@@ -667,6 +689,7 @@ std::string MissionController::translateFlightPlanIntoYaml(const std::vector<aer
 
 bool MissionController::stopSupervisingServiceCallback(aerialcore_msgs::StopSupervising::Request& _req, aerialcore_msgs::StopSupervising::Response& _res) {
     stop_current_supervising_ = true;
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     if(parameter_estimator_thread_.joinable()) parameter_estimator_thread_.join();
     if(plan_thread_.joinable()) plan_thread_.join();
     stop_current_supervising_ = false;
@@ -751,6 +774,7 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
 
     // Stop supervising threads, if exist:
     stop_current_supervising_ = true;
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     if(parameter_estimator_thread_.joinable()) parameter_estimator_thread_.join();
     if(plan_thread_.joinable()) plan_thread_.join();
     stop_current_supervising_ = false;
@@ -978,6 +1002,11 @@ void MissionController::printCurrentGraph() {
         std::cout << "current_graph_node[ " << i << " ].altitude                 = " << current_graph_[i].altitude << std::endl;
     }
     current_graph_mutex_.unlock();
+}
+
+
+bool MissionController::compareFlightPlanById(const aerialcore_msgs::FlightPlan &a, const aerialcore_msgs::FlightPlan &b) {
+    return a.uav_id > b.uav_id;
 }
 
 
