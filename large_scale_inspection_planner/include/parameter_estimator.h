@@ -40,6 +40,8 @@ public:
     const std::map<int, std::map<int, std::map<int, float> > >& getTimeCostMatrices();
     const std::map<int, std::map<int, std::map<int, float> > >& getBatteryDropMatrices();
 
+    void printMatrices();
+
 private:
     // The following are the capacity and cost matrices. For them, each row and column are graph nodes and the elements between them are the edges.
     // The rows and columns are the following graph nodes: initial UAV pose, regular land stations, recharging land stations, and pylons.
@@ -61,9 +63,6 @@ private:
     std::mutex distance_cost_matrix_mutex_;
     std::mutex time_cost_matrices_mutex_;
     std::mutex battery_drop_matrices_mutex_;
-
-    // std::string distance_cost_matrix_yaml_path_;
-    // bool construct_distance_cost_matrix_ = true;        // Parameter estimator constructs the distance_cost_matrix from the graph and export it to a default yaml file (if true), or swiftly read the last default yaml file of the graph (if false).
 
     struct UAV {
         std::string airframe_type;  // Not the one from the roslaunch (PX4), but the one in the yaml.
@@ -90,17 +89,23 @@ private:
     };
     std::vector<UAV> UAVs_;
 
+    geographic_msgs::GeoPoint map_origin_geo_;
+    std::string openweathermap_appid_;
+
+    static size_t writeCallback(void *_contents, size_t _size, size_t _nmemb, void *_userp);
+    int  findUavIndexById(int _UAV_id);
+
     geometry_msgs::Point32 wind_vector_;    // ENU: x positive is East, y positive is North direction and z positive is up. Module of the vector is the wind speed in m/s.
     float wind_speed_;                      // Module of the wind vector (m/s).
-
     void getWindFromInternet();
-    static size_t writeCallback(void *contents, size_t size, size_t nmemb, void *userp);
+
+    float timeCostMulticopter(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, Wps> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph);
+    float timeCostFixedWing(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, Wps> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph);
+    float timeCostVTOL(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, Wps> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph);
 
     float batteryDropMulticopter(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices);
     float batteryDropFixedWing(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices);
     float batteryDropVTOL(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices);
-
-    int  findUavIndexById(int _UAV_id);
 
 };  // end ParameterEstimator class
 

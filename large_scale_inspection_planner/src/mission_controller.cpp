@@ -1006,7 +1006,7 @@ void MissionController::printCurrentGraph() {
 
 
 bool MissionController::compareFlightPlanById(const aerialcore_msgs::FlightPlan &a, const aerialcore_msgs::FlightPlan &b) {
-    return a.uav_id > b.uav_id;
+    return a.uav_id < b.uav_id;
 }
 
 

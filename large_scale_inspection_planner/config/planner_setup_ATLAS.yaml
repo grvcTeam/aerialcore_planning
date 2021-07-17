@@ -55,7 +55,12 @@ deviation_limit: 0.1
 map_origin_geo: [38.138728, -3.173825, 444]
 
 
-# Degrees of inclination of the ATLAS runway from the x axis (East direction):
+# API ID of OpenWeatherMap to get the wind vector from the internet in the Parameter Estimator.
+# THIS API KEY IS NOT VALID, it's just as an example. Please get your own API ID to use this functionality (it's free):
+openweathermap_appid: "73bc471b3a4c39f688d5c0e79647db71"
+
+
+# Degrees of inclination of the ATLAS runway from the x axis (East direction, needed for Fixed Wing landing):
 runway_heading: 18.0
 
 

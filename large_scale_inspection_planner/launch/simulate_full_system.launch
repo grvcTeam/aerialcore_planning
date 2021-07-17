@@ -29,9 +29,9 @@
         <arg name="material" value="Orange"/>
         <arg name="mode" value="$(arg mode)"/>
         <arg name="description_package" value="robots_description"/>
-        <arg name="x" value="28"/>
-        <arg name="y" value="61"/>
-        <arg name="z" value="0.32"/>
+        <arg name="x" value="38.8"/>
+        <arg name="y" value="65"/>
+        <arg name="z" value="0"/>
         <arg name="yaw" value="1.895919"/>
         <arg name="robot_model" value="mbzirc"/>
     </include>
@@ -42,9 +42,9 @@
         <arg name="material" value="Orange"/>
         <arg name="mode" value="$(arg mode)"/>
         <arg name="description_package" value="robots_description"/>
-        <arg name="x" value="38.8"/>
-        <arg name="y" value="65"/>
-        <arg name="z" value="0"/>
+        <arg name="x" value="28"/>
+        <arg name="y" value="61"/>
+        <arg name="z" value="0.32"/>
         <arg name="yaw" value="1.895919"/>
         <arg name="robot_model" value="mbzirc"/>
     </include>
@@ -79,31 +79,20 @@
         <!-- <arg name="robot_model" value="mbzirc"/> -->
     <!-- </include> -->
 
-    <!-- Use mission_lib for commanding UAVs (true) or output a yaml string for using the DJI SDK (false). -->
-    <arg name="commanding_UAV_with_mission_lib_or_DJI_SDK" default="true"/>
-
-    <!-- If construct_distance_cost_matrix is true, the Parameter Estimator will construct the distance_cost_matrix from the graph and export it to a yaml file
-    given in the path distance_cost_matrix_yaml_path. If construct_distance_cost_matrix is false then the last yaml file is loaded to save some computing time. -->
-    <!-- <arg name="construct_distance_cost_matrix" default="true"/>
-    <arg name="distance_cost_matrix_yaml_path" default="$(find large_scale_inspection_planner)/config/distance_cost_matrix.yaml"/>
-    <group if="$(eval arg('construct_distance_cost_matrix') ==false)">
-        <rosparam file="$(arg distance_cost_matrix_yaml_path)" command="load" />
-    </group> -->
-
     <!-- Parameters for the mission_lib. -->
     <arg name="pose_frame_id" default="map"/>
     <arg name="home_pose_parent_frame" default="map"/>
 
+    <!-- Use mission_lib for commanding UAVs (true) or output a yaml string for using the DJI SDK (false). -->
+    <arg name="commanding_UAV_with_mission_lib_or_DJI_SDK" default="true"/>
+
     <!-- Launch the Mission Controller. -->
 	<node pkg="large_scale_inspection_planner" name="mission_controller" type="mission_controller" output="screen">
-		<rosparam param="commanding_UAV_with_mission_lib_or_DJI_SDK" subst_value="true">$(arg commanding_UAV_with_mission_lib_or_DJI_SDK)</rosparam>
-
+		<rosparam param="ns_uav_prefix" subst_value="true">$(arg ns_uav_prefix)</rosparam>
 		<rosparam param="pose_frame_id" subst_value="true">$(arg pose_frame_id)</rosparam>
 		<rosparam param="home_pose_parent_frame" subst_value="true">$(arg home_pose_parent_frame)</rosparam>
-		<rosparam param="ns_uav_prefix" subst_value="true">$(arg ns_uav_prefix)</rosparam>
 
-		<!-- <rosparam param="construct_distance_cost_matrix" subst_value="true">$(arg construct_distance_cost_matrix)</rosparam>
-		<rosparam param="distance_cost_matrix_yaml_path" subst_value="true">$(arg distance_cost_matrix_yaml_path)</rosparam> -->
+		<rosparam param="commanding_UAV_with_mission_lib_or_DJI_SDK" subst_value="true">$(arg commanding_UAV_with_mission_lib_or_DJI_SDK)</rosparam>
 	</node>
 
 </launch>
