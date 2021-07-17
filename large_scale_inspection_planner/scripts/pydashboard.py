@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from aerialcore_msgs.msg import GraphNode
-from aerialcore_msgs.srv import DoSpecificSupervision, DoSpecificSupervisionRequest, StartSupervising, StartSupervisingRequest, StopSupervising, StopSupervisingRequest, PostString, PostStringRequest
+from aerialcore_msgs.srv import DoSpecificSupervision, DoSpecificSupervisionRequest, StartSupervising, StartSupervisingRequest, StopSupervising, StopSupervisingRequest, PostString, PostStringRequest, SetWindVector, SetWindVectorRequest
 from std_srvs.srv import Trigger, TriggerRequest
 import rospkg
 import rospy
@@ -22,6 +22,7 @@ def main_menu():
     print "5. Start specific supervision plan"
     print "6. Do continuous supervision"
     print "7. Do fast supervision"
+    print "8. Set wind vector"
 
     selected = raw_input(" >> ")
     system("clear")
@@ -39,6 +40,8 @@ def main_menu():
         do_continuous_supervision_menu()
     elif selected == "7":
         start_fast_supervision_plan_menu()
+    elif selected == "8":
+        set_wind_vector_menu()
 
     else:
         system("clear")
@@ -316,6 +319,31 @@ def do_fast_supervision_menu():
         print "\nService call failed: %s"%e
 
 
+# 8. Set wind vector:
+def set_wind_vector_menu():
+    system("clear")
+    print "Set wind vector selected."
+    set_wind_vector_request = SetWindVectorRequest()
+    speed = raw_input("Write wind speed (m/s, integer) >> ")
+    speed_unicode = unicode(speed, 'utf-8')
+    if speed_unicode.isnumeric() and int(speed)>=0:   # speed.isalpha() return true if speed is a leter
+        set_wind_vector_request.speed = int(speed)
+    else:
+        print "Value entered is not a number."
+        return
+    direction_deg = raw_input("Write wind direction (degrees, integer) >> ")
+    direction_deg_unicode = unicode(direction_deg, 'utf-8')
+    if direction_deg_unicode.isnumeric() and int(direction_deg)>=0:   # direction_deg.isalpha() return true if direction_deg is a leter
+        set_wind_vector_request.direction_deg = int(direction_deg)
+    else:
+        print "Value entered is not a number."
+        return
+    try:
+        print set_wind_vector_client.call(set_wind_vector_request)
+    except rospy.ServiceException, e:
+        print "\nService call failed: %s"%e
+
+
 # Finish the execution directly when Ctrl+C is pressed (signal.SIGINT received), without escalating to SIGTERM.
 def signal_handler(sig, frame):
     print('Ctrl+C pressed, signal.SIGINT received.')
@@ -329,9 +357,10 @@ if __name__ == "__main__":
     stop_supervising_client = rospy.ServiceProxy('mission_controller/stop_supervising',StopSupervising)
     do_complete_supervision_client = rospy.ServiceProxy('mission_controller/do_complete_supervision',Trigger)
     do_specific_supervision_client = rospy.ServiceProxy('mission_controller/do_specific_supervision',DoSpecificSupervision)
+    start_specific_supervision_plan_client = rospy.ServiceProxy('mission_controller/start_specific_supervision_plan',PostString)
     do_continuous_supervision_client = rospy.ServiceProxy('mission_controller/do_continuous_supervision',Trigger)
     do_fast_supervision_client = rospy.ServiceProxy('mission_controller/do_fast_supervision',Trigger)
-    start_specific_supervision_plan_client = rospy.ServiceProxy('mission_controller/start_specific_supervision_plan',PostString)
+    set_wind_vector_client = rospy.ServiceProxy('parameter_estimator/set_wind_vector',SetWindVector)
     signal.signal(signal.SIGINT, signal_handler)    # Associate signal SIGINT (Ctrl+C pressed) to handler (function "signal_handler")
 
     system("clear")

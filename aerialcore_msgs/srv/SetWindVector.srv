@@ -1,0 +1,7 @@
+#request
+float32 speed           # Wind speed in m/s
+float32 direction_deg   # Wind direction is reported by the direction from which it originates (from which is COMING). For example, a north wind blows from the north to the south, with a direction angle of 0° (or 360°). A wind blowing from the east has a wind direction referred to as 90°, etc.
+---
+#response
+bool success
+string message

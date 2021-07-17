@@ -63,6 +63,7 @@ add_service_files(
   StopSupervising.srv
   DoSpecificSupervision.srv
   PostString.srv
+  SetWindVector.srv
 )
 
 ## Generate actions in the 'action' folder

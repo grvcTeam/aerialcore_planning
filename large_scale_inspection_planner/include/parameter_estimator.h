@@ -8,6 +8,7 @@
 #ifndef PARAMETER_ESTIMATOR_H
 #define PARAMETER_ESTIMATOR_H
 
+#include <ros/ros.h>
 #include <string>
 #include <iostream>
 #include <vector>
@@ -20,6 +21,7 @@
 #include <geometry_msgs/Point32.h>
 #include <geographic_msgs/GeoPoint.h>
 #include <aerialcore_msgs/GraphNode.h>
+#include <aerialcore_msgs/SetWindVector.h>
 
 #include <path_planner.h>
 
@@ -98,6 +100,10 @@ private:
     geometry_msgs::Point32 wind_vector_;    // ENU: x positive is East, y positive is North direction and z positive is up. Module of the vector is the wind speed in m/s.
     float wind_speed_;                      // Module of the wind vector (m/s).
     void getWindFromInternet();
+
+    ros::NodeHandle n_;
+    bool setWindVectorServiceCallback(aerialcore_msgs::SetWindVector::Request& _req, aerialcore_msgs::SetWindVector::Response& _res);
+    ros::ServiceServer set_wind_vector_srv_;
 
     float timeCostMulticopter(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, Wps> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph);
     float timeCostFixedWing(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, Wps> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph);

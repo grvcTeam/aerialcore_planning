@@ -8,7 +8,6 @@
 #include <parameter_estimator.h>
 
 #include <math.h>
-#include <ros/ros.h>
 #include <sstream>
 #include <XmlRpcValue.h>
 #include <fstream>
@@ -69,6 +68,9 @@ ParameterEstimator::ParameterEstimator() {
 
     // Load the API ID of OpenWeatherMap:
     ros::param::get("openweathermap_appid", openweathermap_appid_);
+
+    // Advertised services:
+    set_wind_vector_srv_ = n_.advertiseService("parameter_estimator/set_wind_vector", &ParameterEstimator::setWindVectorServiceCallback, this);
 }
 
 
@@ -379,7 +381,7 @@ void ParameterEstimator::getWindFromInternet() {
             return;
         }
 
-        // Wind direction is reported by the direction from which it originates (from which is COMING). For example, a north wind blows from the north to the south, with a direction angle of 0° (or 360°). A wind blowing from the east has a wind direction referred to as 90°, etc. 
+        // Wind direction is reported by the direction from which it originates (from which is COMING). For example, a north wind blows from the north to the south, with a direction angle of 0° (or 360°). A wind blowing from the east has a wind direction referred to as 90°, etc.
         wind_vector_.x = -wind_speed_*sin(wind_direction_deg*M_PI/180.0);
         wind_vector_.y = -wind_speed_*cos(wind_direction_deg*M_PI/180.0);
         wind_vector_.z = 0;
@@ -392,6 +394,25 @@ void ParameterEstimator::getWindFromInternet() {
 # endif
     }
 }   // end getWindFromInternet
+
+
+bool ParameterEstimator::setWindVectorServiceCallback(aerialcore_msgs::SetWindVector::Request& _req, aerialcore_msgs::SetWindVector::Response& _res) {
+    // Wind direction is reported by the direction from which it originates (from which is COMING). For example, a north wind blows from the north to the south, with a direction angle of 0° (or 360°). A wind blowing from the east has a wind direction referred to as 90°, etc.
+    wind_vector_.x = -_req.speed*sin(_req.direction_deg*M_PI/180.0);
+    wind_vector_.y = -_req.speed*cos(_req.direction_deg*M_PI/180.0);
+    wind_vector_.z = 0;
+    wind_speed_ = _req.speed;
+
+# ifdef DEBUG
+    std::cout << "wind_speed_ = " << wind_speed_ << std::endl;
+    std::cout << "wind_vector_.x = " << wind_vector_.x << std::endl;
+    std::cout << "wind_vector_.y = " << wind_vector_.y << std::endl;
+    std::cout << "wind_vector_.z = " << wind_vector_.z << std::endl << std::endl;
+# endif
+
+    _res.success=true;
+    return true;
+}   // end setWindVectorServiceCallback
 
 
 void ParameterEstimator::printMatrices() {
