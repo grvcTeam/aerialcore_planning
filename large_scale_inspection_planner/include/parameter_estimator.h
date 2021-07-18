@@ -51,12 +51,11 @@ private:
     std::map<int, std::map<int, std::map<int, float> > > time_cost_matrices_;      // One square symetrical matrix for each UAV (map by id and by graph nodes indexes). The elements are the time (in seconds) to cover that edge, if the edge doesn't make sense or there is no connection possible then the value is -1.
     std::map<int, std::map<int, std::map<int, float> > > battery_drop_matrices_;   // One square non-symetrical matrix for each UAV (map by id and by graph nodes indexes). The elements are the battery drop (per unit, not %) to cover that edge, if the edge doesn't make sense or there is no connection possible then the value is -1.
 
-    struct Wps {            // Wps of the path to go from one graph node to the other. Will be useful to correct the battery drop with the wind.
-        std::vector<geometry_msgs::Point32> path;
-        std::vector<float> angle;                   // Angle in radians (axis 0 is the x or East direction) to go to that wp.
-        std::vector<float> distance;                // Distance to go to that wp. All 3 vectors with the same size.
+    struct WpsVectors {             // Vectors between the wps of the path to go from one graph node to the other. Will be useful to correct the battery drop with the wind.
+        std::vector<geometry_msgs::Point32> wp_vector;  // Vector from one wp to the next one (takes into account both the initial and final points of the path).
+        std::vector<float> distance;                    // Distance to go to that wp. All 3 vectors with the same size. Equal size of both wp_vector and the path from the Path Planner.
     };
-    std::map<int, std::map<int, Wps> > paths_matrix_;     // Matrix similar to distance_cost_matrix_, but stores not only the distance but also the path to go from one node to the other.
+    std::map<int, std::map<int, WpsVectors> > paths_matrix_;   // Matrix similar to distance_cost_matrix_, but stores not only the distance, but also the path to go from one node to the other.
 
     std::vector<int> nodes_indexes_in_order_;
 
@@ -88,6 +87,25 @@ private:
         int time_max_flying;  // Used for battery drop estimation, this is the estimated maximum flying time (in seconds) of this specific UAV before the drone runs out of battery.
 
         int id;
+
+        // --------------------------------------------------------
+        //  Battery drop parameters (from Alvaro Caballero's work):
+        // --------------------------------------------------------
+        // Mass and geometry:
+        float m;      // total mass                 [kg]
+        int   nr;     // number of rotors           [-]
+        int   b;      // number of rotor blades     [-]
+        float R;      // rotor radius               [m]
+        float c;      // blade chord (x=0.7*R)      [m]
+        // Aerodynamics:
+        float Cl;     // section lift coefficient   [-]
+        float Cd;     // section drag coefficient   [-]
+        float kappa;  // induced power factor       [-]
+        float eta;    // energy efficiency          [-]
+        float K_mu;   // P0 numerical constant      [-]
+        float f;      // equivalent flat-plate area [m^2]
+        // Battery:
+        float joules; // Capacity of the battery    [J]
     };
     std::vector<UAV> UAVs_;
 
@@ -97,21 +115,32 @@ private:
     static size_t writeCallback(void *_contents, size_t _size, size_t _nmemb, void *_userp);
     int  findUavIndexById(int _UAV_id);
 
-    geometry_msgs::Point32 wind_vector_;    // ENU: x positive is East, y positive is North direction and z positive is up. Module of the vector is the wind speed in m/s.
-    float wind_speed_;                      // Module of the wind vector (m/s).
-    void getWindFromInternet();
+    float wind_speed_;                      // Norm of the wind vector (m/s).
+    geometry_msgs::Point32 wind_vector_;    // ENU: x positive is East, y positive is North direction and z positive is up. Norm of the vector is the wind speed in m/s.
+    float air_density_; // [kg/m^3]
+    float temperature_; // [K]
+    float pressure_;    // [hPa]
+    void getCurrentWeatherFromInternet();
+
+    float gravity_;     // [m/s^2]
 
     ros::NodeHandle n_;
     bool setWindVectorServiceCallback(aerialcore_msgs::SetWindVector::Request& _req, aerialcore_msgs::SetWindVector::Response& _res);
     ros::ServiceServer set_wind_vector_srv_;
 
-    float timeCostMulticopter(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, Wps> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph);
-    float timeCostFixedWing(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, Wps> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph);
-    float timeCostVTOL(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, Wps> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph);
+    float timeCostMulticopter(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, WpsVectors> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph);
+    float timeCostFixedWing(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, WpsVectors> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph);
+    float timeCostVTOL(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, WpsVectors> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph);
 
-    float batteryDropMulticopter(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices);
+    float batteryDropMulticopter(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, WpsVectors> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph);
     float batteryDropFixedWing(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices);
     float batteryDropVTOL(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices);
+
+protected:
+    float multicopterHoverPower(int _uav_id);
+    float multicopterClimbPower(int _uav_id, float _climb_velocity);        // Climb velocity (m/s) should be >0.
+    float multicopterDescentPower(int _uav_id, float _descent_velocity);    // Descent velocity (m/s) should be <0.
+    float multicopterForwardPower(int _uav_id, float _forward_velocity);    // Forward velocity (m/s) relative to the air mass, in other words, it includes the wind.
 
 };  // end ParameterEstimator class
 

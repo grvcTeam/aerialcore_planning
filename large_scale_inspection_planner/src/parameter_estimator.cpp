@@ -2,7 +2,7 @@
  * AERIALCORE Project:
  *
  * Parameter Estimator.
- * 
+ *
  */
 
 #include <parameter_estimator.h>
@@ -15,7 +15,7 @@
 
 #define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
 
-#define FLYING_THRESHOLD 1  // Height threshold above which an UAV is considered to be flyinh (in meters). TODO: better way to know if flying?
+#define FLYING_THRESHOLD 1  // Height threshold above which an UAV is considered to be flying (in meters). TODO: better way to know if flying?
 
 namespace aerialcore {
 
@@ -39,6 +39,23 @@ ParameterEstimator::ParameterEstimator() {
             ros::param::get(it->second+"/takeoff_climb_speed", new_uav.takeoff_climb_speed);
             ros::param::get(it->second+"/landing_descend_speed", new_uav.landing_descend_speed);
             ros::param::get(it->second+"/hardcoded_takeoff_landing_height", new_uav.hardcoded_takeoff_landing_height);
+
+            ros::param::get(it->second+"/m", new_uav.m);
+            ros::param::get(it->second+"/nr", new_uav.nr);
+            ros::param::get(it->second+"/b", new_uav.b);
+            ros::param::get(it->second+"/R", new_uav.R);
+            ros::param::get(it->second+"/c", new_uav.c);
+            ros::param::get(it->second+"/Cl", new_uav.Cl);
+            ros::param::get(it->second+"/Cd", new_uav.Cd);
+            ros::param::get(it->second+"/kappa", new_uav.kappa);
+            ros::param::get(it->second+"/eta", new_uav.eta);
+            ros::param::get(it->second+"/K_mu", new_uav.K_mu);
+            ros::param::get(it->second+"/f", new_uav.f);
+            float capacity_in_Wh;
+            float number_of_batteries;
+            ros::param::get(it->second+"/Wh", capacity_in_Wh);
+            ros::param::get(it->second+"/nb", number_of_batteries);
+            new_uav.joules = capacity_in_Wh*3600/* [s/h] */ * number_of_batteries;
 
         } else if (new_uav.airframe_type == "FIXED_WING") {
             ros::param::get(it->second+"/time_delay_landing", new_uav.time_delay_landing);
@@ -66,11 +83,17 @@ ParameterEstimator::ParameterEstimator() {
     map_origin_geo_.longitude = map_origin_geo_vector[1];
     map_origin_geo_.altitude  = map_origin_geo_vector[2];
 
-    // Load the API ID of OpenWeatherMap:
+    // Load the APP ID of OpenWeatherMap:
     ros::param::get("openweathermap_appid", openweathermap_appid_);
+
+    n_.param<float>("gravity", gravity_, 9.81);
+    n_.param<float>("air_density", air_density_, 1.225);
 
     // Advertised services:
     set_wind_vector_srv_ = n_.advertiseService("parameter_estimator/set_wind_vector", &ParameterEstimator::setWindVectorServiceCallback, this);
+
+    // Get the wind speed vector and air density from OpenWeatherMap to calculate later the power consumption of the UAVs:
+    getCurrentWeatherFromInternet();
 }
 
 
@@ -103,7 +126,7 @@ const std::map<int, std::map<int, std::map<int, float> > >& ParameterEstimator::
 void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector<geometry_msgs::Polygon>& _no_fly_zones, const geometry_msgs::Polygon& _geofence, bool _recalculate_initial_UAV_points) {
 
     std::map<int, std::map<int, float> > new_distance_cost_matrix;
-    std::map<int, std::map<int, Wps> > new_paths_matrix;
+    std::map<int, std::map<int, WpsVectors> > new_paths_matrix;
     std::map<int, std::map<int, std::map<int, float> > > new_time_cost_matrices;
 
     if (distance_cost_matrix_.size()==0 || _recalculate_initial_UAV_points) {  // Only enter the first time this method is called or if recalculating UAV points.
@@ -139,7 +162,7 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
             // Erase the previous initial UAVs row and columns from the new_paths_matrix:
             for (int i=0; i<indexes_to_erase.size(); i++) {
                 new_paths_matrix.erase(indexes_to_erase[i]);
-                for (std::map<int, std::map<int, Wps> >::iterator it_i = new_paths_matrix.begin(); it_i != new_paths_matrix.end(); it_i++) {
+                for (std::map<int, std::map<int, WpsVectors> >::iterator it_i = new_paths_matrix.begin(); it_i != new_paths_matrix.end(); it_i++) {
                     it_i->second.erase(indexes_to_erase[i]);
                 }
             }
@@ -200,25 +223,29 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
                     new_distance_cost_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ] = -1;
                     new_distance_cost_matrix[ nodes_indexes_in_order_[j] ][ nodes_indexes_in_order_[i] ] = -1;
 
-                    Wps empty_wps;
+                    WpsVectors empty_wps;
                     new_paths_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ] = empty_wps;
                     new_paths_matrix[ nodes_indexes_in_order_[j] ][ nodes_indexes_in_order_[i] ] = empty_wps;
                 } else {
                     new_distance_cost_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ] = path_planner_.getFlatDistance();   // TODO: maybe consider also height distances? I think it's better as it is.
                     new_distance_cost_matrix[ nodes_indexes_in_order_[j] ][ nodes_indexes_in_order_[i] ] = path_planner_.getFlatDistance();
 
-                    Wps new_wps, new_wps_reversed;
-                    new_wps.path = path;
-                    path.insert(path.begin(), from_here);   // Path returned doesn' contain the first wp, but it will be convenient to have it.
+                    WpsVectors new_wps, new_wps_reversed;
+                    path.insert(path.begin(), from_here);   // Path returned doesn't contain the first wp, but it will be convenient to have it.
                     for (int k=1; k<path.size(); k++) {
-                        new_wps.angle.push_back( atan2(path[k].y-path[k-1].y, path[k].x-path[k-1].x) );
-                        new_wps.distance.push_back( sqrt( pow(path[k].y-path[k-1].y,2) + pow(path[k].x-path[k-1].x,2) ) );
+                        geometry_msgs::Point32 vector_between_waypoints;
+                        vector_between_waypoints.x = path[k].x - path[k-1].x;
+                        vector_between_waypoints.y = path[k].y - path[k-1].y;
+                        new_wps.wp_vector.push_back(vector_between_waypoints);
+                        new_wps.distance.push_back( sqrt( pow(vector_between_waypoints.x,2) + pow(vector_between_waypoints.y,2) ) );
                     }
                     new_paths_matrix[ nodes_indexes_in_order_[i] ][ nodes_indexes_in_order_[j] ] = new_wps;
                     for (int k=path.size()-2; k>=0; k--) {
-                        new_wps_reversed.path.push_back( path[k] );
-                        new_wps_reversed.angle.push_back( M_PI + new_wps.angle[k] );
-                        new_wps_reversed.distance.push_back( new_wps.distance[k] );
+                        geometry_msgs::Point32 vector_between_waypoints;
+                        vector_between_waypoints.x = path[k].x - path[k+1].x;
+                        vector_between_waypoints.y = path[k].y - path[k+1].y;
+                        new_wps_reversed.wp_vector.push_back(vector_between_waypoints);
+                        new_wps_reversed.distance.push_back( sqrt( pow(vector_between_waypoints.x,2) + pow(vector_between_waypoints.y,2) ) );
                     }
                     new_paths_matrix[ nodes_indexes_in_order_[j] ][ nodes_indexes_in_order_[i] ] = new_wps_reversed;
 
@@ -280,7 +307,9 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
                 } else {
                     if (UAVs_[uav_index].airframe_type == "MULTICOPTER") {
 
-                        new_battery_drop_matrix[ it_i->first ][ it_j->first ] = batteryDropMulticopter(it_k->first, it_i->first, it_j->first, time_cost_matrices_);
+                        distance_cost_matrix_mutex_.lock();
+                        new_battery_drop_matrix[ it_i->first ][ it_j->first ] = batteryDropMulticopter(it_k->first, it_i->first, it_j->first, distance_cost_matrix_, paths_matrix_, _graph);
+                        distance_cost_matrix_mutex_.unlock();
 
                     } else if (UAVs_[uav_index].airframe_type == "FIXED_WING") {
 
@@ -304,13 +333,12 @@ void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::Graph
 
 # ifdef DEBUG
     printMatrices();
-    getWindFromInternet();
 # endif
 
 }   // end updateMatrices
 
 
-void ParameterEstimator::getWindFromInternet() {
+void ParameterEstimator::getCurrentWeatherFromInternet() {
     CURL *curl;
     CURLcode res;
     std::string readBuffer;
@@ -324,7 +352,7 @@ void ParameterEstimator::getWindFromInternet() {
         url.append(std::to_string(map_origin_geo_.longitude).c_str());
         url.append("&appid=");
         url.append(openweathermap_appid_.c_str());
-        std::cout << url << std::endl;
+        // std::cout << url << std::endl;
 
         // Get string data to the readBuffer from the URL with cURL:
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
@@ -337,10 +365,12 @@ void ParameterEstimator::getWindFromInternet() {
     }
 
     if (readBuffer.size() == 0) {
-        ROS_ERROR("Parameter Estimator: OpenWeatherMap didn't answer. Returning empty wind vector (no wind).");
+        ROS_ERROR("Parameter Estimator: OpenWeatherMap server didn't answer. Wind, pressure, temperature and air density data not modified.");
     } else {
-        std::string wind_speed_search_pattern = "\"speed\":";       // 8 elements
+        std::string wind_speed_search_pattern  = "\"speed\":";      // 8 elements
         std::string wind_direction_deg_search_pattern = "\"deg\":"; // 6 elements
+        std::string temperature_search_pattern = "\"temp\":";       // 7 elements
+        std::string pressure_search_pattern    = "\"pressure\":";   // 11 elements
         std::string end_pattern = ",";
 
         // Find the place where the first wind direction and speed are:
@@ -349,57 +379,87 @@ void ParameterEstimator::getWindFromInternet() {
         size_t wind_direction_deg_found = readBuffer.find(wind_direction_deg_search_pattern);
         size_t wind_direction_deg_end_found = readBuffer.find(end_pattern, wind_direction_deg_found+6);
 
-        if (wind_speed_found==std::string::npos || wind_speed_end_found==std::string::npos || wind_direction_deg_found==std::string::npos || wind_direction_deg_end_found==std::string::npos) {
-            ROS_ERROR("Parameter Estimator: parse error from OpenWeatherMap");
+        // Find the place where the first temperature and pressure are:
+        size_t temperature_found = readBuffer.find(temperature_search_pattern);
+        size_t temperature_end_found = readBuffer.find(end_pattern, temperature_found+7);
+        size_t pressure_found = readBuffer.find(pressure_search_pattern);
+        size_t pressure_end_found = readBuffer.find(end_pattern, pressure_found+11);
+
+        if (wind_speed_found==std::string::npos || wind_speed_end_found==std::string::npos || wind_direction_deg_found==std::string::npos || wind_direction_deg_end_found==std::string::npos
+         || temperature_found==std::string::npos || temperature_end_found==std::string::npos || pressure_found==std::string::npos || pressure_end_found==std::string::npos) {
+            ROS_ERROR("Parameter Estimator: parse error from OpenWeatherMap. Wind, pressure, temperature and air density data not modified.");
+            return;
         }
 
+        // Extract the substrings where the wind speed and direction are:
         std::string wind_speed_string = readBuffer.substr(wind_speed_found+8, wind_speed_end_found-(wind_speed_found+8));
         std::string wind_direction_deg_string = readBuffer.substr(wind_direction_deg_found+6, wind_direction_deg_end_found-(wind_direction_deg_found+6));
 
-// # ifdef DEBUG
-        // std::cout << "wind_speed_found = "<< wind_speed_found << std::endl;
-        // std::cout << "wind_speed_end_found = "<< wind_speed_end_found << std::endl;
-        // std::cout << "wind_direction_deg_found = "<< wind_direction_deg_found << std::endl;
-        // std::cout << "wind_direction_deg_end_found = "<< wind_direction_deg_end_found << std::endl;
-        // std::cout << std::endl << "wind_speed_string = " << wind_speed_string << std::endl;
-        // std::cout << "wind_direction_deg_string = " << wind_direction_deg_string << std::endl << std::endl;
-// # endif
+        // Extract the substrings where the temperature and pressure are:
+        std::string temperature_string = readBuffer.substr(temperature_found+7, temperature_end_found-(temperature_found+7));
+        std::string pressure_string = readBuffer.substr(pressure_found+11, pressure_end_found-(pressure_found+11));
 
         std::string::size_type sz;
 
-        std::stringstream wind_speed_stringstream, wind_direction_deg_stringstream;
+        // Pass thaose strings to stringstream to avoid parse problems with decimal points:
+        std::stringstream wind_speed_stringstream, wind_direction_deg_stringstream, temperature_stringstream, pressure_stringstream;
         wind_speed_stringstream << wind_speed_string;
         wind_direction_deg_stringstream << wind_direction_deg_string;
+        temperature_stringstream << temperature_string;
+        pressure_stringstream << pressure_string;
 
         float wind_direction_deg;
 
         try {   // try to parse into float the wind strings...
             wind_speed_ = (float) std::stod ( wind_speed_stringstream.str() , &sz);
             wind_direction_deg = (float) std::stod ( wind_direction_deg_stringstream.str() , &sz);
+            temperature_ = (float) std::stod ( temperature_stringstream.str() , &sz);
+            pressure_ = (float) std::stod ( pressure_stringstream.str() , &sz);
         } catch (...) { // catch any exception
-            ROS_ERROR("Parameter Estimator: error reading the parsed string from OpenWeatherMap");
+            ROS_ERROR("Parameter Estimator: error reading the parsed string from OpenWeatherMap. Wind, pressure, temperature and air density data not modified. Printing wrong parsed strings for debug.");
+
+            std::cout << "wind_speed_found = "<< wind_speed_found << std::endl;
+            std::cout << "wind_speed_end_found = "<< wind_speed_end_found << std::endl;
+            std::cout << "wind_direction_deg_found = "<< wind_direction_deg_found << std::endl;
+            std::cout << "wind_direction_deg_end_found = "<< wind_direction_deg_end_found << std::endl;
+            std::cout << std::endl << "wind_speed_string = " << wind_speed_string << std::endl;
+            std::cout << "wind_direction_deg_string = " << wind_direction_deg_string << std::endl << std::endl;
+
+            std::cout << "temperature_found = "<< temperature_found << std::endl;
+            std::cout << "temperature_end_found = "<< temperature_end_found << std::endl;
+            std::cout << "pressure_found = "<< pressure_found << std::endl;
+            std::cout << "pressure_end_found = "<< pressure_end_found << std::endl;
+            std::cout << std::endl << "temperature_string = " << temperature_string << std::endl;
+            std::cout << "pressure_string = " << pressure_string << std::endl << std::endl;
+
             return;
         }
 
         // Wind direction is reported by the direction from which it originates (from which is COMING). For example, a north wind blows from the north to the south, with a direction angle of 0° (or 360°). A wind blowing from the east has a wind direction referred to as 90°, etc.
-        wind_vector_.x = -wind_speed_*sin(wind_direction_deg*M_PI/180.0);
-        wind_vector_.y = -wind_speed_*cos(wind_direction_deg*M_PI/180.0);
+        wind_vector_.x = -wind_speed_ * sin(wind_direction_deg * M_PI/180.0);
+        wind_vector_.y = -wind_speed_ * cos(wind_direction_deg * M_PI/180.0);
         wind_vector_.z = 0;
 
+        // Calculate the air density with the ideal gas law (dry air):
+        air_density_ = (pressure_*100 * 0.0289652)/(8.31446 * temperature_); // Pressure in hPa, molar mass of dry air 0.0289652 kg/mol, R universal gas constant 8.31446 J/(K·mol), and temperature in Kelvins.
+
 # ifdef DEBUG
-        std::cout << "wind_speed_ = " << wind_speed_ << std::endl;
-        std::cout << "wind_vector_.x = " << wind_vector_.x << std::endl;
-        std::cout << "wind_vector_.y = " << wind_vector_.y << std::endl;
-        std::cout << "wind_vector_.z = " << wind_vector_.z << std::endl << std::endl;
+        std::cout << "wind_speed_    = " << wind_speed_ << " m/s" << std::endl;
+        std::cout << "wind_vector_.x = " << wind_vector_.x << " m/s" << std::endl;
+        std::cout << "wind_vector_.y = " << wind_vector_.y << " m/s" << std::endl;
+        std::cout << "wind_vector_.z = " << wind_vector_.z << " m/s" << std::endl << std::endl;
+        std::cout << "temperature_   = " << temperature_ << " K" << std::endl;
+        std::cout << "pressure_      = " << pressure_ << " hPa" << std::endl << std::endl;
+        std::cout << "air_density_   = " << air_density_ << " kg/m^3" << std::endl << std::endl;
 # endif
     }
-}   // end getWindFromInternet
+}   // end getCurrentWeatherFromInternet
 
 
 bool ParameterEstimator::setWindVectorServiceCallback(aerialcore_msgs::SetWindVector::Request& _req, aerialcore_msgs::SetWindVector::Response& _res) {
     // Wind direction is reported by the direction from which it originates (from which is COMING). For example, a north wind blows from the north to the south, with a direction angle of 0° (or 360°). A wind blowing from the east has a wind direction referred to as 90°, etc.
-    wind_vector_.x = -_req.speed*sin(_req.direction_deg*M_PI/180.0);
-    wind_vector_.y = -_req.speed*cos(_req.direction_deg*M_PI/180.0);
+    wind_vector_.x = -_req.speed * sin(_req.direction_deg * M_PI/180.0);
+    wind_vector_.y = -_req.speed * cos(_req.direction_deg * M_PI/180.0);
     wind_vector_.z = 0;
     wind_speed_ = _req.speed;
 
@@ -533,102 +593,275 @@ int ParameterEstimator::findUavIndexById(int _UAV_id) {
         }
     }
     return uav_index;
-} // end findUavIndexById
+}   // end findUavIndexById
 
 
-float ParameterEstimator::timeCostMulticopter(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, Wps> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph) {
+float ParameterEstimator::timeCostMulticopter(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, WpsVectors> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph) {
     float time_cost = 0;
 
     int uav_index = findUavIndexById(_uav_id);
 
-    if (_graph[_index_i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION
-        || _graph[_index_i].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION
-        || _graph[_index_i].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) { // Takeoff edge with navigation for a multicopter.
+    if (_graph[_index_i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && _graph[_index_i].z <= FLYING_THRESHOLD
+    || _graph[_index_i].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION
+    || _graph[_index_i].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) {     // Takeoff edge with navigation for a multicopter.
         time_cost = _distance_cost_matrix.at(_index_i).at(_index_j) / UAVs_[uav_index].speed_xy
-        + UAVs_[uav_index].time_delay_between_wps * (_paths_matrix.at(_index_i).at(_index_j).path.size() + 1);
+        + UAVs_[uav_index].time_delay_between_wps * (_paths_matrix.at(_index_i).at(_index_j).wp_vector.size() + 1)
+        + UAVs_[uav_index].hardcoded_takeoff_landing_height / UAVs_[uav_index].takeoff_climb_speed ;
 
-        time_cost += _graph[_index_i].z > FLYING_THRESHOLD ? 0 : UAVs_[uav_index].hardcoded_takeoff_landing_height / UAVs_[uav_index].takeoff_climb_speed ;    // Flying if UAV higher than FLYING_THRESHOLD (in meters). TODO: better way to know if flying?
         time_cost += _graph[_index_j].z > UAVs_[uav_index].hardcoded_takeoff_landing_height ? (_graph[_index_j].z - UAVs_[uav_index].hardcoded_takeoff_landing_height)/UAVs_[uav_index].speed_z_up : (UAVs_[uav_index].hardcoded_takeoff_landing_height - _graph[_index_j].z)/UAVs_[uav_index].speed_z_down ;
 
     } else if (_graph[_index_j].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION
     || _graph[_index_j].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) {     // Landing edge with navigation for a multicopter.
         time_cost = UAVs_[uav_index].hardcoded_takeoff_landing_height / UAVs_[uav_index].landing_descend_speed
         + _distance_cost_matrix.at(_index_i).at(_index_j) / UAVs_[uav_index].speed_xy
-        + UAVs_[uav_index].time_delay_between_wps * (_paths_matrix.at(_index_i).at(_index_j).path.size() + 1);
+        + UAVs_[uav_index].time_delay_between_wps * (_paths_matrix.at(_index_i).at(_index_j).wp_vector.size() + 1);
 
         time_cost += _graph[_index_i].z > UAVs_[uav_index].hardcoded_takeoff_landing_height ? (_graph[_index_i].z - UAVs_[uav_index].hardcoded_takeoff_landing_height)/UAVs_[uav_index].speed_z_down : (UAVs_[uav_index].hardcoded_takeoff_landing_height - _graph[_index_i].z)/UAVs_[uav_index].speed_z_up ;
 
     } else {                                                                                // Regular navigation or inspection edge for a multicopter.
         time_cost = _distance_cost_matrix.at(_index_i).at(_index_j) / UAVs_[uav_index].speed_xy
-        + UAVs_[uav_index].time_delay_between_wps * _paths_matrix.at(_index_i).at(_index_j).path.size();
+        + UAVs_[uav_index].time_delay_between_wps * _paths_matrix.at(_index_i).at(_index_j).wp_vector.size();
     }
 
     return time_cost;
-}
+}   // end timeCostMulticopter
 
 
-float ParameterEstimator::timeCostFixedWing(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, Wps> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph) {
+float ParameterEstimator::timeCostFixedWing(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, WpsVectors> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph) {
     float time_cost = 0;
 
     int uav_index = findUavIndexById(_uav_id);
 
     if (_graph[_index_j].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION
-        || _graph[_index_j].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) { // Landing edge with navigation for a fixed wing.
+    || _graph[_index_j].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) {     // Landing edge with navigation for a fixed wing.
         time_cost = _distance_cost_matrix.at(_index_i).at(_index_j) / UAVs_[uav_index].speed_xy
-        + UAVs_[uav_index].time_delay_between_wps * (_paths_matrix.at(_index_i).at(_index_j).path.size() + 1)
+        + UAVs_[uav_index].time_delay_between_wps * (_paths_matrix.at(_index_i).at(_index_j).wp_vector.size() + 1)
         + UAVs_[uav_index].time_delay_landing;
 
     } else {                                                                                // Takeoff or regular navigation or inspection edge for a fixed wing.
         time_cost = _distance_cost_matrix.at(_index_i).at(_index_j) / UAVs_[uav_index].speed_xy
-        + UAVs_[uav_index].time_delay_between_wps * _paths_matrix.at(_index_i).at(_index_j).path.size();
+        + UAVs_[uav_index].time_delay_between_wps * _paths_matrix.at(_index_i).at(_index_j).wp_vector.size();
     }
 
     return time_cost;
-}
+}   // end timeCostFixedWing
 
 
-float ParameterEstimator::timeCostVTOL(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, Wps> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph) {
+float ParameterEstimator::timeCostVTOL(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, WpsVectors> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph) {
     float time_cost = 0;
 
     int uav_index = findUavIndexById(_uav_id);
 
-    if (_graph[_index_i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION
-        || _graph[_index_i].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION
-        || _graph[_index_i].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) { // Takeoff edge with navigation for a VTOL.
+    if (_graph[_index_i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && _graph[_index_i].z <= FLYING_THRESHOLD
+    || _graph[_index_i].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION
+    || _graph[_index_i].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) {     // Takeoff edge with navigation for a VTOL.
         time_cost = (_graph[_index_j].z-_graph[_index_i].z) / UAVs_[uav_index].takeoff_climb_speed
         + _distance_cost_matrix.at(_index_i).at(_index_j) / UAVs_[uav_index].speed_xy
-        + UAVs_[uav_index].time_delay_between_wps * (_paths_matrix.at(_index_i).at(_index_j).path.size() + 1)
+        + UAVs_[uav_index].time_delay_between_wps * (_paths_matrix.at(_index_i).at(_index_j).wp_vector.size() + 1)
         + UAVs_[uav_index].time_delay_start_transition;
 
     } else if (_graph[_index_j].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION
     || _graph[_index_j].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) {     // Landing edge with navigation for a VTOL.
         time_cost = (_graph[_index_i].z-_graph[_index_j].z) / UAVs_[uav_index].landing_descend_speed
         + _distance_cost_matrix.at(_index_i).at(_index_j) / UAVs_[uav_index].speed_xy
-        + UAVs_[uav_index].time_delay_between_wps * (_paths_matrix.at(_index_i).at(_index_j).path.size() + 1)
+        + UAVs_[uav_index].time_delay_between_wps * (_paths_matrix.at(_index_i).at(_index_j).wp_vector.size() + 1)
         + UAVs_[uav_index].time_delay_end_transition;
 
     } else {                                                                                // Regular navigation or inspection edge for a VTOL.
         time_cost = _distance_cost_matrix.at(_index_i).at(_index_j) / UAVs_[uav_index].speed_xy
-        + UAVs_[uav_index].time_delay_between_wps * _paths_matrix.at(_index_i).at(_index_j).path.size();
+        + UAVs_[uav_index].time_delay_between_wps * _paths_matrix.at(_index_i).at(_index_j).wp_vector.size();
     }
 
     return time_cost;
-}
+}   // end timeCostVTOL
 
 
-float ParameterEstimator::batteryDropMulticopter(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices) {
-    return _time_cost_matrices.at(_uav_id).at(_index_i).at(_index_j) / UAVs_[ findUavIndexById(_uav_id) ].time_max_flying;
-}
+float ParameterEstimator::batteryDropMulticopter(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, WpsVectors> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph) {
+    float battery_drop = 0;
+
+    int uav_index = findUavIndexById(_uav_id);
+
+    if (_graph[_index_i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && _graph[_index_i].z <= FLYING_THRESHOLD
+    || _graph[_index_i].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION
+    || _graph[_index_i].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) {     // Takeoff edge with navigation for a multicopter.
+        battery_drop += (UAVs_[uav_index].hardcoded_takeoff_landing_height / UAVs_[uav_index].takeoff_climb_speed + UAVs_[uav_index].time_delay_between_wps) /* [s] */ * multicopterClimbPower(_uav_id, UAVs_[uav_index].takeoff_climb_speed) /* [W = J/s] */ /UAVs_[uav_index].joules /* [J] */;
+        battery_drop += _graph[_index_j].z > UAVs_[uav_index].hardcoded_takeoff_landing_height ? ((_graph[_index_j].z - UAVs_[uav_index].hardcoded_takeoff_landing_height)/UAVs_[uav_index].speed_z_up) /* [s] */ * multicopterClimbPower(_uav_id, UAVs_[uav_index].speed_z_up) /* [W = J/s] */ /UAVs_[uav_index].joules /* [J] */: ((UAVs_[uav_index].hardcoded_takeoff_landing_height - _graph[_index_j].z)/UAVs_[uav_index].speed_z_down) /* [s] */ * multicopterDescentPower(_uav_id, -UAVs_[uav_index].speed_z_down) /* [W = J/s] */ /UAVs_[uav_index].joules /* [J] */;
+
+    } else if (_graph[_index_j].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION
+    || _graph[_index_j].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) {     // Landing edge with navigation for a multicopter.
+        battery_drop += (UAVs_[uav_index].hardcoded_takeoff_landing_height / UAVs_[uav_index].landing_descend_speed + UAVs_[uav_index].time_delay_between_wps) /* [s] */ * multicopterDescentPower(_uav_id, -UAVs_[uav_index].landing_descend_speed) /* [W = J/s] */ /UAVs_[uav_index].joules /* [J] */;
+        battery_drop += _graph[_index_i].z > UAVs_[uav_index].hardcoded_takeoff_landing_height ? ((_graph[_index_i].z - UAVs_[uav_index].hardcoded_takeoff_landing_height)/UAVs_[uav_index].speed_z_down) /* [s] */ * multicopterDescentPower(_uav_id, -UAVs_[uav_index].speed_z_down) /* [W = J/s] */ /UAVs_[uav_index].joules /* [J] */ : ((UAVs_[uav_index].hardcoded_takeoff_landing_height - _graph[_index_i].z)/UAVs_[uav_index].speed_z_up) /* [s] */ * multicopterClimbPower(_uav_id, UAVs_[uav_index].speed_z_up) /* [W = J/s] */ /UAVs_[uav_index].joules /* [J] */;
+
+    }
+
+    // Battery drop for the navigation considering the wind:
+    for (int i=0; i<_paths_matrix.at(_index_i).at(_index_j).wp_vector.size(); i++) {
+        float time = _paths_matrix.at(_index_i).at(_index_j).distance[i] /UAVs_[uav_index].speed_xy + UAVs_[uav_index].time_delay_between_wps;
+        float speed_relative_to_air_x = _paths_matrix.at(_index_i).at(_index_j).wp_vector[i].x /_paths_matrix.at(_index_i).at(_index_j).distance[i] *UAVs_[uav_index].speed_xy - wind_vector_.x;
+        float speed_relative_to_air_y = _paths_matrix.at(_index_i).at(_index_j).wp_vector[i].y /_paths_matrix.at(_index_i).at(_index_j).distance[i] *UAVs_[uav_index].speed_xy - wind_vector_.y;
+        float speed_relative_to_air_norm = sqrt( pow(speed_relative_to_air_x, 2) + pow(speed_relative_to_air_y, 2) );
+        battery_drop += time /* [s] */ * multicopterForwardPower(_uav_id, speed_relative_to_air_norm) /* [W = J/s] */ /UAVs_[uav_index].joules /* [J] */;
+    }
+
+    return battery_drop;
+}   // end batteryDropMulticopter
 
 
 float ParameterEstimator::batteryDropFixedWing(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices) {
     return _time_cost_matrices.at(_uav_id).at(_index_i).at(_index_j) / UAVs_[ findUavIndexById(_uav_id) ].time_max_flying;
-}
+}   // end batteryDropFixedWing
 
 
 float ParameterEstimator::batteryDropVTOL(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices) {
     return _time_cost_matrices.at(_uav_id).at(_index_i).at(_index_j) / UAVs_[ findUavIndexById(_uav_id) ].time_max_flying;
-}
+}   // end batteryDropVTOL
+
+
+float ParameterEstimator::multicopterHoverPower(int _uav_id) {
+    int uav_index = findUavIndexById(_uav_id);
+
+    // Induced power Pi [W]:
+    float T  = UAVs_[uav_index].m * gravity_ / UAVs_[uav_index].nr;                 // thrust           [N]
+    float vi = sqrt( T / (2 * air_density_ * M_PI * pow(UAVs_[uav_index].R,2) ) );  // induced velocity [m/s]
+    float Pi = UAVs_[uav_index].kappa * T * vi;
+
+    // Profile power P0 (blade-section drag dependent) [W]:
+    float omega = sqrt( 6 * T / (air_density_ * UAVs_[uav_index].b * UAVs_[uav_index].c * pow(UAVs_[uav_index].R,3) * UAVs_[uav_index].Cl) );   // rotor speed [rad/s]
+    float P0    = air_density_ * pow(UAVs_[uav_index].R,4) * pow(omega,3) * UAVs_[uav_index].b * UAVs_[uav_index].c * UAVs_[uav_index].Cd / 8;
+
+    // Total aerodynamic power Pa [W]:
+    float Pa = UAVs_[uav_index].nr * (Pi + P0);
+
+    // Electric power [W]:
+    float Pe = Pa / UAVs_[uav_index].eta;
+
+    return Pe;
+}   // end multicopterHoverPower
+
+
+float ParameterEstimator::multicopterClimbPower(int _uav_id, float _climb_velocity) {
+    int uav_index = findUavIndexById(_uav_id);
+
+    if (_climb_velocity < 0) {
+        ROS_WARN("Parameter Estimator: given climb velocity < 0. Changing its sign.");
+        _climb_velocity = -_climb_velocity;
+    }
+
+    // Induced power Pi [W]:
+    float T   = UAVs_[uav_index].m * gravity_ / UAVs_[uav_index].nr;                // thrust                   [N]
+    float vi0 = sqrt( T / (2 * air_density_ * M_PI * pow(UAVs_[uav_index].R,2)) );  // induced velocity (hover) [m/s]
+    float vi  = (-0.5 * (_climb_velocity / vi0) + sqrt(0.25 * pow(_climb_velocity / vi0,2) + 1) ) * vi0;    // induced velocity (climb) [m/s]
+    float Pi  = UAVs_[uav_index].kappa * T * vi;
+
+    // Profile power P0 (blade-section drag dependent) [W]:
+    float omega = sqrt( 6 * T / (air_density_ * UAVs_[uav_index].b * UAVs_[uav_index].c * pow(UAVs_[uav_index].R,3) * UAVs_[uav_index].Cl) );  // rotor speed [rad/s]
+    float P0    = air_density_ * pow(UAVs_[uav_index].R,4) * pow(omega,3) * UAVs_[uav_index].b * UAVs_[uav_index].c * UAVs_[uav_index].Cd/8;
+
+    // Climb power Pc [W]:
+    float Pc = T * _climb_velocity;
+
+    // Total aerodynamic power Pa [W]:
+    float Pa = UAVs_[uav_index].nr * (Pi + P0 + Pc);
+
+    // Electric power [W]:
+    float Pe = Pa / UAVs_[uav_index].eta;
+
+    return Pe;
+}   // end multicopterClimbPower
+
+
+float ParameterEstimator::multicopterDescentPower(int _uav_id, float _descent_velocity) {
+    int uav_index = findUavIndexById(_uav_id);
+
+    if (_descent_velocity > 0) {
+        ROS_WARN("Parameter Estimator: given climb velocity > 0. Changing its sign.");
+        _descent_velocity = -_descent_velocity;
+    }
+
+    // Induced power Pi [W]:
+    float T   = UAVs_[uav_index].m * gravity_ / UAVs_[uav_index].nr;                // thrust [N]
+    float vi0 = sqrt( T / (2 * air_density_ * M_PI * pow(UAVs_[uav_index].R,2)) );  // induced velocity (hover) [m/s]
+
+    float vi;
+    if (_descent_velocity / vi0 <= -2) {
+        // Windmill brake state:
+        vi = ( -0.5 * (_descent_velocity/vi0) - sqrt(0.25 * pow(_descent_velocity/vi0,2) - 1) ) * vi0;  // induced velocity (descent) [m/s]
+    } else {
+        // Vortex ring state + turbulent wake state:
+        float k0 = 1;
+        float k1 = -1.125;
+        float k2 = -1.372;
+        float k3 = -1.718;
+        float k4 = -0.655;
+        vi = ( k0 + k1 * (_descent_velocity/vi0) + k2 * pow(_descent_velocity/vi0,2) + k3 * pow(_descent_velocity/vi0,3) + k4 * pow(_descent_velocity/vi0,4) ) * vi0;   // induced velocity (descent) [m/s]
+    }
+    float Pi = UAVs_[uav_index].kappa * T * vi;
+
+    // Profile power P0 (blade-section drag dependent) [W]:
+    float omega = sqrt( 6 * T / (air_density_ * UAVs_[uav_index].b * UAVs_[uav_index].c * pow(UAVs_[uav_index].R,3) * UAVs_[uav_index].Cl) );  // rotor speed [rad/s]
+    float P0    = air_density_ * pow(UAVs_[uav_index].R,4) * pow(omega,3) * UAVs_[uav_index].b * UAVs_[uav_index].c * UAVs_[uav_index].Cd / 8;
+
+    // Climb power Pc [W]:
+    float Pc = T * _descent_velocity;
+
+    // Total aerodynamic power Pa [W]:
+    float Pa = UAVs_[uav_index].nr * (Pi + P0 + Pc);
+
+    // The batteries cannot absorb energy:
+    if (Pa < 0) {
+        Pa=0;
+    }
+
+    // Electric power [W]:
+    float Pe = Pa / UAVs_[uav_index].eta;
+
+    return Pe;
+}   // end multicopterDescentPower
+
+
+float ParameterEstimator::multicopterForwardPower(int _uav_id, float _forward_velocity) {
+    int uav_index = findUavIndexById(_uav_id);
+
+    // Induced power Pi [W]:
+    float D       = 0.5 * air_density_ * pow(_forward_velocity,2) * UAVs_[uav_index].f;     // fuselage drag [N]
+    float alpha_r = atan2(D, UAVs_[uav_index].m * gravity_);                                // angle of attack (rotor) [rad]
+    float T       = UAVs_[uav_index].m * gravity_ / (UAVs_[uav_index].nr * cos(alpha_r));   // thrust [N]
+
+    // The following block of code is for solving this MATLAB function fzero (next line) with the Newton-Raphson method:
+    // vi = fzero(@(x) (x-vf*sin(alpha_r))*(2*param.rho*pi*param.R^2*sqrt((vf*cos(alpha_r))^2+x^2))-T , vf) - vf*sin(alpha_r); % induced velocity [m/s]
+    auto f = [=](float x) {    // Function
+        return -2*M_PI*pow(UAVs_[uav_index].R,2)*air_density_*(_forward_velocity*sin(alpha_r) - x)*sqrt(pow(_forward_velocity,2)*pow(cos(alpha_r),2) + pow(x,2)) - T;
+    };
+    auto f_d = [=](float x) {  // Derivative of the above function
+        return 2*M_PI*pow(UAVs_[uav_index].R,2)*air_density_*(pow(_forward_velocity,2)*pow(cos(alpha_r),2) - _forward_velocity*x*sin(alpha_r) + 2*pow(x,2))/sqrt(pow(_forward_velocity,2)*pow(cos(alpha_r),2) + pow(x,2));
+    };
+    float x_0 = _forward_velocity;
+    float y   = f(x_0);
+    float y_d = f_d(x_0);
+    do {
+        x_0 = x_0 - (y /y_d);
+        y   = f(x_0);
+        y_d = f_d(x_0);
+    } while (abs(y) > 0.01);
+    float vi = x_0 - _forward_velocity *sin(alpha_r);      // induced velocity [m/s]
+
+    float Pi = UAVs_[uav_index].kappa * T * vi;
+
+    // Profile power P0 (blade-section drag dependent) [W]:
+    float omega = sqrt( 6 * T / (air_density_ * UAVs_[uav_index].b * UAVs_[uav_index].c * pow(UAVs_[uav_index].R,3) * UAVs_[uav_index].Cl) - 3/2 * pow(_forward_velocity * cos(alpha_r) / UAVs_[uav_index].R,2) );  // rotor speed [rad/s]
+    float P0    = air_density_ * pow(UAVs_[uav_index].R,4) * pow(omega,3) * UAVs_[uav_index].b * UAVs_[uav_index].c * UAVs_[uav_index].Cd/8 * (1 + UAVs_[uav_index].K_mu * pow(_forward_velocity * cos(alpha_r) / (omega * UAVs_[uav_index].R),2));
+
+    // Parasite power Pf (fuselage-drag dependent) [W]:
+    float Pf = D * _forward_velocity;
+
+    // Total aerodynamic power Pa [W]:
+    float Pa = UAVs_[uav_index].nr * (Pi + P0) + Pf;
+
+    // Electric power [W]:
+    float Pe = Pa/UAVs_[uav_index].eta;
+
+    return Pe;
+}   // end multicopterForwardPower
 
 
 } // end namespace aerialcore

@@ -579,7 +579,7 @@ void MissionController::translateFlightPlanIntoUAVMission(std::vector<aerialcore
                     if (UAVs_[current_uav_index].mission->airframeType() == grvc::AirframeType::FIXED_WING) {
 
                         // PX4 gives error "adjust landing approach" if the last wp previous to the landing isn't appropriate. So calculate a previous wp to the landing that is at a distance of 200 meters minimum (500 prefered) of the landing spot and 15 meters height.
-                        // TODO: maybe insert this point in the planning to take it into account during the planning. Land pose delayed..
+                        // TODO: maybe insert this point in the planning to take it into account during the planning. Land pose delayed.
                         geometry_msgs::PoseStamped wp_previous_to_landing_1, wp_previous_to_landing_2;
 
                         float runway_heading;

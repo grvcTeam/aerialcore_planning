@@ -7,7 +7,7 @@ drones: {"1": "MULTICOPTER", "2": "MULTICOPTER"} #, "2": "FIXED_WING", "3": "VTO
 
 # Airframe types, each one with its own parameter values (time in seconds, speed in m/s, battery in in parts per unit, height in meters):
 MULTICOPTER:
-  time_max_flying: 1000
+  time_max_flying: 1800
   speed_xy: 5.5
   speed_z_down: 1.5
   speed_z_up: 3.0
@@ -18,6 +18,30 @@ MULTICOPTER:
   time_delay_between_wps: 1         # Each time the UAV pass by a waypoint, it slowsdown and have to maneuver a little. This is the delay estimation of that.
   hardcoded_takeoff_landing_height: 30  # Only multicopters in mission flight mode. Takeoff and land to a hardcoded height (in meters).
 
+  #---------------------------------------------------------------------------------------
+  # Power consumption parameters (from Alvaro Caballero's work with Tarot X4 MULTICOPTER):
+  #---------------------------------------------------------------------------------------
+  # Mass and geometry (Tarot X4):
+  m     : 7.2     # total mass                 [kg]
+  nr    : 4       # number of rotors           [-]
+  b     : 2       # number of rotor blades     [-]
+  R     : 0.2667  # rotor radius               [m]
+  c     : 0.0247  # blade chord (x=0.7*R)      [m]
+  # Aerodynamics (Tarot X4):
+  Cl    : 1.01    # section lift coefficient   [-]
+  Cd    : 0.01    # section drag coefficient   [-]
+  kappa : 1.15    # induced power factor       [-]
+  eta   : 0.72    # energy efficiency          [-]
+  K_mu  : 4.65    # P0 numerical constant      [-]
+  f     : 0.35    # equivalent flat-plate area [m^2]
+  # Battery (DJI Matrice 210):
+  Wh    : 176.93  # Capacity of the battery    [Wh]
+  nb    : 2       # Number of batteries        [-]
+  # mAh   : 7660    # Capacity of the battery    [mAh]
+  # cells : 6       # Number of battery cells    [-]
+  # volt  : 22.8    # Nominal battery voltage    [V]
+
+
 FIXED_WING:
   time_max_flying: 5400
   speed_xy: 20.0
@@ -27,6 +51,7 @@ FIXED_WING:
   time_until_fully_charged: 1800
   time_delay_between_wps: 1         # Each time the UAV pass by a waypoint, it slowsdown and have to maneuver a little. This is the delay estimation of that.
   time_delay_landing: 106
+
 
 VTOL:
   time_max_flying: 5400
@@ -42,6 +67,11 @@ VTOL:
   time_delay_end_transition: 13     # Only for VTOL. Time delay because of the transition from VTOL to MC modes.
 
 
+# Environment parameters for the power consumption calculation (from Alvaro Caballero's work):
+gravity     : 9.81  # gravity acceleration             [m/s^2]
+air_density : 1.225 # default value of the air density [kg/m^3]. It will be estimated with the temperature and pressure from OpenWeatherMap and the ideal gas law (dry air), if the server doesn't respond use this value.
+
+
 # Time (in seconds) between iterations for the Parameter Estimator thread and Plan Monitor thread in the Mission Controller:
 parameter_estimator_time: 20.0
 plan_monitor_time: 30.0         # Just after replanning it will be waited this amount of time x4 for the time estimation to settle.
@@ -55,8 +85,8 @@ deviation_limit: 0.1
 map_origin_geo: [38.138728, -3.173825, 444]
 
 
-# API ID of OpenWeatherMap to get the wind vector from the internet in the Parameter Estimator.
-# THIS API KEY IS NOT VALID, it's just as an example. Please get your own API ID to use this functionality (it's free):
+# APP ID of OpenWeatherMap to get the wind vector from the internet in the Parameter Estimator.
+# THIS API KEY IS NOT VALID, it's just as an example. Please get your own APP ID to use this functionality (it's free):
 openweathermap_appid: "73bc471b3a4c39f688d5c0e79647db71"
 
 
