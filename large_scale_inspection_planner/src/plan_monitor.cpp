@@ -324,13 +324,13 @@ int PlanMonitor::findUavIndexById(int _UAV_id) {
 } // end findUavIndexById
 
 
-std::map<int, int> PlanMonitor::lastFlightPlanGraphNode() {
+std::map<int, int> PlanMonitor::getLastGraphNodes() {
     std::map<int, int> map_to_return;
     for (int i=0; i<UAVs_.size(); i++) {
         map_to_return[ UAVs_[i].id ] = UAVs_[i].last_flight_plan_graph_node;
     }
     return map_to_return;
-} // end lastFlightPlanGraphNode
+} // end getLastGraphNodes
 
 
 } // end namespace aerialcore

@@ -72,7 +72,7 @@ private:
 
   void translateFlightPlanIntoUAVMission(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
   std::string translateFlightPlanIntoDJIyaml(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
-  std::string translateFlightPlanIntoYaml(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
+  std::string translateFlightPlanIntoStdYaml(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
 
   ros::ServiceServer start_supervising_srv_;
   ros::ServiceServer stop_supervising_srv_;
@@ -100,7 +100,12 @@ private:
 
   std::vector<aerialcore_msgs::FlightPlan> flight_plans_;
 
-  bool commanding_UAV_with_mission_lib_or_DJI_SDK_ = true;  // Use mission_lib for commanding UAVs (true) or output a yaml string for using the DJI SDK (false).
+  // Argument UAV_command_mode can be:
+  //  - mission_lib: the plan from the planner will be translated to a plan with mission_lib.
+  //  - DJI_SDK: the plan from the planner will be translated to a yaml plan and sent to the DJI SDK.
+  //  - std_yaml: the plan from the planner will be translated to a standard yaml plan and sent to a given ros service (CTU integration).
+  std::string UAV_command_mode_ = "mission_lib";
+
   std::atomic<bool> stop_current_supervising_ = {false};
 
   geographic_msgs::GeoPoint map_origin_geo_;
