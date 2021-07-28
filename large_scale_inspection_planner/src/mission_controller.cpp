@@ -13,6 +13,8 @@
 
 #define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
 
+#define FLYING_THRESHOLD 1  // Height threshold above which an UAV is considered to be flying (in meters). TODO: better way to know if flying?
+
 namespace aerialcore {
 
 
@@ -412,7 +414,7 @@ void MissionController::planThread(void) {
                 initial_position_graph_node.id = current_uav.id;
                 if (UAV_command_mode_=="mission_lib" || UAV_command_mode_=="std_yaml") {
 
-                    const geometry_msgs::PoseStamped uav_pose = current_uav.mission->pose();
+                    geometry_msgs::PoseStamped uav_pose = current_uav.mission->pose();
 
                     initial_position_graph_node.x = uav_pose.pose.position.x;
                     initial_position_graph_node.y = uav_pose.pose.position.y;
@@ -625,7 +627,9 @@ void MissionController::translateFlightPlanIntoUAVMission(std::vector<aerialcore
 
             if (i==0 && continuous_or_fast_supervision_ && only_sum_delay_once) {  // Delay the takeoff of the next UAV if the inspection mode is set to continuous, which is not fast (one UAV at the time).
                 for (int j=0; j<flight_plan.nodes.size()-1; j++) {
-                    takeoff_delay += time_cost_matrices.at( flight_plan.uav_id ).at( flight_plan.nodes[j] ).at( flight_plan.nodes[j+1] );
+                    try {
+                        takeoff_delay += time_cost_matrices.at( flight_plan.uav_id ).at( flight_plan.nodes[j] ).at( flight_plan.nodes[j+1] );
+                    } catch (...) {} // catch any exception. Mainly when using a specific supervision plan.
                 }
                 only_sum_delay_once = false;
             }
@@ -807,9 +811,14 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
     current_graph_.clear();
     current_graph_mutex_.unlock();
 
+    ros::Time planning_time = ros::Time::now();
+    flight_plans_.clear();
+    aerialcore_msgs::FlightPlan current_flight_plan;
+
     // Iterate the parameters loaded and create from them the graph:
     for (int id=1; id<=20; id++) {
         if (ros::param::has("waypoints_"+std::to_string( id ))) {
+            current_flight_plan.uav_id = id;
 
             // Build the initial UAV positions and regular land stations (same spot where the UAV is when yaml string received) graph nodes for the current graph:
             aerialcore_msgs::GraphNode initial_graph_node;
@@ -818,10 +827,28 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
                 int current_uav_index = findUavIndexById(id);
                 if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
 
-                const geometry_msgs::PoseStamped uav_pose = UAVs_[current_uav_index].mission->pose();
+                geometry_msgs::PoseStamped uav_pose = UAVs_[current_uav_index].mission->pose();
                 initial_graph_node.x = uav_pose.pose.position.x;
                 initial_graph_node.y = uav_pose.pose.position.y;
                 initial_graph_node.z = uav_pose.pose.position.z;
+
+                geometry_msgs::Point32 aux_point32;
+                aux_point32.x = initial_graph_node.x;
+                aux_point32.y = initial_graph_node.y;
+                aux_point32.z = initial_graph_node.z;
+                geographic_msgs::GeoPoint uav_geopoint = cartesian_to_geographic(aux_point32, map_origin_geo_);
+                initial_graph_node.latitude  = uav_geopoint.latitude;
+                initial_graph_node.longitude = uav_geopoint.longitude;
+                initial_graph_node.altitude  = uav_geopoint.altitude;
+
+                if (uav_pose.pose.position.z <= FLYING_THRESHOLD) {
+                    uav_pose.pose.position.z += 30;
+                    current_flight_plan.type.push_back(aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP);
+                } else {
+                    current_flight_plan.type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_PYLON_WP);
+                }
+                current_flight_plan.poses.push_back(uav_pose);
+                current_flight_plan.nodes.push_back(current_graph_.size());
             } else if (UAV_command_mode_=="DJI_SDK") {
                 // // HARDCODED INITIAL POSES ?
             }
@@ -857,42 +884,45 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
                 (float) std::stod (waypoints,&sz);  // Don't save right now the heading.
                 waypoints = waypoints.substr(sz);
 
+                geometry_msgs::Point32 aux_point32;
+                aux_point32.x = pylon_graph_node.x;
+                aux_point32.y = pylon_graph_node.y;
+                aux_point32.z = pylon_graph_node.z;
+                geographic_msgs::GeoPoint pylon_geopoint = cartesian_to_geographic(aux_point32, map_origin_geo_);
+                pylon_graph_node.latitude  = pylon_geopoint.latitude;
+                pylon_graph_node.longitude = pylon_geopoint.longitude;
+                pylon_graph_node.altitude  = pylon_geopoint.altitude;
+
+                geometry_msgs::PoseStamped pylon_pose;
+                pylon_pose.pose.position.x = pylon_graph_node.x;
+                pylon_pose.pose.position.y = pylon_graph_node.y;
+                pylon_pose.pose.position.z = pylon_graph_node.z;
+                current_flight_plan.poses.push_back(pylon_pose);
+                current_flight_plan.type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_PYLON_WP);
+                current_flight_plan.nodes.push_back(current_graph_.size());
+
                 current_graph_mutex_.lock();
                 current_graph_.push_back(pylon_graph_node);
                 current_graph_mutex_.unlock();
             }
+
+            geometry_msgs::PoseStamped land_pose;
+            land_pose.pose.position.x = current_flight_plan.poses.back().pose.position.x;
+            land_pose.pose.position.y = current_flight_plan.poses.back().pose.position.y;
+            land_pose.pose.position.z = current_flight_plan.poses.back().pose.position.z;
+            current_flight_plan.poses.push_back(land_pose);
+            current_flight_plan.type.push_back(aerialcore_msgs::FlightPlan::TYPE_LAND_WP);
+
+            flight_plans_.push_back(current_flight_plan);
+
+            current_flight_plan.nodes.clear();
+            current_flight_plan.poses.clear();
+            current_flight_plan.type.clear();
         }
     }
 #ifdef DEBUG
     printCurrentGraph();
 #endif
-
-    // Build the flight_plans_ so we can translate it later to use the mission_lib or DJI SDK:
-    flight_plans_.clear();
-    aerialcore_msgs::FlightPlan current_flight_plan;
-    int regular_landing_station_index = -1;
-
-    current_graph_mutex_.lock();
-    for (int i=0; i<=current_graph_.size(); i++) {
-        if (i==current_graph_.size() || current_graph_[i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && regular_landing_station_index!=-1) {
-            current_flight_plan.nodes.push_back(regular_landing_station_index);
-            flight_plans_.push_back(current_flight_plan);
-            current_flight_plan.nodes.clear();
-            if (i==current_graph_.size()) {
-                break;
-            }
-        }
-        if (current_graph_[i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION) {
-            regular_landing_station_index = i-1;
-            current_flight_plan.uav_id = current_graph_[i].id;
-            current_flight_plan.nodes.push_back(i);
-        } else if (current_graph_[i].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
-            current_flight_plan.nodes.push_back(i);
-        }
-    }
-    current_graph_mutex_.unlock();
-
-    centralized_planner_.fillFlightPlansFields(flight_plans_);
 
     // First disable all UAVs from supervising to then enable only the ones used:
     for (UAV& current_uav : UAVs_) {
