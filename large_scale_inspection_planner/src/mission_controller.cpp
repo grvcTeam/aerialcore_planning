@@ -629,7 +629,14 @@ void MissionController::translateFlightPlanIntoUAVMission(std::vector<aerialcore
                 for (int j=0; j<flight_plan.nodes.size()-1; j++) {
                     try {
                         takeoff_delay += time_cost_matrices.at( flight_plan.uav_id ).at( flight_plan.nodes[j] ).at( flight_plan.nodes[j+1] );
-                    } catch (...) {} // catch any exception. Mainly when using a specific supervision plan.
+                    } catch (...) { // catch any exception. Mainly the problem is time_cost_matrices not built yet when using a specific supervision plan.
+                        update_matrices_mutex_.lock();
+                        parameter_estimator_.updateMatrices(current_graph_, no_fly_zones_, geofence_, true);
+                        time_cost_matrices = parameter_estimator_.getTimeCostMatrices();
+                        update_matrices_mutex_.unlock();
+
+                        takeoff_delay += time_cost_matrices.at( flight_plan.uav_id ).at( flight_plan.nodes[j] ).at( flight_plan.nodes[j+1] );
+                    }
                 }
                 only_sum_delay_once = false;
             }
