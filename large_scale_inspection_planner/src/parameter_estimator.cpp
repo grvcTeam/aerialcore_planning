@@ -366,6 +366,7 @@ void ParameterEstimator::getCurrentWeatherFromInternet() {
 
     if (readBuffer.size() == 0) {
         ROS_ERROR("Parameter Estimator: OpenWeatherMap server didn't answer. Wind, pressure, temperature and air density data not modified.");
+        return;
     } else {
         std::string wind_speed_search_pattern  = "\"speed\":";      // 8 elements
         std::string wind_direction_deg_search_pattern = "\"deg\":"; // 6 elements
@@ -417,21 +418,6 @@ void ParameterEstimator::getCurrentWeatherFromInternet() {
             pressure_ = (float) std::stod ( pressure_stringstream.str() , &sz);
         } catch (...) { // catch any exception
             ROS_ERROR("Parameter Estimator: error reading the parsed string from OpenWeatherMap. Wind, pressure, temperature and air density data not modified. Printing wrong parsed strings for debug.");
-
-            std::cout << "wind_speed_found = "<< wind_speed_found << std::endl;
-            std::cout << "wind_speed_end_found = "<< wind_speed_end_found << std::endl;
-            std::cout << "wind_direction_deg_found = "<< wind_direction_deg_found << std::endl;
-            std::cout << "wind_direction_deg_end_found = "<< wind_direction_deg_end_found << std::endl;
-            std::cout << std::endl << "wind_speed_string = " << wind_speed_string << std::endl;
-            std::cout << "wind_direction_deg_string = " << wind_direction_deg_string << std::endl << std::endl;
-
-            std::cout << "temperature_found = "<< temperature_found << std::endl;
-            std::cout << "temperature_end_found = "<< temperature_end_found << std::endl;
-            std::cout << "pressure_found = "<< pressure_found << std::endl;
-            std::cout << "pressure_end_found = "<< pressure_end_found << std::endl;
-            std::cout << std::endl << "temperature_string = " << temperature_string << std::endl;
-            std::cout << "pressure_string = " << pressure_string << std::endl << std::endl;
-
             return;
         }
 
