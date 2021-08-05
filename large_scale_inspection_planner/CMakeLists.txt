@@ -4,6 +4,8 @@ project(large_scale_inspection_planner)
 ## Add support for C++11, supported in ROS Kinetic and newer
 add_definitions(-std=c++11)
 
+add_definitions(-DUSING_MS_TSP_PLANNER) # Comment this (and the ms_tsp_planner line below) if not using the ms_tsp_planner.
+
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
@@ -13,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   mission_lib
   path_planner
   aerialcore_msgs
+  ms_tsp_planner  # Comment this if USING_MS_TSP_PLANNER commented.
 )
 
 find_package(PythonLibs 2.7)

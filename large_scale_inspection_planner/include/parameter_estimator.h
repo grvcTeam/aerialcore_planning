@@ -137,10 +137,10 @@ private:
     float batteryDropVTOL(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices);
 
 protected:
-    float multicopterHoverPower(int _uav_id);
-    float multicopterClimbPower(int _uav_id, float _climb_velocity);        // Climb velocity (m/s) should be >0.
-    float multicopterDescentPower(int _uav_id, float _descent_velocity);    // Descent velocity (m/s) should be <0.
-    float multicopterForwardPower(int _uav_id, float _forward_velocity);    // Forward velocity (m/s) relative to the air mass, in other words, it includes the wind.
+    float multicopterHoverPower(int _uav_id);                               // Watts output [W].
+    float multicopterClimbPower(int _uav_id, float _climb_velocity);        // Watts output [W]. Climb velocity (m/s) should be >0.
+    float multicopterDescentPower(int _uav_id, float _descent_velocity);    // Watts output [W]. Descent velocity (m/s) should be <0.
+    float multicopterForwardPower(int _uav_id, float _forward_velocity);    // Watts output [W]. Forward velocity (m/s) relative to the air mass, in other words, it includes the wind.
 
 };  // end ParameterEstimator class
 

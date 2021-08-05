@@ -1,6 +1,15 @@
 # This file describes the settings for the planning problem for the ATLAS_power_lines.world
 
 
+# The following argument defines which method or algorithm computes the plan (vector of FlightPlan, one per UAV), and it can be:
+# - Greedy: plan calculated with a Greedy algorithm.
+# - MILP:   plan calculated with the MILP formulation and OR-Tools.
+# - VNS:    plan calculated with a VNS algorithm.
+# - MEM:    plan calculated with the MEM algorithm (default if not specified).
+# - Mstsp:  plan calculated with the Mstsp algorithm.
+planner_method: "Mstsp"
+
+
 # Dictionary of the actual drones used in the simulation or reality (key: UAV id, value: airframe type):
 drones: {"1": "MULTICOPTER", "2": "MULTICOPTER"} #, "2": "FIXED_WING", "3": "VTOL"}
 

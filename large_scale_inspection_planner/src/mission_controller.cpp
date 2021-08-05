@@ -11,6 +11,10 @@
 #include <time.h>
 #include <algorithm>
 
+#ifdef USING_MS_TSP_PLANNER
+#include "ms_tsp_planner/ConfigToFlightPlans.h"
+#endif
+
 #define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
 
 #define FLYING_THRESHOLD 1  // Height threshold above which an UAV is considered to be flying (in meters). TODO: better way to know if flying?
@@ -26,6 +30,12 @@ MissionController::MissionController() {
     if (UAV_command_mode_!="mission_lib" && UAV_command_mode_!="DJI_SDK" && UAV_command_mode_!="std_yaml") {
         ROS_ERROR("Mission Controller: error, UAV_command_mode not valid. Using mission_lib mode as default.");
         std::string UAV_command_mode_ = "mission_lib";
+    }
+
+    n_.getParam("planner_method", planner_method_);
+    if (planner_method_!="Greedy" && planner_method_!="MILP" && planner_method_!="VNS" && planner_method_!="MEM" && planner_method_!="Mstsp") {
+        ROS_ERROR("Mission Controller: error, planner_method not valid. Using MEM algorithm as default.");
+        std::string planner_method_ = "MEM";
     }
 
     // Charge from the YAML file the time between iterations for the loops in the Parameter Estimator and Plan (Monitor and Planner) threads:
@@ -286,6 +296,9 @@ MissionController::MissionController() {
 
     // Clients:
     post_yaml_client_ = n_.serviceClient<aerialcore_msgs::PostString>("post_yaml");
+#ifdef USING_MS_TSP_PLANNER
+    ms_tsp_planner_ = n_.serviceClient<ms_tsp_planner::ConfigToFlightPlans>("ms_tsp_planner/config_to_flight_plan");
+#endif
 
     // Make communications spin!
     spin_thread_ = std::thread([this]() {
@@ -475,10 +488,54 @@ void MissionController::planThread(void) {
             clock_t t_begin, t_end;
             t_begin = clock();
 
-            // std::vector<aerialcore_msgs::FlightPlan> flight_plans_new = centralized_planner_.getPlanGreedy(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
-            std::vector<aerialcore_msgs::FlightPlan> flight_plans_new = centralized_planner_.getPlanMEM(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
-            // std::vector<aerialcore_msgs::FlightPlan> flight_plans_new =  centralized_planner_.getPlanMILP(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
-            // std::vector<aerialcore_msgs::FlightPlan> flight_plans_new =  centralized_planner_.getPlanVNS(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
+            std::vector<aerialcore_msgs::FlightPlan> flight_plans_new;
+            if (planner_method_ == "Greedy") {
+                flight_plans_new = centralized_planner_.getPlanGreedy(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
+            } else if (planner_method_ == "MILP") {
+                flight_plans_new =  centralized_planner_.getPlanMILP(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
+            } else if (planner_method_ == "VNS") {
+                flight_plans_new =  centralized_planner_.getPlanVNS(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
+            } else if (planner_method_ == "MEM") {
+                flight_plans_new = centralized_planner_.getPlanMEM(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
+            } else if (planner_method_ == "Mstsp") {
+#ifdef USING_MS_TSP_PLANNER
+                ms_tsp_planner::ConfigToFlightPlans config_to_flight_plans;
+                config_to_flight_plans.request.configFile = "default.yaml";
+                if (ms_tsp_planner_.call(config_to_flight_plans)) {
+                    ROS_INFO("Mission Controller: plan from ms_tsp_planner received.");
+                    flight_plans_new = config_to_flight_plans.response.plans;
+
+                    // TODO? this for loop is a patch because mstsp.solution_to_flight_plans(sol) don't fill the uav_id field:
+                    for (int i=0; i<flight_plans_new.size(); i++) {
+                        flight_plans_new[i].uav_id = i+1;
+                    }
+
+                    for (int i=0; i<flight_plans_new.size(); i++) {
+                        for (int j=0; j<flight_plans_new[i].nodes.size(); j++) {
+                            if (planner_current_graph[ flight_plans_new[i].nodes[j] ].z <= FLYING_THRESHOLD) {
+                                planner_current_graph[ flight_plans_new[i].nodes[j] ].z += 30;
+                                flight_plans_new[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP);
+                            } else if ( j==flight_plans_new[i].nodes.size()-1 ) {
+                                flight_plans_new[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_LAND_WP);
+                            } else {
+                                flight_plans_new[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_PYLON_WP);
+                            }
+
+                            geometry_msgs::PoseStamped current_pose;
+                            current_pose.pose.position.x = planner_current_graph[ flight_plans_new[i].nodes[j] ].x;
+                            current_pose.pose.position.y = planner_current_graph[ flight_plans_new[i].nodes[j] ].y;
+                            current_pose.pose.position.z = planner_current_graph[ flight_plans_new[i].nodes[j] ].z;
+                            flight_plans_new[i].poses.push_back(current_pose);
+                        }
+                    }
+
+                } else {
+                    ROS_ERROR("Mission Controller: ms_tsp_planner service didn't answer.");
+                }
+#else
+                ROS_ERROR("Mission Controller: ms_tsp_planner selected but not installed or configured in the cmakelist.");
+#endif
+            }
 
             // Before saving the new plan, check if there are drones not used in this new plan, in which case clear its plan:
             for (const aerialcore_msgs::FlightPlan& flight_plan_original : flight_plans_) {
@@ -581,6 +638,7 @@ void MissionController::translateFlightPlanIntoUAVMission(std::vector<aerialcore
                 }
 
                 if (flight_plan.type[i] == aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP) {
+                    if (planner_method_ == "Mstsp") { current_pose_stamped.pose.position.z += 30; } // TODO: harcoded takeoff height.
                     if (i==0) {     // Only delay the first takeoff.
                         UAVs_[current_uav_index].mission->addTakeOffWp(current_pose_stamped, takeoff_delay);
                         flight_plan.header.stamp.sec += takeoff_delay;
@@ -629,13 +687,17 @@ void MissionController::translateFlightPlanIntoUAVMission(std::vector<aerialcore
                 for (int j=0; j<flight_plan.nodes.size()-1; j++) {
                     try {
                         takeoff_delay += time_cost_matrices.at( flight_plan.uav_id ).at( flight_plan.nodes[j] ).at( flight_plan.nodes[j+1] );
-                    } catch (...) { // catch any exception. Mainly the problem is time_cost_matrices not built yet when using a specific supervision plan.
-                        update_matrices_mutex_.lock();
-                        parameter_estimator_.updateMatrices(current_graph_, no_fly_zones_, geofence_, true);
-                        time_cost_matrices = parameter_estimator_.getTimeCostMatrices();
-                        update_matrices_mutex_.unlock();
+                    } catch (...) { // catch any exception. Mainly the problem is time_cost_matrices not built yet when using a specific supervision plan or Mstsp.
+                        try {
+                            update_matrices_mutex_.lock();
+                            parameter_estimator_.updateMatrices(current_graph_, no_fly_zones_, geofence_, true);
+                            time_cost_matrices = parameter_estimator_.getTimeCostMatrices();
+                            update_matrices_mutex_.unlock();
 
-                        takeoff_delay += time_cost_matrices.at( flight_plan.uav_id ).at( flight_plan.nodes[j] ).at( flight_plan.nodes[j+1] );
+                            takeoff_delay += time_cost_matrices.at( flight_plan.uav_id ).at( flight_plan.nodes[j] ).at( flight_plan.nodes[j+1] );
+                        } catch (...) { // catch any exception. Mainly the problem is time_cost_matrices not built yet when using Mstsp.
+                            takeoff_delay += 0;
+                        }
                     }
                 }
                 only_sum_delay_once = false;

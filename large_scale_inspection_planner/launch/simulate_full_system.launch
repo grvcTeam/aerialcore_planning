@@ -90,6 +90,9 @@
     -->
     <arg name="UAV_command_mode" default="mission_lib"/>
 
+    <!-- If simulation, use the battery_faker for simulating the battery charge (recharge station) and discharge (flying). -->
+    <arg name="simulation" default="true"/>
+
     <!-- Launch the Mission Controller. -->
 	<node pkg="large_scale_inspection_planner" name="mission_controller" type="mission_controller" output="screen">
 		<rosparam param="ns_uav_prefix" subst_value="true">$(arg ns_uav_prefix)</rosparam>
@@ -97,6 +100,7 @@
 		<rosparam param="home_pose_parent_frame" subst_value="true">$(arg home_pose_parent_frame)</rosparam>
 
 		<rosparam param="UAV_command_mode" subst_value="true">$(arg UAV_command_mode)</rosparam>
+		<rosparam param="simulation" subst_value="true">$(arg simulation)</rosparam>
 	</node>
 
 </launch>

@@ -82,6 +82,9 @@ private:
   ros::ServiceServer do_fast_supervision_srv_;
   ros::ServiceServer start_specific_supervision_plan_srv_;
   ros::ServiceClient post_yaml_client_;
+#ifdef USING_MS_TSP_PLANNER
+  ros::ServiceClient ms_tsp_planner_;
+#endif
 
   // Power lines graphs:
   std::vector<aerialcore_msgs::GraphNode> complete_graph_;
@@ -105,6 +108,14 @@ private:
   //  - DJI_SDK: the plan from the planner will be translated to a yaml plan and sent to the DJI SDK.
   //  - std_yaml: the plan from the planner will be translated to a standard yaml plan and sent to a given ros service (CTU integration).
   std::string UAV_command_mode_ = "mission_lib";
+
+  // The following argument defines which method or algorithm computes the plan (vector of FlightPlan, one per UAV), and it can be:
+  // - Greedy: plan calculated with a Greedy algorithm.
+  // - MILP:   plan calculated with the MILP formulation and OR-Tools.
+  // - VNS:    plan calculated with a VNS algorithm.
+  // - MEM:    plan calculated with the MEM algorithm (default if not specified).
+  // - Mstsp:  plan calculated with the Mstsp algorithm.
+  std::string planner_method_ = "MEM";
 
   std::atomic<bool> stop_current_supervising_ = {false};
 
