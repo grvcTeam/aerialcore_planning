@@ -13,7 +13,7 @@
 #include <fstream>
 #include <curl/curl.h>
 
-#define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
+// #define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
 
 #define FLYING_THRESHOLD 1  // Height threshold above which an UAV is considered to be flying (in meters). TODO: better way to know if flying?
 
@@ -847,6 +847,13 @@ float ParameterEstimator::multicopterForwardPower(int _uav_id, float _forward_ve
     float Pe = Pa/UAVs_[uav_index].eta;
 
     return Pe;
+}   // end multicopterForwardPower
+
+
+float ParameterEstimator::multicopterForwardPower(int _uav_id, geometry_msgs::TwistStamped _forward_velocity) {
+    float speed_relative_to_air_norm = sqrt( pow(_forward_velocity.twist.linear.x - wind_vector_.x, 2) + pow(_forward_velocity.twist.linear.x - wind_vector_.y, 2) );
+
+    return multicopterForwardPower(_uav_id, speed_relative_to_air_norm);
 }   // end multicopterForwardPower
 
 

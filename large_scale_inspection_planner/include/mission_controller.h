@@ -62,6 +62,7 @@ private:
 
   void parameterEstimatorThread(void);
   void planThread(void);
+  void batteryFakerThread(void);  // Only used if simulation_==true.
 
   int findUavIndexById(int _UAV_id);
   static bool compareFlightPlanById(const aerialcore_msgs::FlightPlan &a, const aerialcore_msgs::FlightPlan &b);
@@ -123,6 +124,8 @@ private:
   std::vector<geometry_msgs::Polygon> no_fly_zones_;
   geometry_msgs::Polygon geofence_;
 
+  bool simulation_ = true;
+
   // UAVs:
   struct UAV {
     grvc::Mission * mission = nullptr;  // For simulation!!! In the real flights of November there will be no VTOL nor fixed wing, only DJI multicopters.
@@ -135,6 +138,9 @@ private:
 
     float minimum_battery = 0.2;    // Battery in parts per unit (not percentage or %) considered fully discharged. LiPo batteries should never discharge to less than 20% or else the life span (number of charge/discharge cycles) will be dramatically reduced.
     int time_until_fully_charged;   // Used for battery charge time estimation, time expected to charge completely the batteries in the charging pad from discharge state.
+    float joules;                   // Capacity of the battery [J]. By now only for MULTICOPTER if simulation_==true.
+
+    float battery_faked;  // Only used if simulation_==true. Storing the predicted battery that the UAV should have flying in reality. Supposed to start with batteries full.
 
     int time_max_flying;  // Used for battery drop estimation, this is the estimated maximum flying time (in seconds) of this specific UAV before the drone runs out of battery.
 
@@ -149,6 +155,7 @@ private:
 
   std::thread parameter_estimator_thread_;
   std::thread plan_thread_;
+  std::thread battery_faker_thread_;    // Only used if simulation_==true.
 
   float parameter_estimator_time_;
   float plan_monitor_time_;

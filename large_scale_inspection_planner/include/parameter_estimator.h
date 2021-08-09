@@ -18,6 +18,7 @@
 #include <mutex>
 
 #include <geometry_msgs/PointStamped.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/Point32.h>
 #include <geographic_msgs/GeoPoint.h>
 #include <aerialcore_msgs/GraphNode.h>
@@ -43,6 +44,12 @@ public:
     const std::map<int, std::map<int, std::map<int, float> > >& getBatteryDropMatrices();
 
     void printMatrices();
+
+    float multicopterHoverPower(int _uav_id);                               // Watts output [W].
+    float multicopterClimbPower(int _uav_id, float _climb_velocity);        // Watts output [W]. Climb velocity (m/s) should be >0.
+    float multicopterDescentPower(int _uav_id, float _descent_velocity);    // Watts output [W]. Descent velocity (m/s) should be <0.
+    float multicopterForwardPower(int _uav_id, float _forward_velocity);    // Watts output [W]. Forward velocity (m/s) relative to the air mass, in other words, it includes the wind.
+    float multicopterForwardPower(int _uav_id, geometry_msgs::TwistStamped _forward_velocity);    // Watts output [W]. Forward velocity (m/s) NOT relative to the air mass (absolute).
 
 private:
     // The following are the capacity and cost matrices. For them, each row and column are graph nodes and the elements between them are the edges.
@@ -135,12 +142,6 @@ private:
     float batteryDropMulticopter(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, float> >& _distance_cost_matrix, const std::map<int, std::map<int, WpsVectors> >& _paths_matrix, const std::vector<aerialcore_msgs::GraphNode>& _graph);
     float batteryDropFixedWing(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices);
     float batteryDropVTOL(int _uav_id, int _index_i, int _index_j, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices);
-
-protected:
-    float multicopterHoverPower(int _uav_id);                               // Watts output [W].
-    float multicopterClimbPower(int _uav_id, float _climb_velocity);        // Watts output [W]. Climb velocity (m/s) should be >0.
-    float multicopterDescentPower(int _uav_id, float _descent_velocity);    // Watts output [W]. Descent velocity (m/s) should be <0.
-    float multicopterForwardPower(int _uav_id, float _forward_velocity);    // Watts output [W]. Forward velocity (m/s) relative to the air mass, in other words, it includes the wind.
 
 };  // end ParameterEstimator class
 

@@ -1037,7 +1037,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 
 //     fillFlightPlansFields(flight_plans_);
 
-//     return flight_plans_;
+    return flight_plans_;
 
 } // end getPlanMILP method
 

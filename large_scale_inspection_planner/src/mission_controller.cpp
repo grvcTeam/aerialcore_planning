@@ -32,6 +32,8 @@ MissionController::MissionController() {
         std::string UAV_command_mode_ = "mission_lib";
     }
 
+    pnh_.param<bool>("simulation", simulation_, true);
+
     n_.getParam("planner_method", planner_method_);
     if (planner_method_!="Greedy" && planner_method_!="MILP" && planner_method_!="VNS" && planner_method_!="MEM" && planner_method_!="Mstsp") {
         ROS_ERROR("Mission Controller: error, planner_method not valid. Using MEM algorithm as default.");
@@ -77,6 +79,13 @@ MissionController::MissionController() {
         n_.getParam(it->second+"/speed_z_up", new_uav.speed_z_up);
         n_.getParam(it->second+"/minimum_battery", new_uav.minimum_battery);
         n_.getParam(it->second+"/time_until_fully_charged", new_uav.time_until_fully_charged);
+
+        float capacity_in_Wh;
+        float number_of_batteries;
+        n_.param<float>(it->second+"/Wh", capacity_in_Wh, 0);
+        n_.param<float>(it->second+"/nb", number_of_batteries, 0);
+        new_uav.joules = capacity_in_Wh*3600/* [s/h] */ * number_of_batteries;
+
         UAVs_.push_back(new_uav);
     }
 
@@ -306,6 +315,11 @@ MissionController::MissionController() {
         spinner.spin();
     });
 
+    // Start the battery faker thread if simulation_==true:
+    if (simulation_) {
+        battery_faker_thread_ = std::thread(&MissionController::batteryFakerThread, this);
+    }
+
     ROS_INFO("Mission Controller running!");
 
 } // end MissionController constructor
@@ -314,6 +328,7 @@ MissionController::MissionController() {
 // Brief Destructor
 MissionController::~MissionController() {
     if(spin_thread_.joinable()) spin_thread_.join();
+    if(battery_faker_thread_.joinable()) battery_faker_thread_.join();
 
     stop_current_supervising_ = true;
     std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -406,9 +421,28 @@ void MissionController::planThread(void) {
         for (const UAV& current_uav : UAVs_) {
             if (current_uav.enabled_to_supervise == true) {
                 std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> new_tuple;
-                std::get<0>(new_tuple) = UAV_command_mode_=="mission_lib" ? current_uav.mission->battery() : 1;
 
-                battery_level_when_planned[current_uav.id] = !plan_from_scratch ? battery_level_when_planned[current_uav.id] : UAV_command_mode_=="mission_lib" ? current_uav.mission->battery() : 1;
+                if (UAV_command_mode_=="mission_lib") {
+                    if (simulation_) {
+                        std::get<0>(new_tuple) = current_uav.battery_faked;
+                    } else {
+                        std::get<0>(new_tuple) = current_uav.mission->battery();
+                    }
+                } else {
+                    std::get<0>(new_tuple) = 1;
+                }
+
+                if (plan_from_scratch) {
+                    if (UAV_command_mode_=="mission_lib") {
+                        if (simulation_) {
+                            battery_level_when_planned[current_uav.id] = current_uav.battery_faked;
+                        } else {
+                            battery_level_when_planned[current_uav.id] = current_uav.mission->battery();
+                        }
+                    } else {
+                        battery_level_when_planned[current_uav.id] = 1;
+                    }
+                }
                 std::get<1>(new_tuple) = battery_level_when_planned[current_uav.id];
 
                 std::get<2>(new_tuple) = current_uav.minimum_battery;
@@ -570,7 +604,7 @@ void MissionController::planThread(void) {
                 for (const aerialcore_msgs::FlightPlan& flight_plan : flight_plans_) {
 
                     int current_uav_index = findUavIndexById(flight_plan.uav_id);
-                    battery_level_when_planned[ flight_plan.uav_id ] = UAVs_[current_uav_index].mission->battery();
+                    battery_level_when_planned[ flight_plan.uav_id ] = simulation_ ? UAVs_[current_uav_index].battery_faked : UAVs_[current_uav_index].mission->battery();
 
                     if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
 #ifdef DEBUG
@@ -1126,6 +1160,98 @@ void MissionController::printCurrentGraph() {
 
 bool MissionController::compareFlightPlanById(const aerialcore_msgs::FlightPlan &a, const aerialcore_msgs::FlightPlan &b) {
     return a.uav_id < b.uav_id;
+}
+
+
+// Battery faker thread (if simulation_==true):
+void MissionController::batteryFakerThread(void) {
+
+    float sample_time = 1.0;    // Battery update time.
+
+    // In simulation batteries are supposed to start fully charged.
+    for (int i=0; i<UAVs_.size(); i++) {
+        UAVs_[i].battery_faked = 0.8;
+    }
+
+    ros::Rate loop_rate(1.0/sample_time);   // [Hz] Update rate of the battery.
+    while (ros::ok()) {
+        for (int i=0; i<UAVs_.size(); i++) {
+
+            geometry_msgs::PoseStamped uav_pose = UAVs_[i].mission->pose();
+
+            // Landed (disarmed):
+            if (UAVs_[i].mission->armed()==false) {
+
+                // Calculate the closest land station:
+                int closest_land_station = -1;
+                float closest_land_station_distance = std::numeric_limits<float>::max();
+                current_graph_mutex_.lock();
+                for (int j=0; j<current_graph_.size(); j++) {
+                    if (current_graph_[j].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION || current_graph_[j].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION) {
+                        float current_distance = sqrt( pow(current_graph_[j].x-uav_pose.pose.position.x,2) + pow(current_graph_[j].y-uav_pose.pose.position.y,2) );
+                        if ( closest_land_station_distance > current_distance ) {
+                            closest_land_station = j;
+                            closest_land_station_distance = current_distance;
+                        }
+                    }
+                }
+                current_graph_mutex_.unlock();
+
+                // Landed on a recharge land station (closest land station is with recharge and closer than 5 meters):
+                if (current_graph_[closest_land_station].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION && closest_land_station_distance<=5) {
+                    UAVs_[i].battery_faked = UAVs_[i].battery_faked + sample_time/UAVs_[i].time_until_fully_charged <= 1.0 ? UAVs_[i].battery_faked + sample_time/UAVs_[i].time_until_fully_charged : 1.0;
+                    UAVs_[i].recharging = true;
+
+                // Landed on a regular land station (no recharge):
+                } else {
+                    UAVs_[i].battery_faked = UAVs_[i].battery_faked;
+                    UAVs_[i].recharging = false;
+                }
+
+            // Flying (supposed if armed):
+            } else {
+
+                if (UAVs_[i].airframe_type=="MULTICOPTER") {
+
+                    geometry_msgs::TwistStamped uav_velocity = UAVs_[i].mission->velocity();
+                    float horizontal_velocity = sqrt( pow(uav_velocity.twist.linear.x,2) + pow(uav_velocity.twist.linear.y,2) );
+
+                    // Hovering:
+                    if ( abs(uav_velocity.twist.linear.z) < 0.3 && horizontal_velocity < 0.3) {
+                        UAVs_[i].battery_faked = UAVs_[i].battery_faked - sample_time /* [s] */ * parameter_estimator_.multicopterHoverPower(UAVs_[i].id) /* [W = J/s] */ /UAVs_[i].joules /* [J] */ >= 0 ? UAVs_[i].battery_faked - sample_time /* [s] */ * parameter_estimator_.multicopterHoverPower(UAVs_[i].id) /* [W = J/s] */ /UAVs_[i].joules /* [J] */ : 0;
+                        UAVs_[i].recharging = false;
+
+                    // Ascending:
+                    } else if ( abs(uav_velocity.twist.linear.z) > horizontal_velocity && uav_velocity.twist.linear.z > 0) {
+                        UAVs_[i].battery_faked = UAVs_[i].battery_faked - sample_time /* [s] */ * parameter_estimator_.multicopterClimbPower(UAVs_[i].id, uav_velocity.twist.linear.z) /* [W = J/s] */ /UAVs_[i].joules /* [J] */ >= 0 ? UAVs_[i].battery_faked - sample_time /* [s] */ * parameter_estimator_.multicopterClimbPower(UAVs_[i].id, uav_velocity.twist.linear.z) /* [W = J/s] */ /UAVs_[i].joules /* [J] */ : 0;
+                        UAVs_[i].recharging = false;
+
+                    // Descending:
+                    } else if ( abs(uav_velocity.twist.linear.z) > horizontal_velocity && uav_velocity.twist.linear.z < 0) {
+                        UAVs_[i].battery_faked = UAVs_[i].battery_faked - sample_time /* [s] */ * parameter_estimator_.multicopterDescentPower(UAVs_[i].id, uav_velocity.twist.linear.z) /* [W = J/s] */ /UAVs_[i].joules /* [J] */ >= 0 ? UAVs_[i].battery_faked - sample_time /* [s] */ * parameter_estimator_.multicopterDescentPower(UAVs_[i].id, uav_velocity.twist.linear.z) /* [W = J/s] */ /UAVs_[i].joules /* [J] */ : 0;
+                        UAVs_[i].recharging = false;
+
+                    // Forward:
+                    } else {
+                        UAVs_[i].battery_faked = UAVs_[i].battery_faked - sample_time /* [s] */ * parameter_estimator_.multicopterForwardPower(UAVs_[i].id, uav_velocity) /* [W = J/s] */ /UAVs_[i].joules /* [J] */ >= 0 ? UAVs_[i].battery_faked - sample_time /* [s] */ * parameter_estimator_.multicopterForwardPower(UAVs_[i].id, uav_velocity) /* [W = J/s] */ /UAVs_[i].joules /* [J] */ : 0;
+                        UAVs_[i].recharging = false;
+                    }
+
+                } else {
+                    UAVs_[i].battery_faked = UAVs_[i].battery_faked - sample_time/UAVs_[i].time_max_flying >= 0 ? UAVs_[i].battery_faked - sample_time/UAVs_[i].time_max_flying : 0;
+                    UAVs_[i].recharging = false;
+                }
+
+            }
+
+// #ifdef DEBUG
+//             float battery = UAVs_[i].battery_faked * 100;
+//             std::cout << "UAVs_[ " << UAVs_[i].id << " ].battery_faked = " << battery << std::endl;
+// #endif
+        }
+
+        loop_rate.sleep();
+    }
 }
 
 

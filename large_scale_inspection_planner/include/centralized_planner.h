@@ -45,22 +45,22 @@ public:
     // _drone_info it's a vector of tuples, each tuple with 10 elements. The first in the tuple is the initial battery, and so on with all the elements in the "UAV" structure defined here below.
 
     // TODO:
-    // 1) Agarwal: Merge-Embed-Merge algorithm (DONE)
-    // 2) Online replanning (DONE)
+    // 1) Agarwal: Merge-Embed-Merge algorithm. (DONE)
+    // 2) Online replanning. (DONE)
     // 3) Wind affects battery consumption:
-    //  3.1) Multicopter (DONE)
+    //  3.1) Multicopter. (DONE)
     //  3.2) VTOL-fixed wing.
     // 4) Battery faker:
-    //  4.1) Multicopter.
+    //  4.1) Multicopter. (DONE)
     //  4.2) VTOL-fixed wing.
     // 5) Wind input for the planner.
     //  5.1) Wind known or wind sensor.
     //  5.2) Wind from inversed consumption.
     //  5.3) Wind from UAVs angles (depends on airframe type).
-    // 6) VNS CTU
+    // 6) VNS CTU.
     // 7) Dubins for navigations with VTOL or fixed wing, may be needed navigations between non-parallel inspection edges.
-    // 8) Compare with similar problems (maybe ask for the code or just do it myself)
-    // 9) Problem with paths in the cost matrix (wind doesn't affect the same with paths)
+    // 8) Compare with similar problems (maybe ask for the code or just do it myself).
+    // 9) Problem with paths in the cost matrix (wind doesn't affect the same with paths).
 
     void printPlan();
 
