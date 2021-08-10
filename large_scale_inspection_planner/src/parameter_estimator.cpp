@@ -123,7 +123,11 @@ const std::map<int, std::map<int, std::map<int, float> > >& ParameterEstimator::
 
 
 // Method called periodically in an external thread, located in the Mission Controller, that will update both the cost and battery drop matrices with the last prediction:
-void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector<geometry_msgs::Polygon>& _no_fly_zones, const geometry_msgs::Polygon& _geofence, bool _recalculate_initial_UAV_points) {
+void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector<geometry_msgs::Polygon>& _no_fly_zones, const geometry_msgs::Polygon& _geofence, bool _recalculate_initial_UAV_points, bool _update_wind) {
+
+    if (_update_wind) {
+        getCurrentWeatherFromInternet();
+    }
 
     std::map<int, std::map<int, float> > new_distance_cost_matrix;
     std::map<int, std::map<int, WpsVectors> > new_paths_matrix;

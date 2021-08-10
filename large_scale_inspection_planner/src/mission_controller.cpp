@@ -388,7 +388,7 @@ void MissionController::parameterEstimatorThread(void) {
         current_graph_mutex_.unlock();
 
         update_matrices_mutex_.lock();
-        parameter_estimator_.updateMatrices(estimator_current_graph, no_fly_zones_, geofence_, false);  // Don't update here the UAVs initial costs.
+        parameter_estimator_.updateMatrices(estimator_current_graph, no_fly_zones_, geofence_, false, true);  // Don't update here the UAVs initial costs, update the wind.
         update_matrices_mutex_.unlock();
 
         loop_rate.sleep();
@@ -497,7 +497,7 @@ void MissionController::planThread(void) {
         if (plan_from_scratch) {
             // For the first time, force the parameter_estimator_ calculate the matrices with new costs of the initial UAVs:
             update_matrices_mutex_.lock();
-            parameter_estimator_.updateMatrices(planner_current_graph, no_fly_zones_, geofence_, true);
+            parameter_estimator_.updateMatrices(planner_current_graph, no_fly_zones_, geofence_, true, false);
             update_matrices_mutex_.unlock();
         } else {
             replan = plan_monitor_.enoughDeviationToReplan(planner_current_graph, flight_plans_, drone_info, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
@@ -512,7 +512,7 @@ void MissionController::planThread(void) {
             // Force the parameter_estimator_ calculate the matrices with new costs of the initial UAVs only if replanning:
             if (replan) {
                 update_matrices_mutex_.lock();
-                parameter_estimator_.updateMatrices(planner_current_graph, no_fly_zones_, geofence_, true);
+                parameter_estimator_.updateMatrices(planner_current_graph, no_fly_zones_, geofence_, true, false);
                 update_matrices_mutex_.unlock();
             }
 
@@ -724,7 +724,7 @@ void MissionController::translateFlightPlanIntoUAVMission(std::vector<aerialcore
                     } catch (...) { // catch any exception. Mainly the problem is time_cost_matrices not built yet when using a specific supervision plan or Mstsp.
                         try {
                             update_matrices_mutex_.lock();
-                            parameter_estimator_.updateMatrices(current_graph_, no_fly_zones_, geofence_, true);
+                            parameter_estimator_.updateMatrices(current_graph_, no_fly_zones_, geofence_, true, false);
                             time_cost_matrices = parameter_estimator_.getTimeCostMatrices();
                             update_matrices_mutex_.unlock();
 
@@ -1170,7 +1170,7 @@ void MissionController::batteryFakerThread(void) {
 
     // In simulation batteries are supposed to start fully charged.
     for (int i=0; i<UAVs_.size(); i++) {
-        UAVs_[i].battery_faked = 0.8;
+        UAVs_[i].battery_faked = 1;
     }
 
     ros::Rate loop_rate(1.0/sample_time);   // [Hz] Update rate of the battery.

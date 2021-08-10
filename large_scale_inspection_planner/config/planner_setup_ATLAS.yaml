@@ -87,7 +87,7 @@ plan_monitor_time: 30.0         # Just after replanning it will be waited this a
 
 
 # Deviation limit (in parts per unit of the duration of the plans), if this is surpassed (greater or lower) the Plan Monitor will tell the planner to trigger the replanning:
-deviation_limit: 0.1
+deviation_limit: 0.2
 
 
 # Geographic coordinate (latitude, longitude, altitude) that makes (x,y,z) = (0,0,0) meters in cartesian coordinates:
