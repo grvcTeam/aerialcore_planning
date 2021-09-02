@@ -54,7 +54,7 @@ public:
     //  4.1) Multicopter. (DONE)
     //  4.2) VTOL-fixed wing.
     // 5) Wind input for the planner.
-    //  5.1) Wind known or wind sensor.
+    //  5.1) Wind known or wind sensor. (DONE, from Internet API weather)
     //  5.2) Wind from inversed consumption.
     //  5.3) Wind from UAVs angles (depends on airframe type).
     // 6) VNS CTU.
@@ -112,7 +112,7 @@ private:
     bool reset_connection_edges_ = true;
 
     std::vector<aerialcore_msgs::FlightPlan> flight_plans_;  // Output.
-    
+
     geographic_msgs::GeoPoint map_origin_geo_;
 
     void constructUAVs(const std::vector< std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> >& _drone_info);
@@ -128,10 +128,14 @@ private:
 
     float batteryDrop(int _flying_time, int _time_max_flying) const { return (float)_flying_time/(float)_time_max_flying; }
 
-    // Heuristic:
-    float solutionTimeCost(std::vector<aerialcore_msgs::FlightPlan> _flight_plans);
-    bool solutionBatteryDropValidOrNot(std::vector<aerialcore_msgs::FlightPlan> _flight_plans);
-    bool solutionValidOrNot(std::vector<aerialcore_msgs::FlightPlan> _flight_plans);
+    // VNS heuristic:
+    float solutionTimeCost(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
+    bool solutionBatteryDropValidOrNot(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
+    bool solutionValidOrNot(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
+    void shake(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
+    void localSearch(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
+    std::vector< std::vector< std::pair<int,int> > > buildPlannedInspectionEdgesFromNodes(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);   // Edges output same size as _flight_plans.
+    std::vector<aerialcore_msgs::FlightPlan> buildPlanNodesFromInspectionEdges(const std::vector< std::vector< std::pair<int,int> > >& _planned_inspection_edges, const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
 
     struct Tour {
         std::vector<int> nodes;
