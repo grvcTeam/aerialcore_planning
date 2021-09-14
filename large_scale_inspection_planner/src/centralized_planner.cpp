@@ -1303,7 +1303,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanVNS(std::vec
 
     // std::vector< std::vector< std::pair<int,int> > > inspection_edges = buildPlannedInspectionEdgesFromNodes(current_solution);
 
-    // std::cout << "inpection_edges (5): "; for (int i=0; i<inspection_edges[0].size(); i++) { std::cout << inspection_edges[0][i].first << " " << inspection_edges[0][i].second << " , "; } std::cout << std::endl;
+    // std::cout << "inspection_edges (5): "; for (int i=0; i<inspection_edges[0].size(); i++) { std::cout << inspection_edges[0][i].first << " " << inspection_edges[0][i].second << " , "; } std::cout << std::endl;
     // std::cout << "nodes (5): "; for (int i=0; i<current_solution[0].nodes.size(); i++) { std::cout << current_solution[0].nodes[i] << " "; } std::cout << std::endl;
 
     // shake(current_solution);
@@ -1431,7 +1431,9 @@ void CentralizedPlanner::shake(std::vector<aerialcore_msgs::FlightPlan>& _flight
 
         std::vector< std::vector< std::pair<int,int> > > planned_inspection_edges = buildPlannedInspectionEdgesFromNodes(shaked);
         std::vector< std::vector< std::pair<int,int> > > planned_inspection_edges_original = planned_inspection_edges;
-        // std::cout << "inpection_edges (shake 1): "; for (int i=0; i<planned_inspection_edges[0].size(); i++) { std::cout << planned_inspection_edges[0][i].first << " " << planned_inspection_edges[0][i].second << " , "; } std::cout << std::endl;
+        // std::cout << "inspection_edges (shake 1): "; for (int i=0; i<planned_inspection_edges[0].size(); i++) { std::cout << planned_inspection_edges[0][i].first << " " << planned_inspection_edges[0][i].second << " , "; } std::cout << std::endl;
+        // std::cout << "solutionValidOrNot (shake 1): " << solutionValidOrNot(_flight_plans) << std::endl;
+        // std::cout << "solutionTimeCost (shake 1): " << solutionTimeCost(_flight_plans) << std::endl;
 
         int edges_path_within_same_uav = rand() % 2; // 0 if edges moved or exchange between different UAVs, 1 if within the same UAV.
         int uav_from  = rand() % planned_inspection_edges.size();
@@ -1455,9 +1457,9 @@ void CentralizedPlanner::shake(std::vector<aerialcore_msgs::FlightPlan>& _flight
             path_from = reversed_path_from;
         }
 
-        int edge_path_to_begin  = rand() % planned_inspection_edges[uav_to].size();
-        int edge_path_to_end    = edge_path_to_begin + rand() % (planned_inspection_edges[uav_to].size()-edge_path_to_begin);
         int neighborhood_operator = rand() % 2;  // neighborhood_operator in the range 0 to 1
+        int edge_path_to_begin  = neighborhood_operator == 0 ? rand() % planned_inspection_edges[uav_to].size()+1 : rand() % planned_inspection_edges[uav_to].size();
+        int edge_path_to_end    = neighborhood_operator == 0 ? -1 : edge_path_to_begin + rand() % (planned_inspection_edges[uav_to].size()-edge_path_to_begin);
 
         // std::cout << "edges_path_within_same_uav = " << edges_path_within_same_uav << std::endl;
         // std::cout << "uav_from                   = " << uav_from << std::endl;
@@ -1468,7 +1470,7 @@ void CentralizedPlanner::shake(std::vector<aerialcore_msgs::FlightPlan>& _flight
         // std::cout << "edge_path_to_end           = " << edge_path_to_end << std::endl;
         // std::cout << "path_reversed              = " << path_reversed << std::endl;
         // std::cout << "neighborhood_operator      = " << neighborhood_operator << std::endl;
-        // std::cout << "inpection_edges (shake 2): "; for (int i=0; i<planned_inspection_edges[0].size(); i++) { std::cout << planned_inspection_edges[0][i].first << " " << planned_inspection_edges[0][i].second << " , "; } std::cout << std::endl;
+        // std::cout << "inspection_edges (shake 2): "; for (int i=0; i<planned_inspection_edges[0].size(); i++) { std::cout << planned_inspection_edges[0][i].first << " " << planned_inspection_edges[0][i].second << " , "; } std::cout << std::endl;
 
         if (neighborhood_operator==0) {             // Path move.
 
@@ -1479,13 +1481,25 @@ void CentralizedPlanner::shake(std::vector<aerialcore_msgs::FlightPlan>& _flight
             std::vector< std::pair<int,int> > path_to(planned_inspection_edges[uav_to].begin() + edge_path_to_begin, planned_inspection_edges[uav_to].begin() + edge_path_to_end +1);
             planned_inspection_edges[uav_to].erase(planned_inspection_edges[uav_to].begin() + edge_path_to_begin, planned_inspection_edges[uav_to].begin() + edge_path_to_end +1);
 
-            planned_inspection_edges[uav_to].insert(planned_inspection_edges[uav_to].begin() + edge_path_to_begin, path_from.begin(), path_from.end());
-            planned_inspection_edges[uav_from].insert(planned_inspection_edges[uav_from].begin() + edge_path_from_begin, path_to.begin(), path_to.end());
+            if (planned_inspection_edges[uav_to].size() >= edge_path_to_begin) {
+                planned_inspection_edges[uav_to].insert(planned_inspection_edges[uav_to].begin() + edge_path_to_begin, path_from.begin(), path_from.end());
+            } else {
+                planned_inspection_edges[uav_to].insert(planned_inspection_edges[uav_to].begin(), path_from.begin(), path_from.end());
+            }
+
+            if (planned_inspection_edges[uav_from].size() >= edge_path_from_begin) {
+                planned_inspection_edges[uav_from].insert(planned_inspection_edges[uav_from].begin() + edge_path_from_begin, path_to.begin(), path_to.end());
+            } else {
+                planned_inspection_edges[uav_from].insert(planned_inspection_edges[uav_from].begin(), path_to.begin(), path_to.end());
+            }
         }
 
-        // std::cout << "inpection_edges (shake 3): "; for (int i=0; i<planned_inspection_edges[0].size(); i++) { std::cout << planned_inspection_edges[0][i].first << " " << planned_inspection_edges[0][i].second << " , "; } std::cout << std::endl;
+        // std::cout << "inspection_edges (shake 3): "; for (int i=0; i<planned_inspection_edges[0].size(); i++) { std::cout << planned_inspection_edges[0][i].first << " " << planned_inspection_edges[0][i].second << " , "; } std::cout << std::endl;
 
         shaked = buildPlanNodesFromInspectionEdges(planned_inspection_edges, _flight_plans);
+
+        // std::cout << "solutionValidOrNot (shake 3): " << solutionValidOrNot(shaked) << std::endl;
+        // std::cout << "solutionTimeCost (shake 3): " << solutionTimeCost(shaked) << std::endl;
 
         shaked_valid = solutionValidOrNot(shaked);
 
@@ -1534,12 +1548,14 @@ void CentralizedPlanner::localSearch(std::vector<aerialcore_msgs::FlightPlan>& _
         while (iteration<maximum_iterations) {
             std::vector< std::vector< std::pair<int,int> > > planned_inspection_edges = buildPlannedInspectionEdgesFromNodes(local_optimum);
             std::vector< std::vector< std::pair<int,int> > > planned_inspection_edges_original = planned_inspection_edges;
-            // std::cout << "inpection_edges (localSearch 1): "; for (int i=0; i<planned_inspection_edges[0].size(); i++) { std::cout << planned_inspection_edges[0][i].first << " " << planned_inspection_edges[0][i].second << " , "; } std::cout << std::endl;
+            // std::cout << "inspection_edges (localSearch 1): "; for (int i=0; i<planned_inspection_edges[0].size(); i++) { std::cout << planned_inspection_edges[0][i].first << " " << planned_inspection_edges[0][i].second << " , "; } std::cout << std::endl;
+            // std::cout << "solutionValidOrNot (localSearch 1): " << solutionValidOrNot(_flight_plans) << std::endl;
+            // std::cout << "solutionTimeCost (localSearch 1): " << solutionTimeCost(_flight_plans) << std::endl;
 
-            int edge_from = rand() % planned_inspection_edges[i].size();
-            int edge_to   = rand() % planned_inspection_edges[i].size();
-            int edge_reversed = rand() % 2;         // 0 if same direction, 1 if reversed.
             int neighborhood_operator = rand() % 2; // neighborhood_operator in the range 0 to 1
+            int edge_from = rand() % planned_inspection_edges[i].size();
+            int edge_to   = neighborhood_operator == 0 ? rand() % planned_inspection_edges[i].size()+1 : rand() % planned_inspection_edges[i].size();
+            int edge_reversed = rand() % 2;         // 0 if same direction, 1 if reversed.
 
             int initial_number_of_edges = planned_inspection_edges[i].size();
 
@@ -1576,18 +1592,18 @@ void CentralizedPlanner::localSearch(std::vector<aerialcore_msgs::FlightPlan>& _
 
             }
 
-            // std::cout << "inpection_edges (localSearch 2): "; for (int i=0; i<planned_inspection_edges[0].size(); i++) { std::cout << planned_inspection_edges[0][i].first << " " << planned_inspection_edges[0][i].second << " , "; } std::cout << std::endl;
-
             local_optimum = buildPlanNodesFromInspectionEdges(planned_inspection_edges, _flight_plans);
 
-            if (solutionValidOrNot(local_optimum)) {
-                if ( solutionTimeCost(local_optimum) < solutionTimeCost(_flight_plans) ) {   // _flight_plans stores the best solution up until now, if current solution is better, update it.
-                    _flight_plans.clear();
-                    _flight_plans = local_optimum;
-                } else {
-                    local_optimum.clear();
-                    local_optimum = _flight_plans;
-                }
+            // std::cout << "inspection_edges (localSearch 2): "; for (int i=0; i<planned_inspection_edges[0].size(); i++) { std::cout << planned_inspection_edges[0][i].first << " " << planned_inspection_edges[0][i].second << " , "; } std::cout << std::endl;
+            // std::cout << "solutionValidOrNot (localSearch 2): " << solutionValidOrNot(local_optimum) << std::endl;
+            // std::cout << "solutionTimeCost (localSearch 2): " << solutionTimeCost(local_optimum) << std::endl;
+
+            if ( solutionValidOrNot(local_optimum) && solutionTimeCost(local_optimum) < solutionTimeCost(_flight_plans) ) {   // _flight_plans stores the best solution up until now, if current solution is better, update it.
+                _flight_plans.clear();
+                _flight_plans = local_optimum;
+            } else {
+                local_optimum.clear();
+                local_optimum = _flight_plans;
             }
 
             if (initial_number_of_edges != planned_inspection_edges[i].size()) {
@@ -1597,12 +1613,13 @@ void CentralizedPlanner::localSearch(std::vector<aerialcore_msgs::FlightPlan>& _
                 std::cout << "edge_to                    = " << edge_to << std::endl;
                 std::cout << "edge_reversed              = " << edge_reversed << std::endl;
                 std::cout << "neighborhood_operator      = " << neighborhood_operator << std::endl;
-                std::cout << "planned_inspection_edges_original (shake 1): "; for (int i=0; i<planned_inspection_edges_original.size(); i++) { for (int j=0; j<planned_inspection_edges_original[i].size(); j++) { std::cout << planned_inspection_edges_original[i][j].first << " " << planned_inspection_edges_original[i][j].second << " , "; } } std::cout << std::endl;
-                std::cout << "planned_inspection_edges          (shake 2): "; for (int i=0; i<planned_inspection_edges.size(); i++) { for (int j=0; j<planned_inspection_edges[i].size(); j++) { std::cout << planned_inspection_edges[i][j].first << " " << planned_inspection_edges[i][j].second << " , "; } } std::cout << std::endl;
             }
- 
+
             iteration++;
         }
+
+        // std::cout << "solutionValidOrNot (localSearch 3): " << solutionValidOrNot(local_optimum) << std::endl;
+        // std::cout << "solutionTimeCost (localSearch 3): " << solutionTimeCost(local_optimum) << std::endl;
     }
 
     // for (int i=0; i<_flight_plans.size(); i++) {

@@ -7,7 +7,7 @@
 # - VNS:    plan calculated with a VNS algorithm.
 # - MEM:    plan calculated with the MEM algorithm (default if not specified).
 # - Mstsp:  plan calculated with the Mstsp algorithm.
-planner_method: "MEM"
+planner_method: "VNS"
 
 
 # Dictionary of the actual drones used in the simulation or reality (key: UAV id, value: airframe type):
