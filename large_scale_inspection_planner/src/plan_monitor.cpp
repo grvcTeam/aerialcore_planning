@@ -274,6 +274,9 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
             } else if (battery_drop_real.count(uav_index)>0 && battery_drop_real[uav_index]>0 && battery_drop_planned[uav_index]<battery_drop_real[uav_index]*(1-deviation_limit_) || battery_drop_planned[uav_index]>battery_drop_real[uav_index]*(1+deviation_limit_)) {
                 ROS_INFO("Plan Monitor: Replanning true. Deviation of battery drop for the UAV of id=%d greater than threshold.", _flight_plans[i].uav_id);
                 return true;
+            } else if (battery_drop_real.count(uav_index)>0 && ( battery_drop_real[uav_index]>1-UAVs_[uav_index].minimum_battery || battery_drop_planned[uav_index]>1-UAVs_[uav_index].minimum_battery ) ) {
+                ROS_INFO("Plan Monitor: Replanning true. Battery drop real or planned for the UAV of id=%d greater than possible.", _flight_plans[i].uav_id);
+                return true;
             }
         }
         ROS_INFO("Plan Monitor: Replanning false.");

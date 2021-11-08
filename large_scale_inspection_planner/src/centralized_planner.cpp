@@ -464,10 +464,10 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     operations_research::MPObjective *const objective = solver->MutableObjective();
 //     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
-//             if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_INSPECTION) {
+//             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_INSPECTION) {
 //                 objective->SetCoefficient(x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], it->second[ edges_[e_i].i ][ edges_[e_i].j ]);
 //             }
-//             if ( (edges_[e_i].type != aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::Edge::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_i].k) {
+//             if ( (edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_i].k) {
 //                 objective->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], it->second[ edges_[e_i].i ][ edges_[e_i].j ]);
 //             }
 //         }
@@ -484,11 +484,11 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //                 operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0, 0, "");
 //                 for (int e_i=0; e_i<edges_.size(); e_i++) {
 //                     if (edges_[e_i].i == g_i) {
-//                         if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_INSPECTION) {
+//                         if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_INSPECTION) {
 //                             constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], 1);
 //                             constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].j ][ edges_[e_i].i ] ], -1);
 //                         }
-//                         if (edges_[e_i].type != aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::Edge::TYPE_NAVIGATION_AND_LANDING) {
+//                         if (edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING) {
 //                             constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], 1);
 //                             constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].j ][ edges_[e_i].i ] ], -1);
 //                         }
@@ -510,7 +510,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 
 //     // (3) For all inspection edges, x_ij plus x_ji sums 1 (all inspection edges covered in any direction):
 //     for (int e_i=0; e_i<edges_.size(); e_i++) {
-//         if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_INSPECTION && edges_[e_i].i<edges_[e_i].j) {
+//         if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_INSPECTION && edges_[e_i].i<edges_[e_i].j) {
 //             operations_research::MPConstraint *constraint = solver->MakeRowConstraint(1, 1, "");
 //             for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //                 constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], 1);
@@ -523,7 +523,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //         operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0, 1, "");
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
-//             if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION && it->first==edges_[e_i].k) {
+//             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && it->first==edges_[e_i].k) {
 //                 constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], 1);
 //             }
 //         }
@@ -533,7 +533,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     // for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //     //     operations_research::MPConstraint *constraint = solver->MakeRowConstraint(1, 1, "");
 //     //     for (int e_i=0; e_i<edges_.size(); e_i++) {
-//     //         if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_NAVIGATION_AND_LANDING && it->first==edges_[e_i].k) {
+//     //         if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING && it->first==edges_[e_i].k) {
 //     //             constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], 1);
 //     //         }
 //     //     }
@@ -548,10 +548,10 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //                     if (edges_[e_i].i == g_i) {
 //                         constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].j ][ edges_[e_i].i ] ], 1);
 //                         constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], -1);
-//                         if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_INSPECTION) {
+//                         if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_INSPECTION) {
 //                             constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].j ][ edges_[e_i].i ] ], -it->second[ edges_[e_i].j ][ edges_[e_i].i ]);
 //                         }
-//                         if ((edges_[e_i].type != aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::Edge::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_i].k) {
+//                         if ((edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_i].k) {
 //                             constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].j ][ edges_[e_i].i ] ], -it->second[ edges_[e_i].j ][ edges_[e_i].i ]);
 //                         }
 //                     }
@@ -561,17 +561,17 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     }
 //     // for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
 //     //     for (int e_i=0; e_i<edges_.size(); e_i++) {
-//     //         if (edges_[e_i].type != aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION) {
+//     //         if (edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION) {
 //     //             operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0.0, 0.0, "");
 //     //             constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], 1);
 //     //             for (int e_j=0; e_j<edges_.size(); e_j++) {
 //     //                 if (e_j == e_i) continue;
 //     //                 if (edges_[e_i].j == edges_[e_j].i) {
 //     //                     constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_j].i ][ edges_[e_j].j ] ], -1);
-//     //                     if (edges_[e_j].type == aerialcore_msgs::Edge::TYPE_INSPECTION) {
+//     //                     if (edges_[e_j].type == aerialcore_msgs::EdgeType::TYPE_INSPECTION) {
 //     //                         constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_j].i ][ edges_[e_j].j ] ], it->second[ edges_[e_j].i ][ edges_[e_j].j ]);
 //     //                     }
-//     //                     if ((edges_[e_j].type != aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_j].type != aerialcore_msgs::Edge::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_j].k) {
+//     //                     if ((edges_[e_j].type != aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_j].type != aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_j].k) {
 //     //                         constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_j].i ][ edges_[e_j].j ] ], it->second[ edges_[e_j].i ][ edges_[e_j].j ]);
 //     //                     }
 //     //                 }
@@ -584,13 +584,13 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
 //         operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0.0, 0.0, "");
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
-//             if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION && it->first==edges_[e_i].k) {
+//             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && it->first==edges_[e_i].k) {
 //                 constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], 1);
 //             }
-//             if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_INSPECTION) {
+//             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_INSPECTION) {
 //                 constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], -it->second[ edges_[e_i].i ][ edges_[e_i].j ]);
 //             }
-//             if ((edges_[e_i].type != aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::Edge::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_i].k) {
+//             if ((edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_i].k) {
 //                 constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], -it->second[ edges_[e_i].i ][ edges_[e_i].j ]);
 //             }
 //         }
@@ -600,7 +600,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
 //         operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0.0, 0.0, "");
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
-//             if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_NAVIGATION_AND_LANDING && it->first==edges_[e_i].k) {
+//             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING && it->first==edges_[e_i].k) {
 //                 constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], 1);
 //                 constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], -it->second[ edges_[e_i].i ][ edges_[e_i].j ]);
 //             }
@@ -612,10 +612,10 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
 //             operations_research::MPConstraint *constraint = solver->MakeRowConstraint(-infinity, 0.0, "");
 //             constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], 1);
-//             if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_INSPECTION) {
+//             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_INSPECTION) {
 //                 constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], -1.0);
 //             }
-//             if ((edges_[e_i].type != aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::Edge::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_i].k) {
+//             if ((edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_i].k) {
 //                 constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], -1.0);
 //             }
 //         }
@@ -627,10 +627,10 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
 //             operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0.0, infinity, "");
 //             constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], 1);
-//             if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_INSPECTION) {
+//             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_INSPECTION) {
 //                 constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], -it->second[ edges_[e_i].i ][ edges_[e_i].j ]);
 //             }
-//             if ((edges_[e_i].type != aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::Edge::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_i].k) {
+//             if ((edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_i].k) {
 //                 constraint->SetCoefficient(y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], -it->second[ edges_[e_i].i ][ edges_[e_i].j ]);
 //             }
 //         }
@@ -662,8 +662,8 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //                     continue;
 //                 }
 //                 bool inspection_edge_found = false;
-//                 for (aerialcore_msgs::Edge& current_edge_struct : edges_) {
-//                     if (current_edge_struct.type == aerialcore_msgs::Edge::TYPE_INSPECTION && current_edge_struct.i == i && current_edge_struct.j == j) {
+//                 for (aerialcore_msgs::Edge& edge_struct : edges_) {
+//                     if (edge_struct.type == aerialcore_msgs::EdgeType::TYPE_INSPECTION && edge_struct.i == i && edge_struct.j == j) {
 //                         std::cout << std::setprecision(6) << x[ from_k_i_j_to_x_index_[ it->first ][i][j] ]->solution_value() << " ";
 //                         inspection_edge_found = true;
 //                         break;
@@ -721,7 +721,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     std::cout << "(1):" << std::endl;
 //     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
-//             if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_INSPECTION) {
+//             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_INSPECTION) {
 //                 std::cout << "x[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "] " << std::setprecision(6) << x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << " · " << it->second[ edges_[e_i].i ][ edges_[e_i].j ] << " + ";
 //                 // std::cout << std::endl;
 //                 // std::cout << "e_i = " << e_i << std::endl;
@@ -731,7 +731,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //                 // std::cout << "from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] = " << from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] << std::endl;
 //                 // std::cout << "<< std::setprecision(6) << from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ] = " << "x " << x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << std::endl;
 //             }
-//             if ( (edges_[e_i].type != aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::Edge::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_i].k) {
+//             if ( (edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_i].k) {
 //                 std::cout << "y[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << " · " << it->second[ edges_[e_i].i ][ edges_[e_i].j ] << " + ";
 //                 // std::cout << std::endl;
 //                 // std::cout << "e_i = " << e_i << std::endl;
@@ -753,11 +753,11 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //                 std::cout << "node_" << g_i << " : ";
 //                 for (int e_i=0; e_i<edges_.size(); e_i++) {
 //                     if (edges_[e_i].i == g_i) {
-//                         if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_INSPECTION) {
+//                         if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_INSPECTION) {
 //                             std::cout << "x[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "] " << std::setprecision(6) << x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << " · " << 1 << " + ";
 //                             std::cout << "x[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "] " << std::setprecision(6) << x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].j ][ edges_[e_i].i ] ]->solution_value() << " · " << -1 << " + ";
 //                         }
-//                         if (edges_[e_i].type != aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::Edge::TYPE_NAVIGATION_AND_LANDING) {
+//                         if (edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING) {
 //                             std::cout << "y[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << " · " << 1 << " + ";
 //                             std::cout << "y[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].j ][ edges_[e_i].i ] ]->solution_value() << " · " << -1 << " + ";
 //                         }
@@ -786,7 +786,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     // (3) For all inspection edges, x_ij plus x_ji sums 1 (all inspection edges covered in any direction):
 //     std::cout << "(3):" << std::endl;
 //     for (int e_i=0; e_i<edges_.size(); e_i++) {
-//         if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_INSPECTION && edges_[e_i].i<edges_[e_i].j) {
+//         if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_INSPECTION && edges_[e_i].i<edges_[e_i].j) {
 //         std::cout << "inspection_edge_" << e_i << " : ";
 //             for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //                 std::cout << "x[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "] " << std::setprecision(6) << x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << " · " << 1 << " + ";
@@ -802,7 +802,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //         std::cout << "k_" << it->first << " : ";
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
-//             if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION && it->first==edges_[e_i].k) {
+//             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && it->first==edges_[e_i].k) {
 //                 std::cout << "y[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << " · " << 1 << " + ";
 //             }
 //         }
@@ -815,7 +815,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     // for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //     //     std::cout << "k_" << it->first << " : ";
 //     //     for (int e_i=0; e_i<edges_.size(); e_i++) {
-//     //         if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_NAVIGATION_AND_LANDING && it->first==edges_[e_i].k) {
+//     //         if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING && it->first==edges_[e_i].k) {
 //     //             std::cout << "y[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << " · " << 1 << " + ";
 //     //         }
 //     //     }
@@ -833,10 +833,10 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //                     if (edges_[e_i].i == g_i) {
 //                         std::cout << "f[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "] " << std::setprecision(6) << f[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].j ][ edges_[e_i].i ] ]->solution_value() << " · " << 1 << " + ";
 //                         std::cout << "f[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "] " << std::setprecision(6) << f[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << " · " << -1 << " + ";
-//                         if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_INSPECTION) {
+//                         if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_INSPECTION) {
 //                             std::cout << "x[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "] " << std::setprecision(6) << x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].j ][ edges_[e_i].i ] ]->solution_value() << " · " << -it->second[ edges_[e_i].j ][ edges_[e_i].i ] << " + ";
 //                         }
-//                         if ((edges_[e_i].type != aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::Edge::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_i].k) {
+//                         if ((edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_i].k) {
 //                             std::cout << "y[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].j ][ edges_[e_i].i ] ]->solution_value() << " · " << -it->second[ edges_[e_i].j ][ edges_[e_i].i ] << " + ";
 //                         }
 //                     }
@@ -852,13 +852,13 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
 //         std::cout << "k_" << it->first << " : ";
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
-//             if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION && it->first==edges_[e_i].k) {
+//             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && it->first==edges_[e_i].k) {
 //                 std::cout << "f[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "] " << std::setprecision(6) << f[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << " · " << 1 << " + ";
 //             }
-//             if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_INSPECTION) {
+//             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_INSPECTION) {
 //                 std::cout << "x[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "] " << std::setprecision(6) << x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << " · " << -it->second[ edges_[e_i].i ][ edges_[e_i].j ] << " + ";
 //             }
-//             if ((edges_[e_i].type != aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::Edge::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_i].k) {
+//             if ((edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_i].k) {
 //                 std::cout << "y[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << " · " << -it->second[ edges_[e_i].i ][ edges_[e_i].j ] << " + ";
 //             }
 //         }
@@ -871,7 +871,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
 //         std::cout << "k_" << it->first << " : ";
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
-//             if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_NAVIGATION_AND_LANDING) {
+//             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING) {
 //                 std::cout << "f[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "] " << std::setprecision(6) << f[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << " · " << 1 << " + ";
 //                 std::cout << "y[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << " · " << -it->second[ edges_[e_i].i ][ edges_[e_i].j ] << " + ";
 //             }
@@ -886,10 +886,10 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
 //             std::cout << "edge_" << e_i << " : ";
 //             std::cout << "f[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "] " << std::setprecision(6) << f[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << " + ";
-//             if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_INSPECTION) {
+//             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_INSPECTION) {
 //                 std::cout << "x[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "] " << std::setprecision(6) << x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << " + ";
 //             }
-//             if ((edges_[e_i].type != aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::Edge::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_i].k) {
+//             if ((edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING) || it->first==edges_[e_i].k) {
 //                 std::cout << "y[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "] " << std::setprecision(6) << y[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << " + ";
 //             }
 //             std::cout << std::endl;
@@ -988,7 +988,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     //         std::vector<int> solution_nodes;
 
 //     //         for (int e_i=0; e_i<edges_.size(); e_i++) {
-//     //             if (edges_[e_i].type == aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION && f[ from_k_i_j_to_y_and_f_index_[ it->first ][i][j] ]->solution_value()>0.001) {
+//     //             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && f[ from_k_i_j_to_y_and_f_index_[ it->first ][i][j] ]->solution_value()>0.001) {
 //     //                 std::pair<int,int> current_solution_tree_raw;
 //     //                 current_solution_tree_raw.first = -1;                   // Takeoff node without father node.
 //     //                 current_solution_tree_raw.second = edges_[e_i].i;
@@ -1084,12 +1084,33 @@ void CentralizedPlanner::constructEdges(std::vector<aerialcore_msgs::GraphNode>&
                 if (time_cost_matrices_[ it_k->first ][ it_i->first ][ it_j->first ]==-1) {
                     continue;
                 } else {
-                    aerialcore_msgs::Edge new_edge;
+                    Edge new_edge;
                     new_edge.i = it_i->first;
                     new_edge.j = it_j->first;
                     new_edge.k = -1;
-                    new_edge.type = aerialcore_msgs::Edge::TYPE_NAVIGATION;
-                    edges_.push_back(new_edge);
+
+                    if (_graph[ new_edge.i ].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && _graph[ new_edge.j ].type==aerialcore_msgs::GraphNode::TYPE_PYLON ) {
+                        if ( ! UAVs_[new_edge.k].flying_or_landed_initially )  {
+                            new_edge.k = findUavIndexById( _graph[ new_edge.i ].id );
+                            edges_[new_edge] = EdgeType::TYPE_TAKEOFF_AND_NAVIGATION;
+                        }
+
+                    } else if ( ( _graph[ new_edge.i ].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION || _graph[ new_edge.i ].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION ) && _graph[ new_edge.j ].type==aerialcore_msgs::GraphNode::TYPE_PYLON ) {
+                        edges_[new_edge] = EdgeType::TYPE_TAKEOFF_AND_NAVIGATION;
+
+                    } else if ( _graph[ new_edge.i ].type==aerialcore_msgs::GraphNode::TYPE_PYLON && ( _graph[ new_edge.j ].type==aerialcore_msgs::GraphNode::/*TYPE_UAV_INITIAL_POSITION*/TYPE_REGULAR_LAND_STATION || _graph[ new_edge.j ].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION ) ) {
+                        edges_[new_edge] = EdgeType::TYPE_NAVIGATION_AND_LANDING;
+                    } else {
+                        edges_[new_edge] = EdgeType::TYPE_NAVIGATION;
+                    }
+
+                    if (edges_[new_edge] == EdgeType::TYPE_TAKEOFF_AND_NAVIGATION) {
+                        from_k_i_j_to_y_and_f_index_[new_edge.k][new_edge.i][new_edge.j] = y_and_f_index_size_++;
+                    } else {
+                        for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
+                            from_k_i_j_to_y_and_f_index_[ new_edge.k ][new_edge.i][new_edge.j] = y_and_f_index_size_++;
+                        }
+                    }
                 }
             }
         }
@@ -1098,40 +1119,18 @@ void CentralizedPlanner::constructEdges(std::vector<aerialcore_msgs::GraphNode>&
     for (int g_i=0; g_i<_graph.size(); g_i++) {
         if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
             for (int j=0; j<_graph[g_i].connections_indexes.size(); j++) {
-                for (aerialcore_msgs::Edge& current_edge_struct : edges_) {
-                    if (current_edge_struct.i == g_i && current_edge_struct.j == _graph[g_i].connections_indexes[j]) {
-                        current_edge_struct.type = aerialcore_msgs::Edge::TYPE_INSPECTION;
+                Edge edge_struct;
+                edge_struct.i = g_i;
+                edge_struct.j = _graph[g_i].connections_indexes[j];
+                edge_struct.k = -1;
 
-                        for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
-                            from_k_i_j_to_x_index_[ it->first ][current_edge_struct.i][current_edge_struct.j] = x_index_size_++;
-                        }
-                    }
+                edges_[edge_struct] = EdgeType::TYPE_INSPECTION;
+
+                for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
+                    from_k_i_j_to_x_index_[ it->first ][edge_struct.i][edge_struct.j] = x_index_size_++;
                 }
             }
         }
-    }
-    for (aerialcore_msgs::Edge& current_edge_struct : edges_) {
-        if (_graph[ current_edge_struct.i ].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && _graph[ current_edge_struct.j ].type==aerialcore_msgs::GraphNode::TYPE_PYLON ) {
-            if ( ! UAVs_[current_edge_struct.k].flying_or_landed_initially )  {
-                current_edge_struct.k = findUavIndexById( _graph[ current_edge_struct.i ].id );
-                current_edge_struct.type = aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION;
-            }
-
-        } else if ( ( _graph[ current_edge_struct.i ].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION || _graph[ current_edge_struct.i ].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION ) && _graph[ current_edge_struct.j ].type==aerialcore_msgs::GraphNode::TYPE_PYLON ) {
-            current_edge_struct.type = aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION;
-
-        } else if ( _graph[ current_edge_struct.i ].type==aerialcore_msgs::GraphNode::TYPE_PYLON && ( _graph[ current_edge_struct.j ].type==aerialcore_msgs::GraphNode::/*TYPE_UAV_INITIAL_POSITION*/TYPE_REGULAR_LAND_STATION || _graph[ current_edge_struct.j ].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION ) ) {
-            current_edge_struct.type = aerialcore_msgs::Edge::TYPE_NAVIGATION_AND_LANDING;
-        }
-
-        if (current_edge_struct.type == aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION) {
-            from_k_i_j_to_y_and_f_index_[current_edge_struct.k][current_edge_struct.i][current_edge_struct.j] = y_and_f_index_size_++;
-        } else {
-            for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
-                from_k_i_j_to_y_and_f_index_[ it->first ][current_edge_struct.i][current_edge_struct.j] = y_and_f_index_size_++;
-            }
-        }
-
     }
 
 #ifdef DEBUG
@@ -1149,18 +1148,20 @@ void CentralizedPlanner::constructEdges(std::vector<aerialcore_msgs::GraphNode>&
         }
     }
     std::cout << "Number of pylons           = " << pylons_counter << std::endl;
-    for (int i=0; i<edges_.size(); i++) {
-        std::cout << "edges_[" << i << "].i         = " << edges_[i].i << std::endl;
-        std::cout << "edges_[" << i << "].j         = " << edges_[i].j << std::endl;
-        if (edges_[i].type == aerialcore_msgs::Edge::TYPE_INSPECTION) {
+    int i = 0;
+    for (std::map<Edge, EdgeType>::iterator it = edges_.begin(); it != edges_.end(); it++) {
+        std::cout << "edges_[" << i << "].i         = " << it->first.i << std::endl;
+        std::cout << "edges_[" << i << "].j         = " << it->first.j << std::endl;
+        if (it->second == EdgeType::TYPE_INSPECTION) {
             std::cout << "edges_[" << i << "].type = INSPECTION" << std::endl;
-        } else if (edges_[i].type == aerialcore_msgs::Edge::TYPE_NAVIGATION) {
+        } else if (it->second == EdgeType::TYPE_NAVIGATION) {
             std::cout << "edges_[" << i << "].type = NAVIGATION" << std::endl;
-        } else if (edges_[i].type == aerialcore_msgs::Edge::TYPE_TAKEOFF_AND_NAVIGATION) {
+        } else if (it->second == EdgeType::TYPE_TAKEOFF_AND_NAVIGATION) {
             std::cout << "edges_[" << i << "].type = TAKEOFF_AND_NAVIGATION" << std::endl;
-        } else if (edges_[i].type == aerialcore_msgs::Edge::TYPE_NAVIGATION_AND_LANDING) {
+        } else if (it->second == EdgeType::TYPE_NAVIGATION_AND_LANDING) {
             std::cout << "edges_[" << i << "].type = NAVIGATION_AND_LANDING" << std::endl;
         }
+        i++;
     }
 #endif
 } // end constructEdges
@@ -1320,14 +1321,13 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanVNS(std::vec
 
     // ///////// TESTING FUNCTIONS
 
-
 # ifdef DEBUG
     std::cout << std::endl << "Printing initial plan:" << std::endl;
     printPlan();
 # endif
     ros::Time last_improvement_time = ros::Time::now();
 
-    int maximum_time_without_solution_improvement = 600;  // TODO: as a parameter (s).
+    int maximum_time_without_solution_improvement = 5;  // TODO: as a parameter (s).
 
     while ( ros::Time::now().toSec()-last_improvement_time.toSec()<=maximum_time_without_solution_improvement ) {
         shake(current_solution);
@@ -1393,16 +1393,23 @@ bool CentralizedPlanner::solutionValidOrNot(const std::vector<aerialcore_msgs::F
         bool previous_is_navigation = false;
         bool current_is_navigation;
         for (int j=0; j<_flight_plans[i].nodes.size()-1; j++) {
-            for (int k=0; k<edges_.size(); k++) {
-                if (edges_[k].i==_flight_plans[i].nodes[j] && edges_[k].j==_flight_plans[i].nodes[j+1] && (edges_[k].k==-1 || edges_[k].k==_flight_plans[i].uav_id) ) {
-                    current_is_navigation = edges_[k].type != aerialcore_msgs::Edge::TYPE_INSPECTION ? true : false ;
-                    if (previous_is_navigation && current_is_navigation) {
-                        return false;
-                    }
-                    previous_is_navigation = current_is_navigation;
-                    break;
+            Edge edge_struct;
+            edge_struct.i = _flight_plans[i].nodes[j];
+            edge_struct.j = _flight_plans[i].nodes[j+1];
+            edge_struct.k = -1;
+            if (edges_.count(edge_struct)<=0) {
+                edge_struct.k = _flight_plans[i].uav_id;
+                if (edges_.count(edge_struct)<=0) {
+                    continue;
                 }
             }
+
+            current_is_navigation = edges_[edge_struct] != EdgeType::TYPE_INSPECTION ? true : false ;
+            if (previous_is_navigation && current_is_navigation) {
+                return false;
+            }
+            previous_is_navigation = current_is_navigation;
+            break;
         }
     }
 
@@ -1541,7 +1548,7 @@ void CentralizedPlanner::localSearch(std::vector<aerialcore_msgs::FlightPlan>& _
     // }
     // std::cout << std::endl;
 
-    int maximum_iterations = y_and_f_index_size_*100;//pow(y_and_f_index_size_,2);
+    int maximum_iterations = y_and_f_index_size_*30;//pow(y_and_f_index_size_,2);  // TODO: as a parameter.
     // std::cout << "maximum_iterations = " << maximum_iterations << std::endl;
     int iteration = 0;
     for (int i=0; i<_flight_plans.size(); i++) {
@@ -1613,6 +1620,8 @@ void CentralizedPlanner::localSearch(std::vector<aerialcore_msgs::FlightPlan>& _
                 std::cout << "edge_to                    = " << edge_to << std::endl;
                 std::cout << "edge_reversed              = " << edge_reversed << std::endl;
                 std::cout << "neighborhood_operator      = " << neighborhood_operator << std::endl;
+                std::cout << "planned_inspection_edges_original (localSearch 1): "; for (int i=0; i<planned_inspection_edges_original.size(); i++) { for (int j=0; j<planned_inspection_edges_original[i].size(); j++) { std::cout << planned_inspection_edges_original[i][j].first << " " << planned_inspection_edges_original[i][j].second << " , "; } } std::cout << std::endl;
+                std::cout << "planned_inspection_edges          (localSearch 2): "; for (int i=0; i<planned_inspection_edges.size(); i++) { for (int j=0; j<planned_inspection_edges[i].size(); j++) { std::cout << planned_inspection_edges[i][j].first << " " << planned_inspection_edges[i][j].second << " , "; } } std::cout << std::endl;
             }
 
             iteration++;
@@ -1641,6 +1650,7 @@ std::vector< std::vector< std::pair<int,int> > > CentralizedPlanner::buildPlanne
         for (int j=0; j<_flight_plans[i].nodes.size()-1; j++) {
 
             if (graph_[ _flight_plans[i].nodes[j] ].type == aerialcore_msgs::GraphNode::TYPE_PYLON && graph_[ _flight_plans[i].nodes[j+1] ].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
+                // TODO: anidated loops, to enhance?
                 for (int m=0; m<graph_.size(); m++) {
                     if (m==_flight_plans[i].nodes[j]) {
                         for (int n=0; n<graph_[m].connections_indexes.size(); n++) {
@@ -1789,7 +1799,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMEM(std::vec
     }
 
     // Compute savings:
-    for (int i=0; i<R_tours_array.size()-1; i++) {
+    for (int i=0; R_tours_array.size()>0 && i<R_tours_array.size()-1; i++) {
         for (int j=i+1; j<R_tours_array.size(); j++) {
             if (R_tours_array[i].uav_id==R_tours_array[j].uav_id) {
 

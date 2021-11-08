@@ -20,7 +20,6 @@
 #include <geographic_msgs/GeoPoint.h>
 #include <aerialcore_msgs/FlightPlan.h>
 #include <aerialcore_msgs/GraphNode.h>
-#include <aerialcore_msgs/Edge.h>
 
 #include <path_planner.h>
 
@@ -99,7 +98,24 @@ private:
     std::vector< std::pair<int,int> > complete_connection_edges_;   // Edges or connections of the graph (nothing inspected yet), being the pair of indexes of the graph nodes connected by wires. Always the first int index lower than the second of the pair.
     std::vector< std::pair<int,int> > connection_edges_;            // Edges or connections of the graph (some edges inspected, smaller than the complete), being the pair of indexes of the graph nodes connected by wires. Always the first int index lower than the second of the pair.
 
-    std::vector<aerialcore_msgs::Edge> edges_;       // Vector of edges possible in which for each pair of nodes (i,j) there is information of whether it is an inspection edge or not. If it is, it still can be used for cross-heading.
+    struct Edge {
+        int i;      // Refered to the time cost and battery drop matrices.
+        int j;      // Refered to the time cost and battery drop matrices.
+        int k;      // UAV id. Only different that -1 if TAKEOFF_AND_NAVIGATION (and NAVIGATION_AND_LANDING if UAV only can land in its), meaning that only that particular drone k can do that edge.
+
+        bool operator<(const Edge& other) const {     // This struct will be used as keys of maps, so it's necessary to define the operator "<" for the map sorting.
+            return edge2String(*this) < edge2String(other);
+        }
+
+        inline std::string edge2String(const Edge& edge) const {
+            std::string output = std::to_string(edge.i).c_str();
+            output.append(std::to_string(edge.j).c_str());
+            output.append(std::to_string(edge.k).c_str());
+            return output;
+        }
+    };
+    enum struct EdgeType {TYPE_INSPECTION, TYPE_NAVIGATION, TYPE_TAKEOFF_AND_NAVIGATION, TYPE_NAVIGATION_AND_LANDING};
+    std::map<Edge, EdgeType> edges_;       // Vector of edges possible in which for each pair of nodes (i,j) there is information of whether it is an inspection edge or not. If it is, it still can be used for cross-heading.
 
     std::map<int, std::map<int, std::map<int, float> > > time_cost_matrices_;
     std::map<int, std::map<int, std::map<int, float> > > battery_drop_matrices_;

@@ -7,7 +7,7 @@
 # - VNS:    plan calculated with a VNS algorithm.
 # - MEM:    plan calculated with the MEM algorithm (default if not specified).
 # - Mstsp:  plan calculated with the Mstsp algorithm.
-planner_method: "VNS"
+planner_method: "MEM"
 
 
 # Dictionary of the actual drones used in the simulation or reality (key: UAV id, value: airframe type):
@@ -44,7 +44,7 @@ MULTICOPTER:
   K_mu  : 4.65    # P0 numerical constant      [-]
   f     : 0.35    # equivalent flat-plate area [m^2]
   # Battery (DJI Matrice 210):
-  Wh    : 176.93  # Capacity of the battery    [Wh]
+  Wh    : 105 # 176.93  # Capacity of the battery    [Wh]
   nb    : 2       # Number of batteries        [-]
   # mAh   : 7660    # Capacity of the battery    [mAh]
   # cells : 6       # Number of battery cells    [-]
@@ -82,7 +82,7 @@ air_density : 1.225 # default value of the air density [kg/m^3]. It will be esti
 
 
 # Time (in seconds) between iterations for the Parameter Estimator thread and Plan Monitor thread in the Mission Controller:
-parameter_estimator_time: 20.0
+parameter_estimator_time: 10.0 # 20.0
 plan_monitor_time: 30.0         # Just after replanning it will be waited this amount of time x4 for the time estimation to settle.
 
 

@@ -39,7 +39,7 @@ def main_menu():
     elif selected == "6":
         do_continuous_supervision_menu()
     elif selected == "7":
-        start_fast_supervision_plan_menu()
+        do_fast_supervision_menu()
     elif selected == "8":
         set_wind_vector_menu()
 

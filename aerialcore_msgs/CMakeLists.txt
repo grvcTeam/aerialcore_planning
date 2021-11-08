@@ -53,7 +53,6 @@ add_message_files(
   FlightPlan.msg
   MissionState.msg
   GraphNode.msg
-  Edge.msg
 )
 
 ## Generate services in the 'srv' folde

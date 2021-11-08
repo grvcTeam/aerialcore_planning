@@ -16,6 +16,7 @@
 #endif
 
 #define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
+// #define NUMERICAL_EXPERIMENTS
 
 #define FLYING_THRESHOLD 1  // Height threshold above which an UAV is considered to be flying (in meters). TODO: better way to know if flying?
 
@@ -509,6 +510,14 @@ void MissionController::planThread(void) {
             printCurrentGraph();
 #endif
 
+#ifdef NUMERICAL_EXPERIMENTS
+            std::vector<std::string> methods{"Greedy"/*, "MILP"*/, "MEM", "VNS"/*, "Mstsp"*/};
+            for (int method=0; method<methods.size(); method++) {
+            planner_method_ = methods[method];
+            for (int it_exp=1; it_exp<=30; it_exp++) {
+            centralized_planner_.resetInspectedEdges();
+#endif
+
             // Force the parameter_estimator_ calculate the matrices with new costs of the initial UAVs only if replanning:
             if (replan) {
                 update_matrices_mutex_.lock();
@@ -566,6 +575,7 @@ void MissionController::planThread(void) {
                 } else {
                     ROS_ERROR("Mission Controller: ms_tsp_planner service didn't answer.");
                 }
+
 #else
                 ROS_ERROR("Mission Controller: ms_tsp_planner selected but not installed or configured in the cmakelist.");
 #endif
@@ -596,6 +606,82 @@ void MissionController::planThread(void) {
 
 #ifdef DEBUG
             centralized_planner_.printPlan();
+
+            std::cout << "Planner's results (from MC):" << std::endl;
+            float total_time_cost = 0;
+            float total_battery_cost = 0;
+            std::map<int, std::map<int, std::map<int, float> > > time_cost_matrices = parameter_estimator_.getTimeCostMatrices();
+            std::map<int, std::map<int, std::map<int, float> > > battery_drop_matrices = parameter_estimator_.getBatteryDropMatrices();
+            for (int i=0; i<flight_plans_.size(); i++) {
+                std::cout << "flight_plans[ " << i << " ].uav_id       = " << flight_plans_[i].uav_id << std::endl;
+                float time_cost = 0;
+                float battery_cost = 0;
+                for (int j=0; j<flight_plans_[i].nodes.size()-1; j++) {
+                    if (time_cost_matrices[flight_plans_[i].uav_id][ flight_plans_[i].nodes[j] ][ flight_plans_[i].nodes[j+1] ] != -1) {
+                        time_cost += time_cost_matrices[flight_plans_[i].uav_id][ flight_plans_[i].nodes[j] ][ flight_plans_[i].nodes[j+1] ];
+                        battery_cost += battery_drop_matrices[flight_plans_[i].uav_id][ flight_plans_[i].nodes[j] ][ flight_plans_[i].nodes[j+1] ];
+                    }
+                }
+                std::cout << "flight_plans[ " << i << " ].time_cost    = " << time_cost << std::endl;
+                std::cout << "flight_plans[ " << i << " ].battery_cost = " << battery_cost << std::endl;
+                total_time_cost += time_cost;
+                total_battery_cost += battery_cost;
+            }
+            std::cout << "Total plan time cost:    " << total_time_cost << std::endl;
+            std::cout << "Total plan battery cost: " << total_battery_cost << std::endl;
+            std::cout << "UAVs involved:           " << flight_plans_.size() << std::endl << std::endl;
+
+// #ifdef NUMERICAL_EXPERIMENTS
+            // % of inspection edges covered:
+            auto distance_cost_matrix = parameter_estimator_.getDistanceCostMatrix();
+            float total_distance_to_inspect = 0;
+            std::vector< std::pair<int,int> > connection_edges;    // Edges or connections of the graph, being the pair of indexes of the graph nodes connected by wires. Always the first int index lower than the second of the pair.
+            for (int i=0; i<planner_current_graph.size(); i++) {   // Construct connection_edges from scratch:
+                if (planner_current_graph[i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
+                    for (int j=0; j<planner_current_graph[i].connections_indexes.size(); j++) {
+                        if (i < planner_current_graph[i].connections_indexes[j]) {
+                            std::pair <int,int> current_edge (i, planner_current_graph[i].connections_indexes[j]);
+                            total_distance_to_inspect += distance_cost_matrix[ current_edge.first ][ current_edge.second ];
+                            connection_edges.push_back(current_edge);
+                        }
+                    }
+                }
+            }
+            for (int i=0; i<flight_plans_.size(); i++) {    // Erase from connection_edges the one covered by the plan:
+                for (int j=0; j<flight_plans_[i].nodes.size()-1; j++) {
+                    if (planner_current_graph[ flight_plans_[i].nodes[j] ].type==aerialcore_msgs::GraphNode::TYPE_PYLON && planner_current_graph[ flight_plans_[i].nodes[j+1] ].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
+                        std::pair <int,int> current_edge;
+                        if (flight_plans_[i].nodes[j] < flight_plans_[i].nodes[j+1]) {
+                            current_edge.first  = flight_plans_[i].nodes[j];
+                            current_edge.second = flight_plans_[i].nodes[j+1];
+                        } else {
+                            current_edge.first  = flight_plans_[i].nodes[j+1];
+                            current_edge.second = flight_plans_[i].nodes[j];
+                        }
+                        for (int k=0; k<connection_edges.size(); k++) {
+                            if (connection_edges[k] == current_edge) {
+                                connection_edges.erase(connection_edges.begin() + k);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            float distance_not_covered = 0;
+            for (int k=0; k<connection_edges.size(); k++) {
+                distance_not_covered += distance_cost_matrix[ connection_edges[k].first ][ connection_edges[k].second ];
+            }
+
+            std::ofstream file_out("experimental_results.txt", std::ios_base::app);
+            file_out /*<< it_exp*/ /* Number of iteration of the numerical experiment */ << " " << planner_method_ << " " << seconds /* computation time */ << " " << total_time_cost << " " << total_battery_cost << " " << flight_plans_.size() /* Nº UAVs in the solution*/ << " " << UAVs_.size() /* UAVs available */ << " " << distance_not_covered << " " << total_distance_to_inspect << std::endl;
+            file_out.close();
+// #endif
+
+#ifdef NUMERICAL_EXPERIMENTS
+            }
+            }
+#endif
+
 #endif
 
             if (UAV_command_mode_=="mission_lib") {
