@@ -41,6 +41,12 @@ MissionController::MissionController() {
         std::string planner_method_ = "MEM";
     }
 
+    n_.getParam("planner_method_electric_fault", planner_method_electric_fault_);
+    if (planner_method_electric_fault_!="Minimax-VNS" && planner_method_electric_fault_!="Minimax-MEM") {
+        ROS_ERROR("Mission Controller: error, planner_method_electric_fault not valid. Using Minimax-MEM algorithm as default.");
+        std::string planner_method_electric_fault_ = "Minimax-MEM";
+    }
+
     // Charge from the YAML file the time between iterations for the loops in the Parameter Estimator and Plan (Monitor and Planner) threads:
     n_.param<float>("parameter_estimator_time", parameter_estimator_time_, 5.0);
     n_.param<float>("plan_monitor_time", plan_monitor_time_, 5.0);
@@ -511,9 +517,17 @@ void MissionController::planThread(void) {
 #endif
 
 #ifdef NUMERICAL_EXPERIMENTS
-            std::vector<std::string> methods{"Greedy"/*, "MILP"*/, "MEM", "VNS"/*, "Mstsp"*/};
+            std::vector<std::string> methods{"Greedy"/*, "MILP"*/, "MEM", "VNS"/*, "Mstsp"*/, "Minimax-MEM", "Minimax-VNS"};
             for (int method=0; method<methods.size(); method++) {
+
             planner_method_ = methods[method];
+            planner_method_electric_fault_ = methods[method];
+            if (method<methods.size()-2) {                      // IF NOT MINIMAX
+                continuous_or_fast_supervision_ = true;
+            } else {
+                continuous_or_fast_supervision_ = false;
+            }
+
             for (int it_exp=1; it_exp<=30; it_exp++) {
             centralized_planner_.resetInspectedEdges();
 #endif
@@ -532,53 +546,61 @@ void MissionController::planThread(void) {
             t_begin = clock();
 
             std::vector<aerialcore_msgs::FlightPlan> flight_plans_new;
-            if (planner_method_ == "Greedy") {
-                flight_plans_new = centralized_planner_.getPlanGreedy(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
-            } else if (planner_method_ == "MILP") {
-                flight_plans_new =  centralized_planner_.getPlanMILP(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
-            } else if (planner_method_ == "VNS") {
-                flight_plans_new =  centralized_planner_.getPlanVNS(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
-            } else if (planner_method_ == "MEM") {
-                flight_plans_new = centralized_planner_.getPlanMEM(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
-            } else if (planner_method_ == "Mstsp") {
+            if (continuous_or_fast_supervision_) {
+                if (planner_method_ == "Greedy") {
+                    flight_plans_new = centralized_planner_.getPlanGreedy(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
+                } else if (planner_method_ == "MILP") {
+                    flight_plans_new =  centralized_planner_.getPlanMILP(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
+                } else if (planner_method_ == "VNS") {
+                    flight_plans_new =  centralized_planner_.getPlanVNS(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
+                } else if (planner_method_ == "MEM") {
+                    flight_plans_new = centralized_planner_.getPlanMEM(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
+                } else if (planner_method_ == "Mstsp") {
 #ifdef USING_MS_TSP_PLANNER
-                ms_tsp_planner::ConfigToFlightPlans config_to_flight_plans;
-                config_to_flight_plans.request.configFile = "default.yaml";
-                if (ms_tsp_planner_.call(config_to_flight_plans)) {
-                    ROS_INFO("Mission Controller: plan from ms_tsp_planner received.");
-                    flight_plans_new = config_to_flight_plans.response.plans;
+                    ms_tsp_planner::ConfigToFlightPlans config_to_flight_plans;
+                    config_to_flight_plans.request.configFile = "default.yaml";
+                    if (ms_tsp_planner_.call(config_to_flight_plans)) {
+                        ROS_INFO("Mission Controller: plan from ms_tsp_planner received.");
+                        flight_plans_new = config_to_flight_plans.response.plans;
 
-                    // TODO? this for loop is a patch because mstsp.solution_to_flight_plans(sol) don't fill the uav_id field:
-                    for (int i=0; i<flight_plans_new.size(); i++) {
-                        flight_plans_new[i].uav_id = i+1;
-                    }
-
-                    for (int i=0; i<flight_plans_new.size(); i++) {
-                        for (int j=0; j<flight_plans_new[i].nodes.size(); j++) {
-                            if (planner_current_graph[ flight_plans_new[i].nodes[j] ].z <= FLYING_THRESHOLD) {
-                                planner_current_graph[ flight_plans_new[i].nodes[j] ].z += 30;
-                                flight_plans_new[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP);
-                            } else if ( j==flight_plans_new[i].nodes.size()-1 ) {
-                                flight_plans_new[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_LAND_WP);
-                            } else {
-                                flight_plans_new[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_PYLON_WP);
-                            }
-
-                            geometry_msgs::PoseStamped current_pose;
-                            current_pose.pose.position.x = planner_current_graph[ flight_plans_new[i].nodes[j] ].x;
-                            current_pose.pose.position.y = planner_current_graph[ flight_plans_new[i].nodes[j] ].y;
-                            current_pose.pose.position.z = planner_current_graph[ flight_plans_new[i].nodes[j] ].z;
-                            flight_plans_new[i].poses.push_back(current_pose);
+                        // TODO? this for loop is a patch because mstsp.solution_to_flight_plans(sol) don't fill the uav_id field:
+                        for (int i=0; i<flight_plans_new.size(); i++) {
+                            flight_plans_new[i].uav_id = i+1;
                         }
-                    }
 
-                } else {
-                    ROS_ERROR("Mission Controller: ms_tsp_planner service didn't answer.");
-                }
+                        for (int i=0; i<flight_plans_new.size(); i++) {
+                            for (int j=0; j<flight_plans_new[i].nodes.size(); j++) {
+                                if (planner_current_graph[ flight_plans_new[i].nodes[j] ].z <= FLYING_THRESHOLD) {
+                                    planner_current_graph[ flight_plans_new[i].nodes[j] ].z += 30;
+                                    flight_plans_new[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP);
+                                } else if ( j==flight_plans_new[i].nodes.size()-1 ) {
+                                    flight_plans_new[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_LAND_WP);
+                                } else {
+                                    flight_plans_new[i].type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_PYLON_WP);
+                                }
+
+                                geometry_msgs::PoseStamped current_pose;
+                                current_pose.pose.position.x = planner_current_graph[ flight_plans_new[i].nodes[j] ].x;
+                                current_pose.pose.position.y = planner_current_graph[ flight_plans_new[i].nodes[j] ].y;
+                                current_pose.pose.position.z = planner_current_graph[ flight_plans_new[i].nodes[j] ].z;
+                                flight_plans_new[i].poses.push_back(current_pose);
+                            }
+                        }
+
+                    } else {
+                        ROS_ERROR("Mission Controller: ms_tsp_planner service didn't answer.");
+                    }
 
 #else
                 ROS_ERROR("Mission Controller: ms_tsp_planner selected but not installed or configured in the cmakelist.");
 #endif
+                }
+            } else {
+                if (planner_method_electric_fault_ == "Minimax-MEM") {
+                    flight_plans_new = centralized_planner_.getPlanMinimaxMEM(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
+                } else if (planner_method_electric_fault_ == "Minimax-VNS") {
+                    flight_plans_new =  centralized_planner_.getPlanMinimaxVNS(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
+                }
             }
 
             // Before saving the new plan, check if there are drones not used in this new plan, in which case clear its plan:
@@ -631,7 +653,7 @@ void MissionController::planThread(void) {
             std::cout << "Total plan battery cost: " << total_battery_cost << std::endl;
             std::cout << "UAVs involved:           " << flight_plans_.size() << std::endl << std::endl;
 
-// #ifdef NUMERICAL_EXPERIMENTS
+#ifdef NUMERICAL_EXPERIMENTS
             // % of inspection edges covered:
             auto distance_cost_matrix = parameter_estimator_.getDistanceCostMatrix();
             float total_distance_to_inspect = 0;
@@ -675,7 +697,7 @@ void MissionController::planThread(void) {
             std::ofstream file_out("experimental_results.txt", std::ios_base::app);
             file_out /*<< it_exp*/ /* Number of iteration of the numerical experiment */ << " " << planner_method_ << " " << seconds /* computation time */ << " " << total_time_cost << " " << total_battery_cost << " " << flight_plans_.size() /* Nº UAVs in the solution*/ << " " << UAVs_.size() /* UAVs available */ << " " << distance_not_covered << " " << total_distance_to_inspect << std::endl;
             file_out.close();
-// #endif
+#endif
 
 #ifdef NUMERICAL_EXPERIMENTS
             }

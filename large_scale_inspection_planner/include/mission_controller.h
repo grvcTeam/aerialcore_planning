@@ -118,6 +118,11 @@ private:
   // - Mstsp:  plan calculated with the Mstsp algorithm.
   std::string planner_method_ = "MEM";
 
+  // The following argument defines which method or algorithm computes the plan for the electric fault inspection problem (vector of FlightPlan, one per UAV), and it can be:
+  // - Minimax-MEM: plan calculated with the MEM algorithm (default if not specified).
+  // - Minimax-VNS: plan calculated with a VNS algorithm.
+  std::string planner_method_electric_fault_ = "Minimax-MEM";
+
   std::atomic<bool> stop_current_supervising_ = {false};
 
   geographic_msgs::GeoPoint map_origin_geo_;

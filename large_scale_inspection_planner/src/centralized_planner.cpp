@@ -21,6 +21,7 @@
 #include "ortools/constraint_solver/routing_parameters.h"
 
 #define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
+#define NUMERICAL_EXPERIMENTS
 
 namespace aerialcore {
 
@@ -36,7 +37,10 @@ CentralizedPlanner::CentralizedPlanner() {
     map_origin_geo_.longitude = map_origin_geo_vector[1];
     map_origin_geo_.altitude  = map_origin_geo_vector[2];
 
-    srand (time(NULL));
+    nh.getParam("maximum_time_without_improvement", maximum_time_without_improvement_);
+    nh.getParam("local_search_iteration_multiplier", local_search_iteration_multiplier_);
+
+    srand(std::time(nullptr));
 }
 
 
@@ -52,8 +56,8 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
     battery_drop_matrices_.clear();
 
     graph_ = _graph;
-    time_cost_matrices_ = _time_cost_matrices;
-    battery_drop_matrices_ = _battery_drop_matrices;
+
+    constructUnordenedMaps(_time_cost_matrices, _battery_drop_matrices);
 
     if (_geofence.points.size()>0 && _no_fly_zones.size()>0) {
         std::vector< std::vector<geographic_msgs::GeoPoint> > obstacle_polygon_vector_geo;
@@ -80,6 +84,19 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
 
     constructConnectionEdges(_graph, _last_flight_plan_graph_node);
     flight_plans_.clear();  // Need to be later than constructConnectionEdges()
+
+    if (!regular_or_fast_inspection_) {
+        // Minimax greedy assigns to each UAV a proportional part (in battery terms) of the graph to inspect:
+        float total_battery_to_inspect_times_UAVs = 0;
+        for (const auto& wired_edge : connection_edges_) {
+            for (const UAV& current_uav : UAVs_) {
+                total_battery_to_inspect_times_UAVs += battery_drop_matrices_.at(current_uav.id).at( wired_edge.first ).at( wired_edge.second );
+            }
+        }
+        proportional_battery_ = 1 - total_battery_to_inspect_times_UAVs/UAVs_.size();
+    } else {
+        proportional_battery_ = -1;
+    }
 
     // constructEdges(_graph);
 
@@ -127,7 +144,8 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
 
         while (connection_edges_.size()>0 && (battery
             - battery_drop_matrices_[ current_uav.id ][ uav_initial_position_graph_index ][ index_graph_of_next_pylon ]
-            - battery_drop_matrices_[ current_uav.id ][ index_graph_of_next_pylon ][ index_graph_land_station_from_next_pylon ] ) ) {
+            - battery_drop_matrices_[ current_uav.id ][ index_graph_of_next_pylon ][ index_graph_land_station_from_next_pylon ] >= current_uav.minimum_battery) &&
+            (regular_or_fast_inspection_ || (battery - battery_drop_matrices_[ current_uav.id ][ uav_initial_position_graph_index ][ index_graph_of_next_pylon ] - battery_drop_matrices_[ current_uav.id ][ index_graph_of_next_pylon ][ index_graph_land_station_from_next_pylon ] >= proportional_battery_)) ) {
 
             // Insert pylon because it can be reached with enough battery to go later to a land station:
             current_flight_plan.nodes.push_back(index_graph_of_next_pylon);
@@ -154,7 +172,8 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
                     nearestGraphNodeLandStation(index_pylon_connected_with_unserved_edge, index_graph_land_station_from_next_pylon, current_uav.id);
                     if ( (index_pylon_connected_with_unserved_edge!=-1) && (index_graph_land_station_from_next_pylon!=-1) && (battery
                         - battery_drop_matrices_[ current_uav.id ][ current_flight_plan.nodes.back() ][ index_pylon_connected_with_unserved_edge ]
-                        - battery_drop_matrices_[ current_uav.id ][ index_pylon_connected_with_unserved_edge ][ index_graph_land_station_from_next_pylon ] ) ) {
+                        - battery_drop_matrices_[ current_uav.id ][ index_pylon_connected_with_unserved_edge ][ index_graph_land_station_from_next_pylon ] >= current_uav.minimum_battery) &&
+                        (regular_or_fast_inspection_ || (battery - battery_drop_matrices_[ current_uav.id ][ current_flight_plan.nodes.back() ][ index_pylon_connected_with_unserved_edge ] - battery_drop_matrices_[ current_uav.id ][ index_pylon_connected_with_unserved_edge ][ index_graph_land_station_from_next_pylon ] >= proportional_battery_)) ) {
                         current_flight_plan.nodes.push_back(index_graph_of_next_pylon);
                         battery -= battery_drop_matrices_[ current_uav.id ][ current_flight_plan.nodes.back() ][ index_graph_of_next_pylon ];
                         index_graph_of_next_pylon = index_pylon_connected_with_unserved_edge;
@@ -238,36 +257,6 @@ float CentralizedPlanner::nearestGraphNodeUAVInitialPosition(int _from_this_inde
     return time_cost;
 
 } // end nearestGraphNodeUAVInitialPosition method
-
-
-// Brief method that returns the index of the nearest initial position graph node given an initial index.
-float CentralizedPlanner::nearestGraphNodeUAVInitialPositionByTypeString(int _from_this_index_graph, int& _index_graph_node_to_return, int& _uav_id, std::string _type_string) {
-
-    if (_from_this_index_graph==-1) {
-        return -1;
-    }
-
-    _index_graph_node_to_return = -1;
-    _uav_id = -1;
-    float time_cost = std::numeric_limits<float>::max();
-
-    for (int i=0; i<graph_.size(); i++) {
-        if ( graph_[i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && _type_string==uavTypeStringById(graph_[i].id) ) {
-
-            float current_time_cost = time_cost_matrices_[ graph_[i].id ][ _from_this_index_graph ][ i ];
-            if (current_time_cost <= 0.001) continue;     // It's the same graph node or path not found, ignore and continue.
-
-            if ( time_cost > current_time_cost ) {
-                _index_graph_node_to_return = i;
-                _uav_id = graph_[i].id;
-                time_cost = current_time_cost;
-            }
-        }
-    }
-
-    return time_cost;
-
-} // end nearestGraphNodeUAVInitialPositionByTypeString method
 
 
 // Brief method that returns the index of the nearest pylon graph node given an initial index. The new pylon will have edges unserved and will not be directly connected.
@@ -428,13 +417,12 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     time_cost_matrices_.clear();
 //     battery_drop_matrices_.clear();
 
+//     constructUnordenedMaps(_time_cost_matrices, _battery_drop_matrices);
+
 //     constructUAVs(_drone_info);
 //     constructEdges(_graph);
 
 //     flight_plans_.clear();
-
-//     time_cost_matrices_ = _time_cost_matrices;
-//     battery_drop_matrices_ = _battery_drop_matrices;
 
 //     //////////////////// Start defining the MILP problem according to agarwal_icra20 and solve it using OR-Tools ////////////////////
 
@@ -462,7 +450,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     // Create the objective function:
 //     // (1) Minimize all the inspection time (UAVs flying separately).
 //     operations_research::MPObjective *const objective = solver->MutableObjective();
-//     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
+//     for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
 //             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_INSPECTION) {
 //                 objective->SetCoefficient(x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], it->second[ edges_[e_i].i ][ edges_[e_i].j ]);
@@ -478,7 +466,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     // Create the constraints:
 
 //     // (2) For all pylon nodes and tours-drones, Sum_all_j(x_ij_k) plus Sum_all_j(y_ij_k) minus Sum_all_j(x_ji_k) and minus Sum_all_j(x_ji_k) is equal to zero (inputs equal to outputs in each node):
-//     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
+//     for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //         for (int g_i=0; g_i<_graph.size(); g_i++) {
 //             if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
 //                 operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0, 0, "");
@@ -512,7 +500,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     for (int e_i=0; e_i<edges_.size(); e_i++) {
 //         if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_INSPECTION && edges_[e_i].i<edges_[e_i].j) {
 //             operations_research::MPConstraint *constraint = solver->MakeRowConstraint(1, 1, "");
-//             for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
+//             for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //                 constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], 1);
 //                 constraint->SetCoefficient(x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].j ][ edges_[e_i].i ] ], 1);
 //             }
@@ -520,7 +508,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     }
 
 //     // (4) For all tours-drones, in edges coming from takeoff nodes, y_0j is 0 or 1 (take off just once or zero times in each tour):
-//     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
+//     for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //         operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0, 1, "");
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
 //             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && it->first==edges_[e_i].k) {
@@ -530,7 +518,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     }
 
 //     // // (4.1) For all tours-drones, in edges going to land nodes, y_j0 is 0 or 1 (land just once in each tour):
-//     // for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
+//     // for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //     //     operations_research::MPConstraint *constraint = solver->MakeRowConstraint(1, 1, "");
 //     //     for (int e_i=0; e_i<edges_.size(); e_i++) {
 //     //         if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING && it->first==edges_[e_i].k) {
@@ -540,7 +528,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     // }
 
 //     // (5) For all tours-drones and pylon nodes, equation of flow consumed in node (flow in equals to flow destroyed in that node plus flow out):
-//     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
+//     for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
 //         for (int g_i=0; g_i<_graph.size(); g_i++) {
 //             if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
 //                 operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0.0, 0.0, "");
@@ -559,7 +547,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //             }
 //         }
 //     }
-//     // for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
+//     // for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
 //     //     for (int e_i=0; e_i<edges_.size(); e_i++) {
 //     //         if (edges_[e_i].type != aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION) {
 //     //             operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0.0, 0.0, "");
@@ -581,7 +569,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     // }
 
 //     // (6) For all tours-drones, all flow is created in the takeoff nodes:
-//     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
+//     for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
 //         operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0.0, 0.0, "");
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
 //             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && it->first==edges_[e_i].k) {
@@ -597,7 +585,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     }
 
 //     // (7) For all tours-drones, land nodes receive all the remaining flow:
-//     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
+//     for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
 //         operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0.0, 0.0, "");
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
 //             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING && it->first==edges_[e_i].k) {
@@ -608,7 +596,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     }
 
 //     // (8) For all tours-drones and edges, there is only flow if edge served:
-//     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
+//     for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
 //             operations_research::MPConstraint *constraint = solver->MakeRowConstraint(-infinity, 0.0, "");
 //             constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], 1);
@@ -623,7 +611,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 
 
 //     // (1.14) For all tours-drones and edges, flow has a minimum value:
-//     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
+//     for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
 //             operations_research::MPConstraint *constraint = solver->MakeRowConstraint(0.0, infinity, "");
 //             constraint->SetCoefficient(f[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ], 1);
@@ -651,9 +639,9 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     LOG(INFO) << "Solution:";
 //     LOG(INFO) << "Optimal objective value = " << objective->Value();
 
-// #ifdef DEBUG
+// # ifdef DEBUG
 //     // Print the variables of the solution:
-//     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
+//     for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //         std::cout << "x[" << it->first << "]" << std::endl;
 //         for (int i=0; i<it->second.size(); i++) {
 //             for (int j=0; j<it->second[i].size(); j++) {
@@ -676,8 +664,8 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //             std::cout << std::endl;
 //         }
 //     }
-//     std::map<int, std::map<int, std::map<int, float> > >::iterator map_begin = time_cost_matrices_.begin();
-//     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
+//     std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator map_begin = time_cost_matrices_.begin();
+//     for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //         std::cout << "y[" << it->first << "]" << std::endl;
 //         for (int i=0; i<it->second.size(); i++) {
 //             for (int j=0; j<it->second[i].size(); j++) {
@@ -694,7 +682,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //             std::cout << std::endl;
 //         }
 //     }
-//     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
+//     for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //         std::cout << "f[" << it->first << "]" << std::endl;
 //         for (int i=0; i<it->second.size(); i++) {
 //             for (int j=0; j<it->second[i].size(); j++) {
@@ -719,7 +707,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 
 //     // (1) Minimize all the inspection time (UAVs flying separately).
 //     std::cout << "(1):" << std::endl;
-//     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
+//     for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
 //             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_INSPECTION) {
 //                 std::cout << "x[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "] " << std::setprecision(6) << x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << " · " << it->second[ edges_[e_i].i ][ edges_[e_i].j ] << " + ";
@@ -747,7 +735,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 
 //     // (2) For all pylon nodes and tours-drones, Sum_all_j(x_ij_k) plus Sum_all_j(y_ij_k) minus Sum_all_j(x_ji_k) and minus Sum_all_j(x_ji_k) is equal to zero (inputs equal to outputs in each node):
 //     std::cout << "(2):" << std::endl;
-//     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
+//     for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //         for (int g_i=0; g_i<_graph.size(); g_i++) {
 //             if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
 //                 std::cout << "node_" << g_i << " : ";
@@ -788,7 +776,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     for (int e_i=0; e_i<edges_.size(); e_i++) {
 //         if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_INSPECTION && edges_[e_i].i<edges_[e_i].j) {
 //         std::cout << "inspection_edge_" << e_i << " : ";
-//             for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
+//             for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //                 std::cout << "x[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "] " << std::setprecision(6) << x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << " · " << 1 << " + ";
 //                 std::cout << "x[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "] " << std::setprecision(6) << x[ from_k_i_j_to_x_index_[ it->first ][ edges_[e_i].j ][ edges_[e_i].i ] ]->solution_value() << " · " << 1 << " + ";
 //             }
@@ -799,7 +787,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 
 //     // (4) For all tours-drones, in edges coming from takeoff nodes, y_0j is 0 or 1 (take off just once in each tour):
 //     std::cout << "(4):" << std::endl;
-//     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
+//     for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //         std::cout << "k_" << it->first << " : ";
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
 //             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && it->first==edges_[e_i].k) {
@@ -812,7 +800,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 
 //     // // (4.1) For all tours-drones, in edges going to land nodes, y_j0 is 0 or 1 (land just once in each tour):
 //     // std::cout << "(4.1):" << std::endl;
-//     // for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
+//     // for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
 //     //     std::cout << "k_" << it->first << " : ";
 //     //     for (int e_i=0; e_i<edges_.size(); e_i++) {
 //     //         if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING && it->first==edges_[e_i].k) {
@@ -825,7 +813,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 
 //     // (5) For all tours-drones and pylon nodes, equation of flow consumed in node (flow in equals to flow destroyed in that node plus flow out):
 //     std::cout << "(5):" << std::endl;
-//     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
+//     for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
 //         for (int g_i=0; g_i<_graph.size(); g_i++) {
 //             if (_graph[g_i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
 //                 std::cout << "pylon_node_" << g_i << " : ";
@@ -849,7 +837,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 
 //     // (6) For all tours-drones, all flow is created in the takeoff nodes:
 //     std::cout << "(6):" << std::endl;
-//     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
+//     for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
 //         std::cout << "k_" << it->first << " : ";
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
 //             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_TAKEOFF_AND_NAVIGATION && it->first==edges_[e_i].k) {
@@ -868,7 +856,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 
 //     // (7) For all tours-drones, land nodes receive all the remaining flow:
 //     std::cout << "(7):" << std::endl;
-//     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
+//     for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
 //         std::cout << "k_" << it->first << " : ";
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
 //             if (edges_[e_i].type == aerialcore_msgs::EdgeType::TYPE_NAVIGATION_AND_LANDING) {
@@ -882,7 +870,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 
 //     // (8) For all tours-drones and edges, there is only flow if edge served:
 //     std::cout << "(8):" << std::endl;
-//     for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
+//     for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
 //         for (int e_i=0; e_i<edges_.size(); e_i++) {
 //             std::cout << "edge_" << e_i << " : ";
 //             std::cout << "f[" << it->first << "][" << from_matrix_index_to_graph_index_[edges_[e_i].i] << "][" << from_matrix_index_to_graph_index_[edges_[e_i].j] << "] " << std::setprecision(6) << f[ from_k_i_j_to_y_and_f_index_[ it->first ][ edges_[e_i].i ][ edges_[e_i].j ] ]->solution_value() << " + ";
@@ -915,10 +903,10 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 
 //     */
 
-// #endif
+// # endif
 
 //     // Assign flight_plans_ according to the edges in the solution:
-// //    for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
+// //    for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = battery_drop_matrices_.begin(); it != battery_drop_matrices_.end(); it++) {
 
 // //         // All this commented because the solution isn't totally sorted in f descendent:
 // //         struct fStruct {
@@ -961,7 +949,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 // //         }
 
 // //         if (current_flight_plan.nodes.size()>3) {   // Consider the flight plan only if it visits two or more pylons.
-// // #ifdef DEBUG
+// // # ifdef DEBUG
 // //             std::cout << "current_flight_plan.uav_id: " << current_flight_plan.uav_id << std::endl;
 // //             std::cout << "current_flight_plan.nodes:" << std::endl;
 
@@ -978,7 +966,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 // //                 }
 // //             }
 // //             std::cout << "milp_solution_coherent = " << milp_solution_coherent << std::endl;
-// // #endif
+// // # endif
 
 
 
@@ -1078,9 +1066,9 @@ void CentralizedPlanner::constructEdges(std::vector<aerialcore_msgs::GraphNode>&
     // Construct edges_ that contain all the possible edges, with information of if it is a pure dead-heading edge or both inspection and dead-heading edge:
     x_index_size_ = 0;
     y_and_f_index_size_ = 0;
-    for (std::map<int, std::map<int, std::map<int, float> > >::iterator it_k = time_cost_matrices_.begin(); it_k != time_cost_matrices_.end(); it_k++) {
-        for (std::map<int, std::map<int, float> >::iterator it_i = it_k->second.begin(); it_i != it_k->second.end(); it_i++) {
-            for (std::map<int, float>::iterator it_j = it_i->second.begin(); it_j != it_i->second.end(); it_j++) {
+    for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it_k = time_cost_matrices_.begin(); it_k != time_cost_matrices_.end(); it_k++) {
+        for (std::unordered_map<int, std::unordered_map<int, float> >::iterator it_i = it_k->second.begin(); it_i != it_k->second.end(); it_i++) {
+            for (std::unordered_map<int, float>::iterator it_j = it_i->second.begin(); it_j != it_i->second.end(); it_j++) {
                 if (time_cost_matrices_[ it_k->first ][ it_i->first ][ it_j->first ]==-1) {
                     continue;
                 } else {
@@ -1107,7 +1095,7 @@ void CentralizedPlanner::constructEdges(std::vector<aerialcore_msgs::GraphNode>&
                     if (edges_[new_edge] == EdgeType::TYPE_TAKEOFF_AND_NAVIGATION) {
                         from_k_i_j_to_y_and_f_index_[new_edge.k][new_edge.i][new_edge.j] = y_and_f_index_size_++;
                     } else {
-                        for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
+                        for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
                             from_k_i_j_to_y_and_f_index_[ new_edge.k ][new_edge.i][new_edge.j] = y_and_f_index_size_++;
                         }
                     }
@@ -1126,18 +1114,18 @@ void CentralizedPlanner::constructEdges(std::vector<aerialcore_msgs::GraphNode>&
 
                 edges_[edge_struct] = EdgeType::TYPE_INSPECTION;
 
-                for (std::map<int, std::map<int, std::map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
+                for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it = time_cost_matrices_.begin(); it != time_cost_matrices_.end(); it++) {
                     from_k_i_j_to_x_index_[ it->first ][edge_struct.i][edge_struct.j] = x_index_size_++;
                 }
             }
         }
     }
 
-#ifdef DEBUG
+# ifdef DEBUG
     std::cout << "Number of edges            = " << edges_.size() << std::endl;
     std::cout << "Number of inspection edges = " << x_index_size_/time_cost_matrices_.size() << std::endl;
     std::cout << "Number of k                = " << time_cost_matrices_.size() << std::endl;
-    for (std::map<int, std::map<int, std::map<int, float> > >::iterator it_k = time_cost_matrices_.begin(); it_k != time_cost_matrices_.end(); it_k++) {
+    for (std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > >::iterator it_k = time_cost_matrices_.begin(); it_k != time_cost_matrices_.end(); it_k++) {
         std::cout << "Number of i and j          = " << time_cost_matrices_[it_k->first].size() << std::endl;
         break;
     }
@@ -1163,7 +1151,7 @@ void CentralizedPlanner::constructEdges(std::vector<aerialcore_msgs::GraphNode>&
         }
         i++;
     }
-#endif
+# endif
 } // end constructEdges
 
 
@@ -1227,7 +1215,7 @@ void CentralizedPlanner::constructConnectionEdges(const std::vector<aerialcore_m
 
 void CentralizedPlanner::resetInspectedEdges() {
     reset_connection_edges_ = true;
-} // resetConnectionEdges
+} // end resetInspectedEdges
 
 
 int CentralizedPlanner::findUavIndexById(int _UAV_id) {
@@ -1259,81 +1247,41 @@ int CentralizedPlanner::findTourIndexById(int _tour_id, const std::vector<Tour>&
 
 std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanVNS(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices, std::map<int, int> _last_flight_plan_graph_node) {
 
+# ifdef NUMERICAL_EXPERIMENTS
+    ros::Time time_just_before_planning = ros::Time::now();
+    time_computing_plan_ = 0;
+    accumulated_time_checking_solutions_ = 0;
+# endif
+
     // Get the initial plan with the greedy method:
-    // std::vector<aerialcore_msgs::FlightPlan> current_solution = getPlanGreedy(_graph, _drone_info, _no_fly_zones, _geofence, _time_cost_matrices, _battery_drop_matrices, _last_flight_plan_graph_node);
-    std::vector<aerialcore_msgs::FlightPlan> current_solution = getPlanMEM(_graph, _drone_info, _no_fly_zones, _geofence, _time_cost_matrices, _battery_drop_matrices, _last_flight_plan_graph_node);
+    std::vector<aerialcore_msgs::FlightPlan> current_solution;
+    if (regular_or_fast_inspection_) {
+        // current_solution = getPlanMEM(_graph, _drone_info, _no_fly_zones, _geofence, _time_cost_matrices, _battery_drop_matrices, _last_flight_plan_graph_node);
+        current_solution = getPlanGreedy(_graph, _drone_info, _no_fly_zones, _geofence, _time_cost_matrices, _battery_drop_matrices, _last_flight_plan_graph_node);
+    } else {
+        // current_solution = getPlanMinimaxMEM(_graph, _drone_info, _no_fly_zones, _geofence, _time_cost_matrices, _battery_drop_matrices, _last_flight_plan_graph_node);
+        current_solution = getPlanMinimaxGreedy(_graph, _drone_info, _no_fly_zones, _geofence, _time_cost_matrices, _battery_drop_matrices, _last_flight_plan_graph_node);
+    }
 
     constructEdges(_graph);
 
-    // ///////// TESTING FUNCTIONS
-
-    // flight_plans_ = current_solution;
-    // current_solution.clear();
-    // aerialcore_msgs::FlightPlan plan_uav_1;
-    // plan_uav_1.uav_id = 1;
-    // plan_uav_1.nodes.push_back(35);
-    // plan_uav_1.type.push_back(aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP);
-    // plan_uav_1.nodes.push_back(0);
-    // plan_uav_1.type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_PYLON_WP);
-    // plan_uav_1.nodes.push_back(1);
-    // plan_uav_1.type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_PYLON_WP);
-    // plan_uav_1.nodes.push_back(2);
-    // plan_uav_1.type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_PYLON_WP);
-    // plan_uav_1.nodes.push_back(3);
-    // plan_uav_1.type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_PYLON_WP);
-    // plan_uav_1.nodes.push_back(34);
-    // plan_uav_1.type.push_back(aerialcore_msgs::FlightPlan::TYPE_LAND_WP);
-    // current_solution.push_back(plan_uav_1);
-
-    // std::cout << "nodes (1): "; for (int i=0; i<current_solution[0].nodes.size(); i++) { std::cout << current_solution[0].nodes[i] << " "; } std::cout << std::endl;
-
-    // float solution_time_cost = solutionTimeCost(current_solution);
-    // std::cout << "solution_time_cost = " << solution_time_cost << std::endl;
-
-    // std::cout << "nodes (2): "; for (int i=0; i<current_solution[0].nodes.size(); i++) { std::cout << current_solution[0].nodes[i] << " "; } std::cout << std::endl;
-
-    // bool battery_valid = solutionBatteryDropValidOrNot(current_solution);
-    // std::cout << "battery_valid = " << battery_valid << std::endl;
-
-    // std::cout << "nodes (3): "; for (int i=0; i<current_solution[0].nodes.size(); i++) { std::cout << current_solution[0].nodes[i] << " "; } std::cout << std::endl;
-
-    // bool valid = solutionValidOrNot(current_solution);
-    // std::cout << "valid = " << valid << std::endl;
-
-    // std::cout << "nodes (4): "; for (int i=0; i<current_solution[0].nodes.size(); i++) { std::cout << current_solution[0].nodes[i] << " "; } std::cout << std::endl;
-
-    // std::vector< std::vector< std::pair<int,int> > > inspection_edges = buildPlannedInspectionEdgesFromNodes(current_solution);
-
-    // std::cout << "inspection_edges (5): "; for (int i=0; i<inspection_edges[0].size(); i++) { std::cout << inspection_edges[0][i].first << " " << inspection_edges[0][i].second << " , "; } std::cout << std::endl;
-    // std::cout << "nodes (5): "; for (int i=0; i<current_solution[0].nodes.size(); i++) { std::cout << current_solution[0].nodes[i] << " "; } std::cout << std::endl;
-
-    // shake(current_solution);
-
-    // std::cout << "nodes (6): "; for (int i=0; i<current_solution[0].nodes.size(); i++) { std::cout << current_solution[0].nodes[i] << " "; } std::cout << std::endl;
-
-    // localSearch(current_solution);
-
-    // std::cout << "nodes (7): "; for (int i=0; i<current_solution[0].nodes.size(); i++) { std::cout << current_solution[0].nodes[i] << " "; } std::cout << std::endl;
-
-    // std::vector<aerialcore_msgs::FlightPlan> current_solution_2 = buildPlanNodesFromInspectionEdges(inspection_edges, current_solution);
-
-    // std::cout << "nodes (8): "; for (int i=0; i<current_solution[0].nodes.size(); i++) { std::cout << current_solution[0].nodes[i] << " "; } std::cout << std::endl;
-
-    // ///////// TESTING FUNCTIONS
-
 # ifdef DEBUG
-    std::cout << std::endl << "Printing initial plan:" << std::endl;
+    std::cout << std::endl << "Printing initial plan (Greedy or MEM):" << std::endl;
     printPlan();
+# ifdef NUMERICAL_EXPERIMENTS
+    time_computing_plan_ = (ros::Time::now().toNSec()-time_just_before_planning.toNSec())*1.0e-9;
+    std::cout << "Time computing initial plan (Greedy or MEM) [s] = " << time_computing_plan_ << std::endl;
+    time_just_before_planning = ros::Time::now();
 # endif
+# endif
+
     ros::Time last_improvement_time = ros::Time::now();
 
-    int maximum_time_without_solution_improvement = 5;  // TODO: as a parameter (s).
-
-    while ( ros::Time::now().toSec()-last_improvement_time.toSec()<=maximum_time_without_solution_improvement ) {
+    while ( ros::Time::now().toSec()-last_improvement_time.toSec()<=maximum_time_without_improvement_ ) {
         shake(current_solution);
         localSearch(current_solution);
 
-        if ( solutionTimeCost(current_solution) < solutionTimeCost(flight_plans_) ) {   // flight_plans_ stores the best solution up until now, if current solution is better, update it.
+        if ( ( regular_or_fast_inspection_ && ( solutionTimeCostTotal(current_solution) < solutionTimeCostTotal(flight_plans_) ) ) || ( !regular_or_fast_inspection_ && ( solutionTimeCostMaximum(current_solution) < solutionTimeCostMaximum(flight_plans_) ) ) ) {   // flight_plans_ stores the best solution up until now, if current solution is better, update it.
             flight_plans_.clear();
             flight_plans_ = current_solution;
             last_improvement_time = ros::Time::now();
@@ -1348,6 +1296,13 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanVNS(std::vec
 # ifdef DEBUG
     std::cout << std::endl << "Printing improved plan with VNS:" << std::endl;
     printPlan();
+# ifdef NUMERICAL_EXPERIMENTS
+    time_computing_plan_ = (ros::Time::now().toNSec()-time_just_before_planning.toNSec())*1.0e-9;
+    std::cout << "Time computing with VNS the improved plan [s] = " << time_computing_plan_ << std::endl;
+    std::cout << "accumulated_time_checking_solutions_ [s] = " << accumulated_time_checking_solutions_ << std::endl;
+    double percentage_checking_solutions = accumulated_time_checking_solutions_/time_computing_plan_ * 100.0;
+    std::cout << "percentage_checking_solutions        [%] = " << percentage_checking_solutions << std::endl;
+# endif
 # endif
 
     return flight_plans_;
@@ -1355,26 +1310,65 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanVNS(std::vec
 } // end getPlanVNS
 
 
-float CentralizedPlanner::solutionTimeCost(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
+float CentralizedPlanner::solutionTimeCostTotal(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
+# ifdef NUMERICAL_EXPERIMENTS
+    ros::Time time_begin_check = ros::Time::now();
+# endif
+
     float solution_time_cost = 0;
 
     for (int i=0; i<_flight_plans.size(); i++) {
         for (int j=0; j<_flight_plans[i].nodes.size()-1; j++) {
-            solution_time_cost += time_cost_matrices_[_flight_plans[i].uav_id][ _flight_plans[i].nodes[j] ][ _flight_plans[i].nodes[j+1] ];
+            solution_time_cost += time_cost_matrices_.at(_flight_plans[i].uav_id).at( _flight_plans[i].nodes[j] ).at( _flight_plans[i].nodes[j+1] );
         }
     }
 
+# ifdef NUMERICAL_EXPERIMENTS
+    accumulated_time_checking_solutions_ += (ros::Time::now().toNSec()-time_begin_check.toNSec())*1.0e-9;
+# endif
+
     return solution_time_cost;
-} // end solutionTimeCost
+} // end solutionTimeCostTotal
 
 
-bool CentralizedPlanner::solutionBatteryDropValidOrNot(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
+float CentralizedPlanner::solutionTimeCostMaximum(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
+
+# ifdef NUMERICAL_EXPERIMENTS
+    ros::Time time_begin_check = ros::Time::now();
+# endif
+
+    float solution_maximum_cost = 0;
+
+    for (int i=0; i<_flight_plans.size(); i++) {
+        float current_solution_maximum_cost = 0;
+        for (int j=0; j<_flight_plans[i].nodes.size()-1; j++) {
+            current_solution_maximum_cost += time_cost_matrices_.at(_flight_plans[i].uav_id).at( _flight_plans[i].nodes[j] ).at( _flight_plans[i].nodes[j+1] );
+        }
+        if (current_solution_maximum_cost > solution_maximum_cost) {
+            solution_maximum_cost = current_solution_maximum_cost;
+        }
+    }
+
+# ifdef NUMERICAL_EXPERIMENTS
+    accumulated_time_checking_solutions_ += (ros::Time::now().toNSec()-time_begin_check.toNSec())*1.0e-9;
+# endif
+
+    return solution_maximum_cost;
+} // end solutionTimeCostMaximum
+
+
+bool CentralizedPlanner::solutionValidOrNot(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
+
+# ifdef NUMERICAL_EXPERIMENTS
+    ros::Time time_begin_check = ros::Time::now();
+# endif
+
     bool solution_battery_drop_valid_or_not = true;
 
     for (int i=0; i<_flight_plans.size(); i++) {
         float battery_left = UAVs_[i].initial_battery;
         for (int j=0; j<_flight_plans[i].nodes.size()-1; j++) {
-            battery_left -= battery_drop_matrices_[_flight_plans[i].uav_id][ _flight_plans[i].nodes[j] ][ _flight_plans[i].nodes[j+1] ];
+            battery_left -= battery_drop_matrices_.at(_flight_plans[i].uav_id).at( _flight_plans[i].nodes[j] ).at( _flight_plans[i].nodes[j+1] );
         }
         if (battery_left < UAVs_[i].minimum_battery) {
             solution_battery_drop_valid_or_not = false;
@@ -1382,55 +1376,16 @@ bool CentralizedPlanner::solutionBatteryDropValidOrNot(const std::vector<aerialc
         }
     }
 
+# ifdef NUMERICAL_EXPERIMENTS
+        accumulated_time_checking_solutions_ += (ros::Time::now().toNSec()-time_begin_check.toNSec())*1.0e-9;
+# endif
+
     return solution_battery_drop_valid_or_not;
-} // end solutionBatteryDropValidOrNot
-
-
-bool CentralizedPlanner::solutionValidOrNot(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
-
-    // Check that there aren't two navigations together:
-    for (int i=0; i<_flight_plans.size(); i++) {
-        bool previous_is_navigation = false;
-        bool current_is_navigation;
-        for (int j=0; j<_flight_plans[i].nodes.size()-1; j++) {
-            Edge edge_struct;
-            edge_struct.i = _flight_plans[i].nodes[j];
-            edge_struct.j = _flight_plans[i].nodes[j+1];
-            edge_struct.k = -1;
-            if (edges_.count(edge_struct)<=0) {
-                edge_struct.k = _flight_plans[i].uav_id;
-                if (edges_.count(edge_struct)<=0) {
-                    continue;
-                }
-            }
-
-            current_is_navigation = edges_[edge_struct] != EdgeType::TYPE_INSPECTION ? true : false ;
-            if (previous_is_navigation && current_is_navigation) {
-                return false;
-            }
-            previous_is_navigation = current_is_navigation;
-            break;
-        }
-    }
-
-    // Solution battery drop is acceptable or not:
-    if (!solutionBatteryDropValidOrNot(_flight_plans)) {
-        return false;
-    }
-
-    return true;
 } // end solutionValidOrNot
 
 
 void CentralizedPlanner::shake(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
     std::vector<aerialcore_msgs::FlightPlan> shaked;
-
-    // for (int i=0; i<_flight_plans.size(); i++) {
-    //     for (int j=0; j<_flight_plans[i].nodes.size(); j++) {
-    //         std::cout << "shake before _flight_plans[ " << i << " ].nodes[ " << j << " ] = " << _flight_plans[i].nodes[j] << std::endl;
-    //     }
-    // }
-    // std::cout << std::endl;
 
     bool shaked_valid = false;
     while (!shaked_valid) {
@@ -1438,9 +1393,10 @@ void CentralizedPlanner::shake(std::vector<aerialcore_msgs::FlightPlan>& _flight
 
         std::vector< std::vector< std::pair<int,int> > > planned_inspection_edges = buildPlannedInspectionEdgesFromNodes(shaked);
         std::vector< std::vector< std::pair<int,int> > > planned_inspection_edges_original = planned_inspection_edges;
-        // std::cout << "inspection_edges (shake 1): "; for (int i=0; i<planned_inspection_edges[0].size(); i++) { std::cout << planned_inspection_edges[0][i].first << " " << planned_inspection_edges[0][i].second << " , "; } std::cout << std::endl;
+
+        // for (int i=0; i<planned_inspection_edges.size(); i++) { std::cout << std::endl << "planned_inspection_edges (shake 1, i="<< i << "): "; for (int j=0; j<planned_inspection_edges[i].size(); j++) { std::cout << planned_inspection_edges[i][j].first << " " << planned_inspection_edges[i][j].second << " , "; } } std::cout << std::endl;
         // std::cout << "solutionValidOrNot (shake 1): " << solutionValidOrNot(_flight_plans) << std::endl;
-        // std::cout << "solutionTimeCost (shake 1): " << solutionTimeCost(_flight_plans) << std::endl;
+        // std::cout << "solutionTimeCostTotal (shake 1): " << solutionTimeCostTotal(_flight_plans) << std::endl;
 
         int edges_path_within_same_uav = rand() % 2; // 0 if edges moved or exchange between different UAVs, 1 if within the same UAV.
         int uav_from  = rand() % planned_inspection_edges.size();
@@ -1463,11 +1419,20 @@ void CentralizedPlanner::shake(std::vector<aerialcore_msgs::FlightPlan>& _flight
             path_from.clear();
             path_from = reversed_path_from;
         }
+        // std::cout << "path_from: "; for (int i=0; i<path_from.size(); i++) { std::cout << path_from[i].first << " " << path_from[i].second << " , " << std::endl; }
 
         int neighborhood_operator = rand() % 2;  // neighborhood_operator in the range 0 to 1
-        int edge_path_to_begin  = neighborhood_operator == 0 ? rand() % planned_inspection_edges[uav_to].size()+1 : rand() % planned_inspection_edges[uav_to].size();
-        int edge_path_to_end    = neighborhood_operator == 0 ? -1 : edge_path_to_begin + rand() % (planned_inspection_edges[uav_to].size()-edge_path_to_begin);
-
+        int edge_path_to_begin = 0;
+        int edge_path_to_end = 0;
+        if ( planned_inspection_edges[uav_to].size()>0 ) {
+            if (neighborhood_operator == 0) {
+                edge_path_to_begin = rand() % (planned_inspection_edges[uav_to].size()+1);
+                edge_path_to_end   = -1;
+            } else {
+                edge_path_to_begin = rand() % planned_inspection_edges[uav_to].size();
+                edge_path_to_end   = edge_path_to_begin + rand() % (planned_inspection_edges[uav_to].size()-edge_path_to_begin);
+            }
+        }
         // std::cout << "edges_path_within_same_uav = " << edges_path_within_same_uav << std::endl;
         // std::cout << "uav_from                   = " << uav_from << std::endl;
         // std::cout << "uav_to                     = " << uav_to << std::endl;
@@ -1477,9 +1442,9 @@ void CentralizedPlanner::shake(std::vector<aerialcore_msgs::FlightPlan>& _flight
         // std::cout << "edge_path_to_end           = " << edge_path_to_end << std::endl;
         // std::cout << "path_reversed              = " << path_reversed << std::endl;
         // std::cout << "neighborhood_operator      = " << neighborhood_operator << std::endl;
-        // std::cout << "inspection_edges (shake 2): "; for (int i=0; i<planned_inspection_edges[0].size(); i++) { std::cout << planned_inspection_edges[0][i].first << " " << planned_inspection_edges[0][i].second << " , "; } std::cout << std::endl;
+        // for (int i=0; i<planned_inspection_edges.size(); i++) { std::cout << std::endl << "planned_inspection_edges (shake 2, i="<< i << "): "; for (int j=0; j<planned_inspection_edges[i].size(); j++) { std::cout << planned_inspection_edges[i][j].first << " " << planned_inspection_edges[i][j].second << " , "; } } std::cout << std::endl;
 
-        if (neighborhood_operator==0) {             // Path move.
+        if (neighborhood_operator==0 || planned_inspection_edges[uav_to].size()==0) {             // Path move.
 
             planned_inspection_edges[uav_to].insert(planned_inspection_edges[uav_to].begin() + edge_path_to_begin, path_from.begin(), path_from.end());
 
@@ -1501,12 +1466,12 @@ void CentralizedPlanner::shake(std::vector<aerialcore_msgs::FlightPlan>& _flight
             }
         }
 
-        // std::cout << "inspection_edges (shake 3): "; for (int i=0; i<planned_inspection_edges[0].size(); i++) { std::cout << planned_inspection_edges[0][i].first << " " << planned_inspection_edges[0][i].second << " , "; } std::cout << std::endl;
+        // for (int i=0; i<planned_inspection_edges.size(); i++) { std::cout << std::endl << "planned_inspection_edges (shake 3, i="<< i << "): "; for (int j=0; j<planned_inspection_edges[i].size(); j++) { std::cout << planned_inspection_edges[i][j].first << " " << planned_inspection_edges[i][j].second << " , "; } } std::cout << std::endl;
 
         shaked = buildPlanNodesFromInspectionEdges(planned_inspection_edges, _flight_plans);
 
         // std::cout << "solutionValidOrNot (shake 3): " << solutionValidOrNot(shaked) << std::endl;
-        // std::cout << "solutionTimeCost (shake 3): " << solutionTimeCost(shaked) << std::endl;
+        // std::cout << "solutionTimeCostTotal (shake 3): " << solutionTimeCostTotal(shaked) << std::endl;
 
         shaked_valid = solutionValidOrNot(shaked);
 
@@ -1528,40 +1493,25 @@ void CentralizedPlanner::shake(std::vector<aerialcore_msgs::FlightPlan>& _flight
 
     _flight_plans.clear();
     _flight_plans = shaked;
-
-    // for (int i=0; i<_flight_plans.size(); i++) {
-    //     for (int j=0; j<_flight_plans[i].nodes.size(); j++) {
-    //         std::cout << "shake after _flight_plans[ " << i << " ].nodes[ " << j << " ] = " << _flight_plans[i].nodes[j] << std::endl;
-    //     }
-    // }
-    // std::cout << std::endl;
 } // end shake
 
 
 void CentralizedPlanner::localSearch(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
     std::vector<aerialcore_msgs::FlightPlan> local_optimum = _flight_plans;
 
-    // for (int i=0; i<_flight_plans.size(); i++) {
-    //     for (int j=0; j<_flight_plans[i].nodes.size(); j++) {
-    //         std::cout << "localSearch before _flight_plans[ " << i << " ].nodes[ " << j << " ] = " << _flight_plans[i].nodes[j] << std::endl;
-    //     }
-    // }
-    // std::cout << std::endl;
-
-    int maximum_iterations = y_and_f_index_size_*30;//pow(y_and_f_index_size_,2);  // TODO: as a parameter.
-    // std::cout << "maximum_iterations = " << maximum_iterations << std::endl;
+    int maximum_iterations = y_and_f_index_size_ * local_search_iteration_multiplier_;
     int iteration = 0;
     for (int i=0; i<_flight_plans.size(); i++) {
         while (iteration<maximum_iterations) {
             std::vector< std::vector< std::pair<int,int> > > planned_inspection_edges = buildPlannedInspectionEdgesFromNodes(local_optimum);
             std::vector< std::vector< std::pair<int,int> > > planned_inspection_edges_original = planned_inspection_edges;
-            // std::cout << "inspection_edges (localSearch 1): "; for (int i=0; i<planned_inspection_edges[0].size(); i++) { std::cout << planned_inspection_edges[0][i].first << " " << planned_inspection_edges[0][i].second << " , "; } std::cout << std::endl;
+            // for (int i=0; i<planned_inspection_edges.size(); i++) { std::cout << std::endl << "planned_inspection_edges (localSearch 1, i="<< i << "): "; for (int j=0; j<planned_inspection_edges[i].size(); j++) { std::cout << planned_inspection_edges[i][j].first << " " << planned_inspection_edges[i][j].second << " , "; } } std::cout << std::endl;
             // std::cout << "solutionValidOrNot (localSearch 1): " << solutionValidOrNot(_flight_plans) << std::endl;
-            // std::cout << "solutionTimeCost (localSearch 1): " << solutionTimeCost(_flight_plans) << std::endl;
+            // std::cout << "solutionTimeCostTotal (localSearch 1): " << solutionTimeCostTotal(_flight_plans) << std::endl;
 
             int neighborhood_operator = rand() % 2; // neighborhood_operator in the range 0 to 1
             int edge_from = rand() % planned_inspection_edges[i].size();
-            int edge_to   = neighborhood_operator == 0 ? rand() % planned_inspection_edges[i].size()+1 : rand() % planned_inspection_edges[i].size();
+            int edge_to   = neighborhood_operator == 0 ? rand() % (planned_inspection_edges[i].size()+1) : rand() % planned_inspection_edges[i].size();
             int edge_reversed = rand() % 2;         // 0 if same direction, 1 if reversed.
 
             int initial_number_of_edges = planned_inspection_edges[i].size();
@@ -1601,11 +1551,11 @@ void CentralizedPlanner::localSearch(std::vector<aerialcore_msgs::FlightPlan>& _
 
             local_optimum = buildPlanNodesFromInspectionEdges(planned_inspection_edges, _flight_plans);
 
-            // std::cout << "inspection_edges (localSearch 2): "; for (int i=0; i<planned_inspection_edges[0].size(); i++) { std::cout << planned_inspection_edges[0][i].first << " " << planned_inspection_edges[0][i].second << " , "; } std::cout << std::endl;
+            // for (int i=0; i<planned_inspection_edges.size(); i++) { std::cout << std::endl << "planned_inspection_edges (localSearch 2, i="<< i << "): "; for (int j=0; j<planned_inspection_edges[i].size(); j++) { std::cout << planned_inspection_edges[i][j].first << " " << planned_inspection_edges[i][j].second << " , "; } } std::cout << std::endl;
             // std::cout << "solutionValidOrNot (localSearch 2): " << solutionValidOrNot(local_optimum) << std::endl;
-            // std::cout << "solutionTimeCost (localSearch 2): " << solutionTimeCost(local_optimum) << std::endl;
+            // std::cout << "solutionTimeCostTotal (localSearch 2): " << solutionTimeCostTotal(local_optimum) << std::endl;
 
-            if ( solutionValidOrNot(local_optimum) && solutionTimeCost(local_optimum) < solutionTimeCost(_flight_plans) ) {   // _flight_plans stores the best solution up until now, if current solution is better, update it.
+            if ( solutionValidOrNot(local_optimum) && (regular_or_fast_inspection_&&(solutionTimeCostTotal(local_optimum) < solutionTimeCostTotal(_flight_plans)) || !regular_or_fast_inspection_&&(solutionTimeCostMaximum(local_optimum) < solutionTimeCostMaximum(_flight_plans))) ) {   // _flight_plans stores the best solution up until now, if current solution is better, update it.
                 _flight_plans.clear();
                 _flight_plans = local_optimum;
             } else {
@@ -1628,15 +1578,8 @@ void CentralizedPlanner::localSearch(std::vector<aerialcore_msgs::FlightPlan>& _
         }
 
         // std::cout << "solutionValidOrNot (localSearch 3): " << solutionValidOrNot(local_optimum) << std::endl;
-        // std::cout << "solutionTimeCost (localSearch 3): " << solutionTimeCost(local_optimum) << std::endl;
+        // std::cout << "solutionTimeCostTotal (localSearch 3): " << solutionTimeCostTotal(local_optimum) << std::endl;
     }
-
-    // for (int i=0; i<_flight_plans.size(); i++) {
-    //     for (int j=0; j<_flight_plans[i].nodes.size(); j++) {
-    //         std::cout << "localSearch after _flight_plans[ " << i << " ].nodes[ " << j << " ] = " << _flight_plans[i].nodes[j] << std::endl;
-    //     }
-    // }
-    // std::cout << std::endl;
 } // end localSearch
 
 
@@ -1682,6 +1625,7 @@ std::vector< std::vector< std::pair<int,int> > > CentralizedPlanner::buildPlanne
 
 
 std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::buildPlanNodesFromInspectionEdges(const std::vector< std::vector< std::pair<int,int> > >& _planned_inspection_edges, const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans) {
+
     std::vector<aerialcore_msgs::FlightPlan> flight_plans_to_return = _flight_plans;
 
     for (int i=0; i<_flight_plans.size(); i++) {
@@ -1710,8 +1654,8 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMEM(std::vec
     battery_drop_matrices_.clear();
 
     graph_ = _graph;
-    time_cost_matrices_ = _time_cost_matrices;
-    battery_drop_matrices_ = _battery_drop_matrices;
+
+    constructUnordenedMaps(_time_cost_matrices, _battery_drop_matrices);
 
     if (_geofence.points.size()>0 && _no_fly_zones.size()>0) {
         std::vector< std::vector<geographic_msgs::GeoPoint> > obstacle_polygon_vector_geo;
@@ -1749,11 +1693,6 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMEM(std::vec
     std::vector<Saving> S_savings;
 
     int latest_tour_id = 0;
-
-    // std::vector<std::string> UAV_types;
-    // for (int i=0; i<UAVs_.size(); i++) {
-    //     UAV_types.push_back( uavTypeStringByIndex(i) );
-    // }
 
     // Initialization of tours:
     for (int i=0; i<connection_edges_.size(); i++) {
@@ -2028,7 +1967,6 @@ CentralizedPlanner::Saving CentralizedPlanner::bestSavingPermutation(const Savin
         }
     }
 
-// # ifdef DEBUG
 //     std::cout << "Permutation _R_tours_array[ " << _i << " ]:"<< std::endl;
 //     for (int i=0; i<_R_tours_array[_i].nodes.size(); i++) {
 //         std::cout << _R_tours_array[_i].nodes[i] << std::endl;
@@ -2043,7 +1981,6 @@ CentralizedPlanner::Saving CentralizedPlanner::bestSavingPermutation(const Savin
 //             std::cout << saving_permutations[i].nodes[j] << std::endl;
 //         }
 //     }
-// # endif
 
     if (best_saving_index!=-1) {
         return saving_permutations[best_saving_index];
@@ -2136,15 +2073,6 @@ void CentralizedPlanner::fillFlightPlansFields(std::vector<aerialcore_msgs::Flig
             }
 
             if (!path_planner_.checkIfTwoPointsAreVisible(test_point_1, test_point_2)) {
-// # ifdef DEBUG
-//                 printPlan();
-//                 std::cout << "test_point_1.latitude  = " << test_point_1.latitude << std::endl;
-//                 std::cout << "test_point_1.longitude = " << test_point_1.longitude << std::endl;
-//                 std::cout << "test_point_1.altitude  = " << test_point_1.altitude << std::endl;
-//                 std::cout << "test_point_2.latitude  = " << test_point_2.latitude << std::endl;
-//                 std::cout << "test_point_2.longitude = " << test_point_2.longitude << std::endl;
-//                 std::cout << "test_point_2.altitude  = " << test_point_2.altitude << std::endl;
-// # endif
 
                 if (graph_[ _flight_plans[i].nodes[j+1] ].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION || graph_[ _flight_plans[i].nodes[j+1] ].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION) {
                     test_point_2.altitude  = test_point_1.altitude;
@@ -2204,22 +2132,51 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::buildFlightPlansFro
 } // buildFlightPlansFromTours
 
 
-// Types of UAVs are calculated by appending their technical specifications:
-std::string CentralizedPlanner::uavTypeStringByIndex(int _uav_index) {
-    std::string uav_type;
-    uav_type.append(std::to_string( UAVs_[_uav_index].speed_xy ).c_str());
-    uav_type.append(std::to_string( UAVs_[_uav_index].speed_z_down ).c_str());
-    uav_type.append(std::to_string( UAVs_[_uav_index].speed_z_up ).c_str());
-    uav_type.append(std::to_string( UAVs_[_uav_index].minimum_battery ).c_str());
-    uav_type.append(std::to_string( UAVs_[_uav_index].time_until_fully_charged ).c_str());
-    uav_type.append(std::to_string( UAVs_[_uav_index].time_max_flying ).c_str());
-    return uav_type;
-} // uavTypeStringByIndex
+std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMinimaxGreedy(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices, std::map<int, int> _last_flight_plan_graph_node) {
+
+    // Run the regular greedy solver, but stopping when each UAV has it's % of inpection edges asignated.
+
+    regular_or_fast_inspection_ = false;
+    std::vector<aerialcore_msgs::FlightPlan> solution = getPlanGreedy(_graph, _drone_info, _no_fly_zones, _geofence, _time_cost_matrices, _battery_drop_matrices, _last_flight_plan_graph_node);
+    regular_or_fast_inspection_ = true;
+    return solution;
+} // end getPlanMinimaxGreedy
 
 
-std::string CentralizedPlanner::uavTypeStringById(int _uav_id) {
-    return uavTypeStringByIndex( findUavIndexById(_uav_id) );
-} // uavTypeStringById
+std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMinimaxMEM(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices, std::map<int, int> _last_flight_plan_graph_node) {
+    // TODO
+    return flight_plans_;
+} // end getPlanMinimaxMEM
+
+
+std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMinimaxVNS(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices, std::map<int, int> _last_flight_plan_graph_node) {
+    regular_or_fast_inspection_ = false;
+    std::vector<aerialcore_msgs::FlightPlan> solution = getPlanVNS(_graph, _drone_info, _no_fly_zones, _geofence, _time_cost_matrices, _battery_drop_matrices, _last_flight_plan_graph_node);
+    regular_or_fast_inspection_ = true;
+    return solution;
+} // end getPlanMinimaxVNS
+
+
+void CentralizedPlanner::constructUnordenedMaps(const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices) {
+    time_cost_matrices_.clear();
+    battery_drop_matrices_.clear();
+    for (std::map<int, std::map<int, std::map<int, float> > >::const_iterator it_k = _time_cost_matrices.begin(); it_k != _time_cost_matrices.end(); it_k++) {
+        std::unordered_map<int, std::unordered_map<int, float> > aux_time_1;
+        std::unordered_map<int, std::unordered_map<int, float> > aux_batt_1;
+        for (std::map<int, std::map<int, float> >::const_iterator it_i = it_k->second.begin(); it_i != it_k->second.end(); it_i++) {
+            std::unordered_map<int, float> aux_time_2;
+            std::unordered_map<int, float> aux_batt_2;
+            for (std::map<int, float>::const_iterator it_j = it_i->second.begin(); it_j != it_i->second.end(); it_j++) {
+                aux_time_2[it_j->first] = _time_cost_matrices.at(it_k->first).at(it_i->first).at(it_j->first);
+                aux_batt_2[it_j->first] = _battery_drop_matrices.at(it_k->first).at(it_i->first).at(it_j->first);
+            }
+            aux_time_1[it_i->first] = aux_time_2;
+            aux_batt_1[it_i->first] = aux_batt_2;
+        }
+        time_cost_matrices_[it_k->first] = aux_time_1;
+        battery_drop_matrices_[it_k->first] = aux_batt_1;
+    }
+} // end constructUnordenedMaps
 
 
 } // end namespace aerialcore

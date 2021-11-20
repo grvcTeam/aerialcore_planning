@@ -1,13 +1,19 @@
 # This file describes the settings for the planning problem for the ATLAS_power_lines.world
 
 
-# The following argument defines which method or algorithm computes the plan (vector of FlightPlan, one per UAV), and it can be:
+# The following argument defines which method or algorithm computes the plan for the regular inspection problem (vector of FlightPlan, one per UAV), and it can be:
 # - Greedy: plan calculated with a Greedy algorithm.
 # - MILP:   plan calculated with the MILP formulation and OR-Tools.
 # - VNS:    plan calculated with a VNS algorithm.
 # - MEM:    plan calculated with the MEM algorithm (default if not specified).
 # - Mstsp:  plan calculated with the Mstsp algorithm.
-planner_method: "MEM"
+planner_method: "VNS"
+
+
+# The following argument defines which method or algorithm computes the plan for the electric fault inspection problem (vector of FlightPlan, one per UAV), and it can be:
+# - Minimax-MEM: plan calculated with the MEM algorithm (default if not specified).
+# - Minimax-VNS: plan calculated with a VNS algorithm.
+planner_method_electric_fault: "Minimax-VNS"
 
 
 # Dictionary of the actual drones used in the simulation or reality (key: UAV id, value: airframe type):
@@ -88,6 +94,11 @@ plan_monitor_time: 30.0         # Just after replanning it will be waited this a
 
 # Deviation limit (in parts per unit of the duration of the plans), if this is surpassed (greater or lower) the Plan Monitor will tell the planner to trigger the replanning:
 deviation_limit: 0.2
+
+
+# VNS parameters:
+maximum_time_without_improvement:  0.40  # Stop condition for the VNS algorithm. Seconds that the VNS will keep trying to improve a solution before giving up.
+local_search_iteration_multiplier: 0.40  # This number multiplied for the graph nodes matrix size will be the number of times that the local search of the VNS will be repeated in order to achieve the local minuma.
 
 
 # Geographic coordinate (latitude, longitude, altitude) that makes (x,y,z) = (0,0,0) meters in cartesian coordinates:
