@@ -86,7 +86,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
     flight_plans_.clear();  // Need to be later than constructConnectionEdges()
 
     if (!regular_or_fast_inspection_) {
-        // Minimax greedy assigns to each UAV a proportional part (in battery terms) of the graph to inspect:
+        // Minimax greedy assigns to each UAV a proportional part (in battery terms) of the graph to inspect (the last UAV can be assigned more until graph completely inspected):
         float total_battery_to_inspect_times_UAVs = 0;
         for (const auto& wired_edge : connection_edges_) {
             for (const UAV& current_uav : UAVs_) {
@@ -100,7 +100,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
 
     // constructEdges(_graph);
 
-    for (const UAV& current_uav : UAVs_) {
+    for (int i=0; i<UAVs_.size(); i++) {
 
         // GREEDY PLANNER:
         // First heuristic greedy approach. This algorithm is centralized and without replanning.
@@ -111,13 +111,13 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
         // Assigned segments are removed from the graph for next UAVs.
 
         aerialcore_msgs::FlightPlan current_flight_plan;
-        current_flight_plan.uav_id = current_uav.id;
+        current_flight_plan.uav_id = UAVs_[i].id;
 
         // Find the initial position of the drone in the graph and insert it as the first node of the flight plan:
         int uav_initial_position_graph_index = -1;
-        for (int i=0; i<graph_.size(); i++) {
-            if (graph_[i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && graph_[i].id == current_uav.id) {
-                uav_initial_position_graph_index = i;
+        for (int j=0; j<graph_.size(); j++) {
+            if (graph_[j].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION && graph_[j].id == UAVs_[i].id) {
+                uav_initial_position_graph_index = j;
                 break;
             }
         }
@@ -127,7 +127,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
         }
         current_flight_plan.nodes.push_back(uav_initial_position_graph_index);
 
-        float battery = current_uav.initial_battery;
+        float battery = UAVs_[i].initial_battery;
 
         int index_graph_of_next_pylon;
 
@@ -137,15 +137,18 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
         int index_graph_land_station_from_pylon_last;
 
         // Calculate closest pylon from the UAV initial pose:
-        nearestGraphNodePylon(uav_initial_position_graph_index, index_graph_of_next_pylon, current_uav.id);
+        nearestGraphNodePylon(uav_initial_position_graph_index, index_graph_of_next_pylon, UAVs_[i].id);
 
         // Calculate closest land station from that closest pylon:
-        nearestGraphNodeLandStation(index_graph_of_next_pylon, index_graph_land_station_from_next_pylon, current_uav.id);
+        nearestGraphNodeLandStation(index_graph_of_next_pylon, index_graph_land_station_from_next_pylon, UAVs_[i].id);
 
         while (connection_edges_.size()>0 && (battery
-            - battery_drop_matrices_[ current_uav.id ][ uav_initial_position_graph_index ][ index_graph_of_next_pylon ]
-            - battery_drop_matrices_[ current_uav.id ][ index_graph_of_next_pylon ][ index_graph_land_station_from_next_pylon ] >= current_uav.minimum_battery) &&
-            (regular_or_fast_inspection_ || (battery - battery_drop_matrices_[ current_uav.id ][ uav_initial_position_graph_index ][ index_graph_of_next_pylon ] - battery_drop_matrices_[ current_uav.id ][ index_graph_of_next_pylon ][ index_graph_land_station_from_next_pylon ] >= proportional_battery_)) ) {
+            - battery_drop_matrices_[ UAVs_[i].id ][ uav_initial_position_graph_index ][ index_graph_of_next_pylon ]
+            - battery_drop_matrices_[ UAVs_[i].id ][ index_graph_of_next_pylon ][ index_graph_land_station_from_next_pylon ] >= UAVs_[i].minimum_battery) &&
+            (regular_or_fast_inspection_ || (i==UAVs_.size()-1) || (battery - battery_drop_matrices_[ UAVs_[i].id ][ uav_initial_position_graph_index ][ index_graph_of_next_pylon ] - battery_drop_matrices_[ UAVs_[i].id ][ index_graph_of_next_pylon ][ index_graph_land_station_from_next_pylon ] >= proportional_battery_)) ) {
+
+            // Update the battery left:
+            battery -= battery_drop_matrices_[ UAVs_[i].id ][ current_flight_plan.nodes.back() ][ index_graph_of_next_pylon ];
 
             // Insert pylon because it can be reached with enough battery to go later to a land station:
             current_flight_plan.nodes.push_back(index_graph_of_next_pylon);
@@ -154,28 +157,25 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
                 connection_edges_.erase( connection_edges_.begin() + index_edge_to_erase );
             }
 
-            // Update the battery left:            
-            battery -= battery_drop_matrices_[ current_uav.id ][ current_flight_plan.nodes.back() ][ index_graph_of_next_pylon ];
-
             // Calculate pylon with most benefit from current pylon:
-            mostRewardedPylon(current_flight_plan.nodes.back(), index_graph_of_next_pylon, index_edge_to_erase, current_uav.id);
+            mostRewardedPylon(current_flight_plan.nodes.back(), index_graph_of_next_pylon, index_edge_to_erase, UAVs_[i].id);
 
             index_graph_land_station_from_pylon_last = index_graph_land_station_from_next_pylon;
 
             if (index_graph_of_next_pylon == -1) { // No next pylon connected with unserved edges, search pylons not connected to this one.
                 int index_pylon_connected_with_unserved_edge;
-                nearestGraphNodePylon(current_flight_plan.nodes.back(), index_graph_of_next_pylon, current_uav.id);
+                nearestGraphNodePylon(current_flight_plan.nodes.back(), index_graph_of_next_pylon, UAVs_[i].id);
                 if (index_graph_of_next_pylon == -1) {
                     break; // No next pylon at all with unserved edges.
                 } else {   // Pylon has edges unserved connected.
-                    mostRewardedPylon(index_graph_of_next_pylon, index_pylon_connected_with_unserved_edge, index_edge_to_erase, current_uav.id);
-                    nearestGraphNodeLandStation(index_pylon_connected_with_unserved_edge, index_graph_land_station_from_next_pylon, current_uav.id);
+                    mostRewardedPylon(index_graph_of_next_pylon, index_pylon_connected_with_unserved_edge, index_edge_to_erase, UAVs_[i].id);
+                    nearestGraphNodeLandStation(index_pylon_connected_with_unserved_edge, index_graph_land_station_from_next_pylon, UAVs_[i].id);
                     if ( (index_pylon_connected_with_unserved_edge!=-1) && (index_graph_land_station_from_next_pylon!=-1) && (battery
-                        - battery_drop_matrices_[ current_uav.id ][ current_flight_plan.nodes.back() ][ index_pylon_connected_with_unserved_edge ]
-                        - battery_drop_matrices_[ current_uav.id ][ index_pylon_connected_with_unserved_edge ][ index_graph_land_station_from_next_pylon ] >= current_uav.minimum_battery) &&
-                        (regular_or_fast_inspection_ || (battery - battery_drop_matrices_[ current_uav.id ][ current_flight_plan.nodes.back() ][ index_pylon_connected_with_unserved_edge ] - battery_drop_matrices_[ current_uav.id ][ index_pylon_connected_with_unserved_edge ][ index_graph_land_station_from_next_pylon ] >= proportional_battery_)) ) {
+                        - battery_drop_matrices_[ UAVs_[i].id ][ current_flight_plan.nodes.back() ][ index_pylon_connected_with_unserved_edge ]
+                        - battery_drop_matrices_[ UAVs_[i].id ][ index_pylon_connected_with_unserved_edge ][ index_graph_land_station_from_next_pylon ] >= UAVs_[i].minimum_battery) &&
+                        (regular_or_fast_inspection_ || (i==UAVs_.size()-1) || (battery - battery_drop_matrices_[ UAVs_[i].id ][ current_flight_plan.nodes.back() ][ index_pylon_connected_with_unserved_edge ] - battery_drop_matrices_[ UAVs_[i].id ][ index_pylon_connected_with_unserved_edge ][ index_graph_land_station_from_next_pylon ] >= proportional_battery_)) ) {
+                        battery -= battery_drop_matrices_[ UAVs_[i].id ][ current_flight_plan.nodes.back() ][ index_graph_of_next_pylon ];
                         current_flight_plan.nodes.push_back(index_graph_of_next_pylon);
-                        battery -= battery_drop_matrices_[ current_uav.id ][ current_flight_plan.nodes.back() ][ index_graph_of_next_pylon ];
                         index_graph_of_next_pylon = index_pylon_connected_with_unserved_edge;
                     } else {    // Only insert the next pylon if it has battery to at least fulfill one edge.
                         break;
@@ -183,7 +183,7 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanGreedy(std::
                 }
             } else {
                 // Calculate closest land station from that most rewarded pylon:
-                nearestGraphNodeLandStation(index_graph_of_next_pylon, index_graph_land_station_from_next_pylon, current_uav.id);
+                nearestGraphNodeLandStation(index_graph_of_next_pylon, index_graph_land_station_from_next_pylon, UAVs_[i].id);
             }
         }
         // Insert closest land station when inserting another pylon would result in low battery:
@@ -212,6 +212,7 @@ float CentralizedPlanner::nearestGraphNodeLandStation(int _from_this_index_graph
     float time_cost = std::numeric_limits<float>::max();
 
     for (int i=0; i<graph_.size(); i++) {
+        if (_from_this_index_graph == i) continue;
         if (graph_[i].type==aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION || graph_[i].type==aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION) {
 
             float current_time_cost = time_cost_matrices_[_uav_id][ _from_this_index_graph ][ i ];
@@ -241,9 +242,10 @@ float CentralizedPlanner::nearestGraphNodeUAVInitialPosition(int _from_this_inde
     float time_cost = std::numeric_limits<float>::max();
 
     for (int i=0; i<graph_.size(); i++) {
+        if (_from_this_index_graph == i) continue;
         if ( graph_[i].type==aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION) {
 
-            float current_time_cost = current_time_cost = time_cost_matrices_[ graph_[i].id ][ _from_this_index_graph ][ i ];
+            float current_time_cost = time_cost_matrices_[ graph_[i].id ][ _from_this_index_graph ][ i ];
             if (current_time_cost <= 0.001) continue;     // It's the same graph node or path not found, ignore and continue.
 
             if ( time_cost > current_time_cost ) {
@@ -270,6 +272,7 @@ float CentralizedPlanner::nearestGraphNodePylon(int _from_this_index_graph, int&
     float time_cost = std::numeric_limits<float>::max();
 
     for (int i=0; i<graph_.size(); i++) {
+        if (_from_this_index_graph == i) continue;
         if (graph_[i].type==aerialcore_msgs::GraphNode::TYPE_PYLON) {
 
             // If i (current node iterated) is connected to the original pylon index ignore it.
@@ -1251,17 +1254,20 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanVNS(std::vec
     ros::Time time_just_before_planning = ros::Time::now();
     time_computing_plan_ = 0;
     accumulated_time_checking_solutions_ = 0;
+    int number_of_shakes = 0;
 # endif
 
     // Get the initial plan with the greedy method:
     std::vector<aerialcore_msgs::FlightPlan> current_solution;
     if (regular_or_fast_inspection_) {
-        // current_solution = getPlanMEM(_graph, _drone_info, _no_fly_zones, _geofence, _time_cost_matrices, _battery_drop_matrices, _last_flight_plan_graph_node);
         current_solution = getPlanGreedy(_graph, _drone_info, _no_fly_zones, _geofence, _time_cost_matrices, _battery_drop_matrices, _last_flight_plan_graph_node);
+        // current_solution = getPlanMEM(_graph, _drone_info, _no_fly_zones, _geofence, _time_cost_matrices, _battery_drop_matrices, _last_flight_plan_graph_node);
     } else {
-        // current_solution = getPlanMinimaxMEM(_graph, _drone_info, _no_fly_zones, _geofence, _time_cost_matrices, _battery_drop_matrices, _last_flight_plan_graph_node);
         current_solution = getPlanMinimaxGreedy(_graph, _drone_info, _no_fly_zones, _geofence, _time_cost_matrices, _battery_drop_matrices, _last_flight_plan_graph_node);
+        // current_solution = getPlanMinimaxMEM(_graph, _drone_info, _no_fly_zones, _geofence, _time_cost_matrices, _battery_drop_matrices, _last_flight_plan_graph_node);
     }
+
+    // TODO: right now VNS only consider inspection edges in the initial solution. Think solution? Should be enough as long as there are enough UAVs to cover all the graph.
 
     constructEdges(_graph);
 
@@ -1278,6 +1284,10 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanVNS(std::vec
     ros::Time last_improvement_time = ros::Time::now();
 
     while ( ros::Time::now().toSec()-last_improvement_time.toSec()<=maximum_time_without_improvement_ ) {
+# ifdef NUMERICAL_EXPERIMENTS
+        number_of_shakes++;
+# endif
+
         shake(current_solution);
         localSearch(current_solution);
 
@@ -1302,6 +1312,9 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanVNS(std::vec
     std::cout << "accumulated_time_checking_solutions_ [s] = " << accumulated_time_checking_solutions_ << std::endl;
     double percentage_checking_solutions = accumulated_time_checking_solutions_/time_computing_plan_ * 100.0;
     std::cout << "percentage_checking_solutions        [%] = " << percentage_checking_solutions << std::endl;
+    std::cout << "number_of_shakes                         = " << number_of_shakes << std::endl;
+    int maximum_iterations = y_and_f_index_size_ * local_search_iteration_multiplier_;
+    std::cout << "number_of_local_searchs_per_shake        = " << maximum_iterations << std::endl;
 # endif
 # endif
 
@@ -1397,10 +1410,10 @@ void CentralizedPlanner::shake(std::vector<aerialcore_msgs::FlightPlan>& _flight
         // for (int i=0; i<planned_inspection_edges.size(); i++) { std::cout << std::endl << "planned_inspection_edges (shake 1, i="<< i << "): "; for (int j=0; j<planned_inspection_edges[i].size(); j++) { std::cout << planned_inspection_edges[i][j].first << " " << planned_inspection_edges[i][j].second << " , "; } } std::cout << std::endl;
         // std::cout << "solutionValidOrNot (shake 1): " << solutionValidOrNot(_flight_plans) << std::endl;
         // std::cout << "solutionTimeCostTotal (shake 1): " << solutionTimeCostTotal(_flight_plans) << std::endl;
+        // std::cout << "solutionTimeCostMaximum (shake 1): " << solutionTimeCostMaximum(_flight_plans) << std::endl;
 
-        int edges_path_within_same_uav = rand() % 2; // 0 if edges moved or exchange between different UAVs, 1 if within the same UAV.
         int uav_from  = rand() % planned_inspection_edges.size();
-        int uav_to    = edges_path_within_same_uav==1 ? uav_from : rand() % planned_inspection_edges.size();
+        int uav_to    = rand() % planned_inspection_edges.size();
         int edge_path_from_begin = rand() % planned_inspection_edges[uav_from].size();
         int edge_path_from_end  = edge_path_from_begin + rand() % (planned_inspection_edges[uav_from].size()-edge_path_from_begin);
         int path_reversed       = rand() % 2;    // 0 if same direction, 1 if reversed.
@@ -1433,7 +1446,6 @@ void CentralizedPlanner::shake(std::vector<aerialcore_msgs::FlightPlan>& _flight
                 edge_path_to_end   = edge_path_to_begin + rand() % (planned_inspection_edges[uav_to].size()-edge_path_to_begin);
             }
         }
-        // std::cout << "edges_path_within_same_uav = " << edges_path_within_same_uav << std::endl;
         // std::cout << "uav_from                   = " << uav_from << std::endl;
         // std::cout << "uav_to                     = " << uav_to << std::endl;
         // std::cout << "edge_path_from_begin       = " << edge_path_from_begin << std::endl;
@@ -1472,12 +1484,12 @@ void CentralizedPlanner::shake(std::vector<aerialcore_msgs::FlightPlan>& _flight
 
         // std::cout << "solutionValidOrNot (shake 3): " << solutionValidOrNot(shaked) << std::endl;
         // std::cout << "solutionTimeCostTotal (shake 3): " << solutionTimeCostTotal(shaked) << std::endl;
+        // std::cout << "solutionTimeCostMaximum (shake 3): " << solutionTimeCostMaximum(shaked) << std::endl;
 
         shaked_valid = solutionValidOrNot(shaked);
 
         if (initial_number_of_edges != planned_inspection_edges[uav_to].size() + planned_inspection_edges[uav_from].size()) {
             ROS_ERROR("Centralized Planner: number of edges variation.");
-            std::cout << "edges_path_within_same_uav = " << edges_path_within_same_uav << std::endl;
             std::cout << "uav_from                   = " << uav_from << std::endl;
             std::cout << "uav_to                     = " << uav_to << std::endl;
             std::cout << "edge_path_from_begin       = " << edge_path_from_begin << std::endl;
@@ -1500,86 +1512,89 @@ void CentralizedPlanner::localSearch(std::vector<aerialcore_msgs::FlightPlan>& _
     std::vector<aerialcore_msgs::FlightPlan> local_optimum = _flight_plans;
 
     int maximum_iterations = y_and_f_index_size_ * local_search_iteration_multiplier_;
-    int iteration = 0;
-    for (int i=0; i<_flight_plans.size(); i++) {
-        while (iteration<maximum_iterations) {
-            std::vector< std::vector< std::pair<int,int> > > planned_inspection_edges = buildPlannedInspectionEdgesFromNodes(local_optimum);
-            std::vector< std::vector< std::pair<int,int> > > planned_inspection_edges_original = planned_inspection_edges;
-            // for (int i=0; i<planned_inspection_edges.size(); i++) { std::cout << std::endl << "planned_inspection_edges (localSearch 1, i="<< i << "): "; for (int j=0; j<planned_inspection_edges[i].size(); j++) { std::cout << planned_inspection_edges[i][j].first << " " << planned_inspection_edges[i][j].second << " , "; } } std::cout << std::endl;
-            // std::cout << "solutionValidOrNot (localSearch 1): " << solutionValidOrNot(_flight_plans) << std::endl;
-            // std::cout << "solutionTimeCostTotal (localSearch 1): " << solutionTimeCostTotal(_flight_plans) << std::endl;
+    for (int iteration=0; iteration<maximum_iterations; iteration++) {
+        std::vector< std::vector< std::pair<int,int> > > planned_inspection_edges = buildPlannedInspectionEdgesFromNodes(local_optimum);
+        std::vector< std::vector< std::pair<int,int> > > planned_inspection_edges_original = planned_inspection_edges;
+        // for (int i=0; i<planned_inspection_edges.size(); i++) { std::cout << std::endl << "planned_inspection_edges (localSearch 1, i="<< i << "): "; for (int j=0; j<planned_inspection_edges[i].size(); j++) { std::cout << planned_inspection_edges[i][j].first << " " << planned_inspection_edges[i][j].second << " , "; } } std::cout << std::endl;
+        // std::cout << "solutionValidOrNot (localSearch 1): " << solutionValidOrNot(_flight_plans) << std::endl;
+        // std::cout << "solutionTimeCostTotal (localSearch 1): " << solutionTimeCostTotal(_flight_plans) << std::endl;
+        // std::cout << "solutionTimeCostMaximum (localSearch 1): " << solutionTimeCostMaximum(_flight_plans) << std::endl;
 
-            int neighborhood_operator = rand() % 2; // neighborhood_operator in the range 0 to 1
-            int edge_from = rand() % planned_inspection_edges[i].size();
-            int edge_to   = neighborhood_operator == 0 ? rand() % (planned_inspection_edges[i].size()+1) : rand() % planned_inspection_edges[i].size();
-            int edge_reversed = rand() % 2;         // 0 if same direction, 1 if reversed.
+        int uav_from  = rand() % planned_inspection_edges.size();
+        int uav_to    = rand() % planned_inspection_edges.size();
+        int neighborhood_operator = rand() % 2; // neighborhood_operator in the range 0 to 1
+        int edge_from = rand() % planned_inspection_edges[uav_from].size();
+        int edge_to   = neighborhood_operator == 0 ? rand() % (planned_inspection_edges[uav_to].size()+1) : rand() % planned_inspection_edges[uav_to].size();
+        int edge_reversed = rand() % 2;         // 0 if same direction, 1 if reversed.
 
-            int initial_number_of_edges = planned_inspection_edges[i].size();
+        int initial_number_of_edges = planned_inspection_edges[uav_from].size() + planned_inspection_edges[uav_to].size();
 
-            // std::cout << "edge_from             = " << edge_from << std::endl;
-            // std::cout << "edge_to               = " << edge_to << std::endl;
-            // std::cout << "edge_reversed         = " << edge_reversed << std::endl;
-            // std::cout << "neighborhood_operator = " << neighborhood_operator << std::endl;
+        // std::cout << "uav_from              = " << uav_from << std::endl;
+        // std::cout << "uav_to                = " << uav_to << std::endl;
+        // std::cout << "edge_from             = " << edge_from << std::endl;
+        // std::cout << "edge_to               = " << edge_to << std::endl;
+        // std::cout << "edge_reversed         = " << edge_reversed << std::endl;
+        // std::cout << "neighborhood_operator = " << neighborhood_operator << std::endl;
 
-            if (neighborhood_operator==0) {             // One inspection edge move.
+        if (neighborhood_operator==0) {             // One inspection edge move.
 
-                // Insert the edge in the new position:
-                if (edge_reversed==1) {
-                    std::pair <int,int> reversed_edge (planned_inspection_edges[i][edge_from].second, planned_inspection_edges[i][edge_from].first);
-                    planned_inspection_edges[i].insert(planned_inspection_edges[i].begin() + edge_to, reversed_edge);
-                } else {
-                    planned_inspection_edges[i].insert(planned_inspection_edges[i].begin() + edge_to, planned_inspection_edges[i][edge_from]);
-                }
-
-                // Erase the edge from the previous position:
-                if (edge_from<=edge_to) {
-                    planned_inspection_edges[i].erase(planned_inspection_edges[i].begin()+edge_from);
-                } else {
-                    planned_inspection_edges[i].erase(planned_inspection_edges[i].begin()+edge_from+1);
-                }
-
-            } else if (neighborhood_operator==1) {      // One inspection edge exchange.
-
-                iter_swap(planned_inspection_edges[i].begin() + edge_from, planned_inspection_edges[i].begin() + edge_to);
-
-                if (edge_reversed==1) {
-                    std::pair <int,int> reversed_edge (planned_inspection_edges[i][edge_to].second, planned_inspection_edges[i][edge_to].first);
-                    planned_inspection_edges[i][edge_to] = reversed_edge;
-                }
-
-            }
-
-            local_optimum = buildPlanNodesFromInspectionEdges(planned_inspection_edges, _flight_plans);
-
-            // for (int i=0; i<planned_inspection_edges.size(); i++) { std::cout << std::endl << "planned_inspection_edges (localSearch 2, i="<< i << "): "; for (int j=0; j<planned_inspection_edges[i].size(); j++) { std::cout << planned_inspection_edges[i][j].first << " " << planned_inspection_edges[i][j].second << " , "; } } std::cout << std::endl;
-            // std::cout << "solutionValidOrNot (localSearch 2): " << solutionValidOrNot(local_optimum) << std::endl;
-            // std::cout << "solutionTimeCostTotal (localSearch 2): " << solutionTimeCostTotal(local_optimum) << std::endl;
-
-            if ( solutionValidOrNot(local_optimum) && (regular_or_fast_inspection_&&(solutionTimeCostTotal(local_optimum) < solutionTimeCostTotal(_flight_plans)) || !regular_or_fast_inspection_&&(solutionTimeCostMaximum(local_optimum) < solutionTimeCostMaximum(_flight_plans))) ) {   // _flight_plans stores the best solution up until now, if current solution is better, update it.
-                _flight_plans.clear();
-                _flight_plans = local_optimum;
+            // Insert the edge in the new position:
+            if (edge_reversed==1) {
+                std::pair <int,int> reversed_edge (planned_inspection_edges[uav_from][edge_from].second, planned_inspection_edges[uav_from][edge_from].first);
+                planned_inspection_edges[uav_to].insert(planned_inspection_edges[uav_to].begin() + edge_to, reversed_edge);
             } else {
-                local_optimum.clear();
-                local_optimum = _flight_plans;
+                planned_inspection_edges[uav_to].insert(planned_inspection_edges[uav_to].begin() + edge_to, planned_inspection_edges[uav_from][edge_from]);
             }
 
-            if (initial_number_of_edges != planned_inspection_edges[i].size()) {
-                ROS_ERROR("Centralized Planner: number of edges variation.");
-                std::cout << "i                          = " << i << std::endl;
-                std::cout << "edge_from                  = " << edge_from << std::endl;
-                std::cout << "edge_to                    = " << edge_to << std::endl;
-                std::cout << "edge_reversed              = " << edge_reversed << std::endl;
-                std::cout << "neighborhood_operator      = " << neighborhood_operator << std::endl;
-                std::cout << "planned_inspection_edges_original (localSearch 1): "; for (int i=0; i<planned_inspection_edges_original.size(); i++) { for (int j=0; j<planned_inspection_edges_original[i].size(); j++) { std::cout << planned_inspection_edges_original[i][j].first << " " << planned_inspection_edges_original[i][j].second << " , "; } } std::cout << std::endl;
-                std::cout << "planned_inspection_edges          (localSearch 2): "; for (int i=0; i<planned_inspection_edges.size(); i++) { for (int j=0; j<planned_inspection_edges[i].size(); j++) { std::cout << planned_inspection_edges[i][j].first << " " << planned_inspection_edges[i][j].second << " , "; } } std::cout << std::endl;
+            // Erase the edge from the previous position:
+            if (uav_from!=uav_to || edge_from<=edge_to) {
+                planned_inspection_edges[uav_from].erase(planned_inspection_edges[uav_from].begin()+edge_from);
+            } else {
+                planned_inspection_edges[uav_from].erase(planned_inspection_edges[uav_from].begin()+edge_from+1);
             }
 
-            iteration++;
+        } else if (neighborhood_operator==1) {      // One inspection edge exchange.
+
+            iter_swap(planned_inspection_edges[uav_from].begin() + edge_from, planned_inspection_edges[uav_to].begin() + edge_to);
+
+            if (edge_reversed==1) {
+                std::pair <int,int> reversed_edge (planned_inspection_edges[uav_to][edge_to].second, planned_inspection_edges[uav_to][edge_to].first);
+                planned_inspection_edges[uav_to][edge_to] = reversed_edge;
+            }
+
         }
 
-        // std::cout << "solutionValidOrNot (localSearch 3): " << solutionValidOrNot(local_optimum) << std::endl;
-        // std::cout << "solutionTimeCostTotal (localSearch 3): " << solutionTimeCostTotal(local_optimum) << std::endl;
+        local_optimum = buildPlanNodesFromInspectionEdges(planned_inspection_edges, _flight_plans);
+
+        // for (int i=0; i<planned_inspection_edges.size(); i++) { std::cout << std::endl << "planned_inspection_edges (localSearch 2, i="<< i << "): "; for (int j=0; j<planned_inspection_edges[i].size(); j++) { std::cout << planned_inspection_edges[i][j].first << " " << planned_inspection_edges[i][j].second << " , "; } } std::cout << std::endl;
+        // std::cout << "solutionValidOrNot (localSearch 2): " << solutionValidOrNot(local_optimum) << std::endl;
+        // std::cout << "solutionTimeCostTotal (localSearch 2): " << solutionTimeCostTotal(local_optimum) << std::endl;
+        // std::cout << "solutionTimeCostMaximum (localSearch 2): " << solutionTimeCostMaximum(local_optimum) << std::endl;
+
+        if ( solutionValidOrNot(local_optimum) && (regular_or_fast_inspection_&&(solutionTimeCostTotal(local_optimum) < solutionTimeCostTotal(_flight_plans)) || !regular_or_fast_inspection_&&(solutionTimeCostMaximum(local_optimum) < solutionTimeCostMaximum(_flight_plans))) ) {   // _flight_plans stores the best solution up until now, if current solution is better, update it.
+            _flight_plans.clear();
+            _flight_plans = local_optimum;
+        } else {
+            local_optimum.clear();
+            local_optimum = _flight_plans;
+        }
+
+        if (initial_number_of_edges != planned_inspection_edges[uav_from].size() + planned_inspection_edges[uav_to].size()) {
+            ROS_ERROR("Centralized Planner: number of edges variation.");
+            std::cout << "uav_from                   = " << uav_from << std::endl;
+            std::cout << "uav_to                     = " << uav_to << std::endl;
+            std::cout << "edge_from                  = " << edge_from << std::endl;
+            std::cout << "edge_to                    = " << edge_to << std::endl;
+            std::cout << "edge_reversed              = " << edge_reversed << std::endl;
+            std::cout << "neighborhood_operator      = " << neighborhood_operator << std::endl;
+            std::cout << "planned_inspection_edges_original (localSearch 1): "; for (int i=0; i<planned_inspection_edges_original.size(); i++) { for (int j=0; j<planned_inspection_edges_original[i].size(); j++) { std::cout << planned_inspection_edges_original[i][j].first << " " << planned_inspection_edges_original[i][j].second << " , "; } } std::cout << std::endl;
+            std::cout << "planned_inspection_edges          (localSearch 2): "; for (int i=0; i<planned_inspection_edges.size(); i++) { for (int j=0; j<planned_inspection_edges[i].size(); j++) { std::cout << planned_inspection_edges[i][j].first << " " << planned_inspection_edges[i][j].second << " , "; } } std::cout << std::endl;
+        }
     }
+
+    // std::cout << "solutionValidOrNot (localSearch 3): " << solutionValidOrNot(local_optimum) << std::endl;
+    // std::cout << "solutionTimeCostTotal (localSearch 3): " << solutionTimeCostTotal(local_optimum) << std::endl;
+    // std::cout << "solutionTimeCostMaximum (localSearch 3): " << solutionTimeCostMaximum(local_optimum) << std::endl;
 } // end localSearch
 
 

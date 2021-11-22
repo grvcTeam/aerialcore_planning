@@ -50,7 +50,7 @@ MULTICOPTER:
   K_mu  : 4.65    # P0 numerical constant      [-]
   f     : 0.35    # equivalent flat-plate area [m^2]
   # Battery (DJI Matrice 210):
-  Wh    : 105 # 176.93  # Capacity of the battery    [Wh]
+  Wh    : 176.93  # Capacity of the battery    [Wh]
   nb    : 2       # Number of batteries        [-]
   # mAh   : 7660    # Capacity of the battery    [mAh]
   # cells : 6       # Number of battery cells    [-]

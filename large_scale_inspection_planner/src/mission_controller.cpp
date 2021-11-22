@@ -627,31 +627,34 @@ void MissionController::planThread(void) {
             std::cout << "Computation time of the planning: " << seconds << " seconds." << std::endl << std::endl;
 
 #ifdef DEBUG
-            centralized_planner_.printPlan();
-
-            std::cout << "Planner's results (from MC):" << std::endl;
-            float total_time_cost = 0;
-            float total_battery_cost = 0;
-            std::map<int, std::map<int, std::map<int, float> > > time_cost_matrices = parameter_estimator_.getTimeCostMatrices();
-            std::map<int, std::map<int, std::map<int, float> > > battery_drop_matrices = parameter_estimator_.getBatteryDropMatrices();
-            for (int i=0; i<flight_plans_.size(); i++) {
-                std::cout << "flight_plans[ " << i << " ].uav_id       = " << flight_plans_[i].uav_id << std::endl;
-                float time_cost = 0;
-                float battery_cost = 0;
-                for (int j=0; j<flight_plans_[i].nodes.size()-1; j++) {
-                    if (time_cost_matrices[flight_plans_[i].uav_id][ flight_plans_[i].nodes[j] ][ flight_plans_[i].nodes[j+1] ] != -1) {
-                        time_cost += time_cost_matrices[flight_plans_[i].uav_id][ flight_plans_[i].nodes[j] ][ flight_plans_[i].nodes[j+1] ];
-                        battery_cost += battery_drop_matrices[flight_plans_[i].uav_id][ flight_plans_[i].nodes[j] ][ flight_plans_[i].nodes[j+1] ];
+            if (continuous_or_fast_supervision_ && planner_method_ == "Mstsp") {
+                std::cout << "Planner's results calculated in the MC:" << std::endl;
+                float total_time_cost = 0;
+                float total_battery_cost = 0;
+                std::map<int, std::map<int, std::map<int, float> > > time_cost_matrices = parameter_estimator_.getTimeCostMatrices();
+                std::map<int, std::map<int, std::map<int, float> > > battery_drop_matrices = parameter_estimator_.getBatteryDropMatrices();
+                for (int i=0; i<flight_plans_.size(); i++) {
+                    std::cout << "flight_plans[ " << i << " ].uav_id       = " << flight_plans_[i].uav_id << std::endl;
+                    float time_cost = 0;
+                    float battery_cost = 0;
+                    for (int j=0; j<flight_plans_[i].nodes.size()-1; j++) {
+                        if (time_cost_matrices[flight_plans_[i].uav_id][ flight_plans_[i].nodes[j] ][ flight_plans_[i].nodes[j+1] ] != -1) {
+                            time_cost += time_cost_matrices[flight_plans_[i].uav_id][ flight_plans_[i].nodes[j] ][ flight_plans_[i].nodes[j+1] ];
+                            battery_cost += battery_drop_matrices[flight_plans_[i].uav_id][ flight_plans_[i].nodes[j] ][ flight_plans_[i].nodes[j+1] ];
+                        }
                     }
+                    std::cout << "flight_plans[ " << i << " ].time_cost    = " << time_cost << std::endl;
+                    std::cout << "flight_plans[ " << i << " ].battery_cost = " << battery_cost << std::endl;
+                    total_time_cost += time_cost;
+                    total_battery_cost += battery_cost;
                 }
-                std::cout << "flight_plans[ " << i << " ].time_cost    = " << time_cost << std::endl;
-                std::cout << "flight_plans[ " << i << " ].battery_cost = " << battery_cost << std::endl;
-                total_time_cost += time_cost;
-                total_battery_cost += battery_cost;
+                std::cout << "Total plan time cost:    " << total_time_cost << std::endl;
+                std::cout << "Total plan battery cost: " << total_battery_cost << std::endl;
+                std::cout << "UAVs involved:           " << flight_plans_.size() << std::endl << std::endl;
+            } else {
+                std::cout << "printPlan() called from the MC:" << std::endl;
+                centralized_planner_.printPlan();
             }
-            std::cout << "Total plan time cost:    " << total_time_cost << std::endl;
-            std::cout << "Total plan battery cost: " << total_battery_cost << std::endl;
-            std::cout << "UAVs involved:           " << flight_plans_.size() << std::endl << std::endl;
 
 #ifdef NUMERICAL_EXPERIMENTS
             // % of inspection edges covered:

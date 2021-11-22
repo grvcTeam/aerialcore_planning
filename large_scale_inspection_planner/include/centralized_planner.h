@@ -57,7 +57,8 @@ public:
     std::vector<aerialcore_msgs::FlightPlan> getPlanMinimaxVNS(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices, std::map<int, int> _last_flight_plan_graph_node); // Returns new plan.
 
     // TODO:
-    // 1) Agarwal: Merge-Embed-Merge algorithm. (DONE)
+    // 0) Greedy. (DONE)
+    // 1) MEM: Agarwal's Merge-Embed-Merge algorithm. (DONE)
     // 2) Online replanning. (DONE)
     // 3) Wind affects battery consumption:
     //  3.1) Multicopter. (DONE)
@@ -71,11 +72,12 @@ public:
     //  5.3) Wind from UAVs angles (depends on airframe type).
     // 6) VNS (DONE).
     // 7) Minimax.
-    //  7.1) MEM.
-    //  7.2) VNS (DONE).
-    // 8) Dubins for navigations with VTOL or fixed wing, may be needed navigations between non-parallel inspection edges.
-    // 9) Compare with similar problems (maybe ask for the code or just do it myself).
-    // 10) Problem with paths in the cost matrix (wind doesn't affect the same with paths).
+    //  7.1) Greedy. (DONE)
+    //  7.2) MEM.
+    //  7.3) VNS (DONE).
+    // 8) Dubins for navigations with VTOL or fixed wing (non-holonomic kinematic and dynamic), may be needed navigations between non-parallel inspection edges.
+    // 9) Problem with paths in the cost matrix (wind doesn't affect the same with paths). (DONE)
+    // 10) Compare with similar problems and solvers, like GRASP.
 
     void printPlan();
 
@@ -144,7 +146,7 @@ private:
     bool reset_connection_edges_ = true;
 
     bool regular_or_fast_inspection_ = true;    // True if regular inspection, false if fast inspection searching for electric fault (minimax).
-    float proportional_battery_ = -1;       // If fast inspection minimax (regular_or_fast_inspection_==false), this is the minimum battery that each UAV can have inspecting with the greedy minimax solver.
+    float proportional_battery_ = -1;           // If fast inspection minimax (regular_or_fast_inspection_==false), this is the minimum battery that each UAV can have inspecting with the greedy minimax solver (the last UAV can be assigned more until graph completely inspected).
 
     std::vector<aerialcore_msgs::FlightPlan> flight_plans_;  // Output.
 
