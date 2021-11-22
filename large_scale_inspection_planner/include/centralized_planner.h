@@ -146,6 +146,7 @@ private:
     bool reset_connection_edges_ = true;
 
     bool regular_or_fast_inspection_ = true;    // True if regular inspection, false if fast inspection searching for electric fault (minimax).
+    bool keep_minimax_after_first_solution_ = false;
     float proportional_battery_ = -1;           // If fast inspection minimax (regular_or_fast_inspection_==false), this is the minimum battery that each UAV can have inspecting with the greedy minimax solver (the last UAV can be assigned more until graph completely inspected).
 
     std::vector<aerialcore_msgs::FlightPlan> flight_plans_;  // Output.
