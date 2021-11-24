@@ -137,9 +137,13 @@ private:
 
     std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > > time_cost_matrices_;
     std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, float> > > battery_drop_matrices_;
+    std::unordered_map<int, std::vector< std::vector<float> > > time_cost_matrices_v_;
+    std::unordered_map<int, std::vector< std::vector<float> > > battery_drop_matrices_v_;
+    // Speed (performance, critical for the VNS):
+    // map < unordered_map < vector
 
-    std::map<int, std::map<int, std::map<int, int>>> from_k_i_j_to_x_index_;
-    std::map<int, std::map<int, std::map<int, int>>> from_k_i_j_to_y_and_f_index_;
+    std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, int>>> from_k_i_j_to_x_index_;
+    std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, int>>> from_k_i_j_to_y_and_f_index_;
     int x_index_size_ = 0;
     int y_and_f_index_size_ = 0;
 
@@ -156,7 +160,7 @@ private:
     void constructUAVs(const std::vector< std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> >& _drone_info);
     void constructConnectionEdges(const std::vector<aerialcore_msgs::GraphNode>& _graph, std::map<int, int> _last_flight_plan_graph_node);
     void constructEdges(std::vector<aerialcore_msgs::GraphNode>& _graph);
-    void constructUnordenedMaps(const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices);
+    void constructUnordenedMapsAndVectors(const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices);
 
     // Greedy:
     float nearestGraphNodeLandStation(int _from_this_index_graph, int& _index_graph_node_to_return, int _uav_id);
@@ -167,13 +171,18 @@ private:
     float batteryDrop(int _flying_time, int _time_max_flying) const { return (float)_flying_time/(float)_time_max_flying; }
 
     // VNS heuristic:
-    float solutionTimeCostTotal(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
-    float solutionTimeCostMaximum(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
-    bool solutionValidOrNot(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
-    void shake(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
-    void localSearch(std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
-    std::vector< std::vector< std::pair<int,int> > > buildPlannedInspectionEdgesFromNodes(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);   // Edges output same size as _flight_plans.
-    std::vector<aerialcore_msgs::FlightPlan> buildPlanNodesFromInspectionEdges(const std::vector< std::vector< std::pair<int,int> > >& _planned_inspection_edges, const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);
+    float solutionTimeCostTotal(const std::unordered_map<int, std::vector< std::pair<int,int> > >& _solution_edges);
+    float solutionTimeCostMaximum(const std::unordered_map<int, std::vector< std::pair<int,int> > >& _solution_edges);
+    bool solutionValidOrNot(const std::unordered_map<int, std::vector< std::pair<int,int> > >& _solution_edges);
+    void shake(std::unordered_map<int, std::vector< std::pair<int,int> > >& _inspection_edges, std::unordered_map<int, std::vector< std::pair<int,int> > >& _solution_edges);
+    void localSearch(std::unordered_map<int, std::vector< std::pair<int,int> > >& _inspection_edges, std::unordered_map<int, std::vector< std::pair<int,int> > >& _solution_edges);
+    std::unordered_map<int, std::vector< std::pair<int,int> > > buildPlannedInspectionEdgesFromNodes(const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans);   // Edges output same size as _flight_plans.
+    std::unordered_map<int, std::vector< std::pair<int,int> > > addNavigationsToInspectionEdges(const std::unordered_map<int, std::vector< std::pair<int,int> > >& _inspection_edges);
+    void buildPlanNodesFromInspectionEdges(const std::unordered_map<int, std::vector< std::pair<int,int> > >& _solution_edges);
+
+    void precomputeClosestLandStations();
+    std::vector<int> closest_land_station_v_;
+    std::unordered_map<int, int> id_to_initial_uav_node_;
 
     struct Tour {
         std::vector<int> nodes;
@@ -208,6 +217,10 @@ private:
     // Numerical experiments:
     double time_computing_plan_ = 0;                    // seconds
     double accumulated_time_checking_solutions_ = 0;    // seconds
+    double aux_accumulated_1_ = 0;    // seconds
+    double aux_accumulated_2_ = 0;    // seconds
+    double aux_accumulated_3_ = 0;    // seconds
+    double aux_accumulated_4_ = 0;    // seconds
 
 };  // end CentralizedPlanner class
 
