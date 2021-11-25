@@ -97,8 +97,8 @@ deviation_limit: 0.2
 
 
 # VNS parameters:
-maximum_time_without_improvement:  0.40  # Stop condition for the VNS algorithm. Seconds that the VNS will keep trying to improve a solution before giving up.
-local_search_iteration_multiplier: 0.40  # This number multiplied for the graph nodes matrix size will be the number of times that the local search of the VNS will be repeated in order to achieve the local minuma.
+maximum_time_without_improvement:  1.00  # Stop condition for the VNS algorithm. Seconds that the VNS will keep trying to improve a solution before giving up.
+local_search_iteration_multiplier: 0.02  # This number multiplied for the graph nodes matrix size will be the number of times that the local search of the VNS will be repeated in order to achieve the local minuma.
 
 
 # Geographic coordinate (latitude, longitude, altitude) that makes (x,y,z) = (0,0,0) meters in cartesian coordinates:
