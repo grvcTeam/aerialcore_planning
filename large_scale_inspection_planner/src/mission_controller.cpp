@@ -550,7 +550,11 @@ void MissionController::planThread(void) {
                 if (planner_method_ == "Greedy") {
                     flight_plans_new = centralized_planner_.getPlanGreedy(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
                 } else if (planner_method_ == "MILP") {
+#ifdef USING_ORTOOLS
                     flight_plans_new =  centralized_planner_.getPlanMILP(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
+#else
+                    ROS_ERROR("Mission Controller: MILP selected but OR-Tools not installed or configured in the cmakelist.");
+#endif
                 } else if (planner_method_ == "VNS") {
                     flight_plans_new =  centralized_planner_.getPlanVNS(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
                 } else if (planner_method_ == "MEM") {

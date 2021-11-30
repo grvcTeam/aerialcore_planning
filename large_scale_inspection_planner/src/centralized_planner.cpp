@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <algorithm>
 
+#ifdef USING_ORTOOLS
 #include "ortools/linear_solver/linear_solver.h"
 #include "ortools/base/logging.h"
 
@@ -19,6 +20,7 @@
 #include "ortools/constraint_solver/routing_enums.pb.h"
 #include "ortools/constraint_solver/routing_index_manager.h"
 #include "ortools/constraint_solver/routing_parameters.h"
+#endif
 
 #define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
 #define NUMERICAL_EXPERIMENTS
@@ -415,6 +417,7 @@ void CentralizedPlanner::printPlan() {
 
 std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector< std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::vector< geometry_msgs::Polygon >& _no_fly_zones, const geometry_msgs::Polygon& _geofence, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices, std::map<int, int> _last_flight_plan_graph_node) {
 
+#ifdef USING_ORTOOLS
 //     graph_ = _graph;
 
 //     constructUnorderedMaps(_time_cost_matrices, _battery_drop_matrices);
@@ -1028,6 +1031,10 @@ std::vector<aerialcore_msgs::FlightPlan> CentralizedPlanner::getPlanMILP(std::ve
 //     // Calculate the path free of obstacles between nodes outside in the Mission Controller. There is a path warantied between the nodes.
 
 //     fillFlightPlansFields(flight_plans_);
+
+#else
+    ROS_ERROR("Centralized Planner: MILP selected but OR-Tools not installed or configured in the cmakelist.");
+#endif
 
     return flight_plans_;
 
