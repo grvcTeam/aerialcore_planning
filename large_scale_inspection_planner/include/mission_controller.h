@@ -130,6 +130,7 @@ private:
   geometry_msgs::Polygon geofence_;
 
   bool simulation_ = true;
+  bool replanning_enabled_ = true;
 
   // UAVs:
   struct UAV {

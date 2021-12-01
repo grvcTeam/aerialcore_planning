@@ -34,6 +34,7 @@ MissionController::MissionController() {
     }
 
     pnh_.param<bool>("simulation", simulation_, true);
+    pnh_.param<bool>("replanning_enabled", replanning_enabled_, true);
 
     n_.getParam("planner_method", planner_method_);
     if (planner_method_!="Greedy" && planner_method_!="MILP" && planner_method_!="VNS" && planner_method_!="MEM" && planner_method_!="Mstsp") {
@@ -507,7 +508,7 @@ void MissionController::planThread(void) {
             parameter_estimator_.updateMatrices(planner_current_graph, no_fly_zones_, geofence_, true, false);
             update_matrices_mutex_.unlock();
         } else {
-            replan = plan_monitor_.enoughDeviationToReplan(planner_current_graph, flight_plans_, drone_info, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
+            replan = replanning_enabled_ ? plan_monitor_.enoughDeviationToReplan(planner_current_graph, flight_plans_, drone_info, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices()) : false;
         }
 
         if (replan || plan_from_scratch) {

@@ -1,7 +1,11 @@
 # This file describes the settings for the planning problem for the ATLAS_power_lines.world
 
 
-# The following argument defines which method or algorithm computes the plan for the regular inspection problem (vector of FlightPlan, one per UAV), and it can be:
+# Argument to activate or deactivate the replanning functionality:
+replanning_enabled: true
+
+
+# The following argument defines which solver method or algorithm computes the plan for the regular inspection problem (vector of FlightPlan, one per UAV), and it can be:
 # - Greedy: plan calculated with a Greedy algorithm.
 # - MILP:   plan calculated with the MILP formulation and OR-Tools.
 # - VNS:    plan calculated with a VNS algorithm.
@@ -10,7 +14,7 @@
 planner_method: "VNS"
 
 
-# The following argument defines which method or algorithm computes the plan for the electric fault inspection problem (vector of FlightPlan, one per UAV), and it can be:
+# The following argument defines which solver method or algorithm computes the plan for the electric fault inspection problem (vector of FlightPlan, one per UAV), and it can be:
 # - Minimax-MEM: plan calculated with the MEM algorithm (default if not specified).
 # - Minimax-VNS: plan calculated with a VNS algorithm.
 planner_method_electric_fault: "Minimax-VNS"
@@ -88,7 +92,7 @@ air_density : 1.225 # default value of the air density [kg/m^3]. It will be esti
 
 
 # Time (in seconds) between iterations for the Parameter Estimator thread and Plan Monitor thread in the Mission Controller:
-parameter_estimator_time: 10.0 # 20.0
+parameter_estimator_time: 20.0
 plan_monitor_time: 30.0         # Just after replanning it will be waited this amount of time x4 for the time estimation to settle.
 
 
