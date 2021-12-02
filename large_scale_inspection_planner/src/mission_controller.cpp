@@ -28,24 +28,24 @@ MissionController::MissionController() {
     pnh_ = ros::NodeHandle("~");
 
     pnh_.getParam("UAV_command_mode", UAV_command_mode_);
-    if (UAV_command_mode_!="mission_lib" && UAV_command_mode_!="DJI_SDK" && UAV_command_mode_!="std_yaml") {
+    if (UAV_command_mode_!="mission_lib" && UAV_command_mode_!="DJI_SDK_yaml" && UAV_command_mode_!="USE_CTU_yaml") {
         ROS_ERROR("Mission Controller: error, UAV_command_mode not valid. Using mission_lib mode as default.");
         std::string UAV_command_mode_ = "mission_lib";
     }
 
     pnh_.param<bool>("simulation", simulation_, true);
-    pnh_.param<bool>("replanning_enabled", replanning_enabled_, true);
+    n_.param<bool>("replanning_enabled", replanning_enabled_, true);
 
     n_.getParam("planner_method", planner_method_);
     if (planner_method_!="Greedy" && planner_method_!="MILP" && planner_method_!="VNS" && planner_method_!="MEM" && planner_method_!="Mstsp") {
-        ROS_ERROR("Mission Controller: error, planner_method not valid. Using MEM algorithm as default.");
-        std::string planner_method_ = "MEM";
+        ROS_ERROR("Mission Controller: error, planner_method not valid. Using VNS algorithm as default.");
+        std::string planner_method_ = "VNS";
     }
 
     n_.getParam("planner_method_electric_fault", planner_method_electric_fault_);
-    if (planner_method_electric_fault_!="Minimax-VNS" && planner_method_electric_fault_!="Minimax-MEM") {
-        ROS_ERROR("Mission Controller: error, planner_method_electric_fault not valid. Using Minimax-MEM algorithm as default.");
-        std::string planner_method_electric_fault_ = "Minimax-MEM";
+    if (planner_method_electric_fault_!="Minimax-VNS" && planner_method_electric_fault_!="Minimax-MEM" && planner_method_electric_fault_!="Minimax-Greedy") {
+        ROS_ERROR("Mission Controller: error, planner_method_electric_fault not valid. Using Minimax-VNS algorithm as default.");
+        std::string planner_method_electric_fault_ = "Minimax-VNS";
     }
 
     // Charge from the YAML file the time between iterations for the loops in the Parameter Estimator and Plan (Monitor and Planner) threads:
@@ -59,13 +59,13 @@ MissionController::MissionController() {
     map_origin_geo_.longitude = map_origin_geo_vector[1];
     map_origin_geo_.altitude  = map_origin_geo_vector[2];
 
-    std::string ns_uav_prefix = "";
-    ros::param::param<std::string>("~ns_uav_prefix",ns_uav_prefix,"uav_");
+    ns_uav_prefix_ = "";
+    ros::param::param<std::string>("~ns_uav_prefix",ns_uav_prefix_,"uav_");
     std::string node_name_space_prefix = "";
     if (ros::this_node::getNamespace() == "/") {
-        node_name_space_prefix = "/" + ns_uav_prefix;
+        node_name_space_prefix = "/" + ns_uav_prefix_;
     } else {
-        node_name_space_prefix = ns_uav_prefix;
+        node_name_space_prefix = ns_uav_prefix_;
     }
 
     // Read and construct parameters of the UAVs (from the yaml):
@@ -79,8 +79,12 @@ MissionController::MissionController() {
         UAV new_uav;
         new_uav.id = stoi(it->first);
         new_uav.airframe_type = it->second;
-        std::string UAV_node_name_space = ns_uav_prefix + std::to_string(new_uav.id)+"/";
-        new_uav.mission = new grvc::Mission(new_uav.id, UAV_node_name_space);
+        std::string UAV_node_name_space = ns_uav_prefix_ + std::to_string(new_uav.id)+"/";
+        if (UAV_command_mode_=="mission_lib") {
+            new_uav.mission = new grvc::Mission(new_uav.id, UAV_node_name_space);
+        } else {
+            new_uav.mission = nullptr;
+        }
         n_.getParam(it->second+"/time_max_flying", new_uav.time_max_flying);
         n_.getParam(it->second+"/speed_xy", new_uav.speed_xy);
         n_.getParam(it->second+"/speed_z_down", new_uav.speed_z_down);
@@ -323,8 +327,8 @@ MissionController::MissionController() {
         spinner.spin();
     });
 
-    // Start the battery faker thread if simulation_==true:
-    if (simulation_) {
+    // Start the battery faker thread if simulation_==true and we have continuous battery information with mission_lib (TODO: can DJI SDK also provide it?):
+    if (simulation_ && UAV_command_mode_=="mission_lib") {
         battery_faker_thread_ = std::thread(&MissionController::batteryFakerThread, this);
     }
 
@@ -436,20 +440,12 @@ void MissionController::planThread(void) {
                     } else {
                         std::get<0>(new_tuple) = current_uav.mission->battery();
                     }
-                } else {
-                    std::get<0>(new_tuple) = 1;
+                } else if (UAV_command_mode_=="DJI_SDK_yaml" || UAV_command_mode_=="USE_CTU_yaml") {
+                    n_.getParam(ns_uav_prefix_+std::to_string( current_uav.id )+"/battery", std::get<0>(new_tuple));    // TODO: should read this from the SDK or other place.
                 }
 
                 if (plan_from_scratch) {
-                    if (UAV_command_mode_=="mission_lib") {
-                        if (simulation_) {
-                            battery_level_when_planned[current_uav.id] = current_uav.battery_faked;
-                        } else {
-                            battery_level_when_planned[current_uav.id] = current_uav.mission->battery();
-                        }
-                    } else {
-                        battery_level_when_planned[current_uav.id] = 1;
-                    }
+                    battery_level_when_planned[current_uav.id] = std::get<0>(new_tuple);
                 }
                 std::get<1>(new_tuple) = battery_level_when_planned[current_uav.id];
 
@@ -467,7 +463,7 @@ void MissionController::planThread(void) {
                 aerialcore_msgs::GraphNode initial_position_graph_node;
                 initial_position_graph_node.type = aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION;
                 initial_position_graph_node.id = current_uav.id;
-                if (UAV_command_mode_=="mission_lib" || UAV_command_mode_=="std_yaml") {
+                if (UAV_command_mode_=="mission_lib") {
 
                     geometry_msgs::PoseStamped uav_pose = current_uav.mission->pose();
 
@@ -484,11 +480,14 @@ void MissionController::planThread(void) {
                     initial_position_graph_node.latitude  = current_geopoint.latitude;
                     initial_position_graph_node.longitude = current_geopoint.longitude;
                     initial_position_graph_node.altitude  = current_geopoint.altitude;
-                } else if (UAV_command_mode_=="DJI_SDK") {
-                    // // HARDCODED INITIAL POSES FOR NOVEMBER EXPERIMENTS?
-                    // initial_position_graph_node.x = current_uav.id==1 ? 28 : 36.119532;
-                    // initial_position_graph_node.y = current_uav.id==1 ? 61 : 63.737163;
-                    // initial_position_graph_node.z = current_uav.id==1 ? 0.32 : 0;
+                } else if (UAV_command_mode_=="DJI_SDK_yaml" || UAV_command_mode_=="USE_CTU_yaml") {
+                    // TODO: should read these from the SDK or other place.
+                    n_.getParam(ns_uav_prefix_+std::to_string( current_uav.id )+"/x", initial_position_graph_node.x);
+                    n_.getParam(ns_uav_prefix_+std::to_string( current_uav.id )+"/y", initial_position_graph_node.y);
+                    n_.getParam(ns_uav_prefix_+std::to_string( current_uav.id )+"/z", initial_position_graph_node.z);
+                    n_.getParam(ns_uav_prefix_+std::to_string( current_uav.id )+"/latitude", initial_position_graph_node.latitude);
+                    n_.getParam(ns_uav_prefix_+std::to_string( current_uav.id )+"/longitude", initial_position_graph_node.longitude);
+                    n_.getParam(ns_uav_prefix_+std::to_string( current_uav.id )+"/altitude", initial_position_graph_node.altitude);
                 }
 
                 planner_current_graph.push_back(initial_position_graph_node);
@@ -518,7 +517,7 @@ void MissionController::planThread(void) {
 #endif
 
 #ifdef NUMERICAL_EXPERIMENTS
-            std::vector<std::string> methods{"Greedy"/*, "MILP"*/, "MEM", "VNS"/*, "Mstsp"*/, "Minimax-MEM", "Minimax-VNS"};
+            std::vector<std::string> methods{"Greedy"/*, "MILP"*/, "MEM", "VNS"/*, "Mstsp"*/, "Minimax-MEM", "Minimax-VNS", "Minimax-Greedy"};
             for (int method=0; method<methods.size(); method++) {
 
             planner_method_ = methods[method];
@@ -601,7 +600,9 @@ void MissionController::planThread(void) {
 #endif
                 }
             } else {
-                if (planner_method_electric_fault_ == "Minimax-MEM") {
+                if (planner_method_electric_fault_ == "Minimax-Greedy") {
+                    flight_plans_new = centralized_planner_.getPlanMinimaxGreedy(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
+                } else if (planner_method_electric_fault_ == "Minimax-MEM") {
                     flight_plans_new = centralized_planner_.getPlanMinimaxMEM(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
                 } else if (planner_method_electric_fault_ == "Minimax-VNS") {
                     flight_plans_new =  centralized_planner_.getPlanMinimaxVNS(planner_current_graph, drone_info, no_fly_zones_, geofence_, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices(), plan_monitor_.getLastGraphNodes());
@@ -618,6 +619,7 @@ void MissionController::planThread(void) {
                     }
                 }
                 if (!uav_match_found) {
+                    UAVs_[ findUavIndexById(flight_plan_original.uav_id) ].mission->stop();
                     UAVs_[ findUavIndexById(flight_plan_original.uav_id) ].mission->clear();
                     UAVs_[ findUavIndexById(flight_plan_original.uav_id) ].mission->pushClear();
                 }
@@ -729,17 +731,27 @@ void MissionController::planThread(void) {
                     UAVs_[current_uav_index].mission->push();
                     UAVs_[current_uav_index].mission->start();
                 }
-            } else if (UAV_command_mode_=="DJI_SDK") {
+            } else if (UAV_command_mode_=="DJI_SDK_yaml") {
                 aerialcore_msgs::PostString post_yaml_string;
                 post_yaml_string.request.data = translateFlightPlanIntoDJIyaml(flight_plans_);
+
+                std::ofstream file_out("plan.yaml");
+                file_out << post_yaml_string.request.data << std::endl;
+                file_out.close();
+
                 if (post_yaml_client_.call(post_yaml_string)) {
                     ROS_INFO("Mission Controller: yaml sent to DJI SDK.");
                 } else {
                     ROS_WARN("Mission Controller: yaml not sent to DJI SDK, service didn't answer.");
                 }
-            } else if (UAV_command_mode_=="std_yaml") {
+            } else if (UAV_command_mode_=="USE_CTU_yaml") {
                 aerialcore_msgs::PostString post_yaml_string;
                 post_yaml_string.request.data = translateFlightPlanIntoStdYaml(flight_plans_);
+
+                std::ofstream file_out("plan.yaml");
+                file_out << post_yaml_string.request.data << std::endl;
+                file_out.close();
+
                 if (post_yaml_client_.call(post_yaml_string)) {
                     ROS_INFO("Mission Controller: standard yaml sent.");
                 } else {
@@ -1042,10 +1054,10 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
             // Build the initial UAV positions and regular land stations (same spot where the UAV is when yaml string received) graph nodes for the current graph:
             aerialcore_msgs::GraphNode initial_graph_node;
             initial_graph_node.type = aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION;
-            if (UAV_command_mode_=="mission_lib" || UAV_command_mode_=="std_yaml") {
-                int current_uav_index = findUavIndexById(id);
-                if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
+            int current_uav_index = findUavIndexById(id);
+            if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
 
+            if (UAV_command_mode_=="mission_lib") {
                 geometry_msgs::PoseStamped uav_pose = UAVs_[current_uav_index].mission->pose();
                 initial_graph_node.x = uav_pose.pose.position.x;
                 initial_graph_node.y = uav_pose.pose.position.y;
@@ -1059,18 +1071,28 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
                 initial_graph_node.latitude  = uav_geopoint.latitude;
                 initial_graph_node.longitude = uav_geopoint.longitude;
                 initial_graph_node.altitude  = uav_geopoint.altitude;
-
-                if (uav_pose.pose.position.z <= FLYING_THRESHOLD) {
-                    uav_pose.pose.position.z += 30;
-                    current_flight_plan.type.push_back(aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP);
-                } else {
-                    current_flight_plan.type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_PYLON_WP);
-                }
-                current_flight_plan.poses.push_back(uav_pose);
-                current_flight_plan.nodes.push_back(current_graph_.size());
-            } else if (UAV_command_mode_=="DJI_SDK") {
-                // // HARDCODED INITIAL POSES ?
+            } else if (UAV_command_mode_=="DJI_SDK_yaml" || UAV_command_mode_=="USE_CTU_yaml") {
+                // TODO: should read these from the SDK or other place.
+                n_.getParam(ns_uav_prefix_+std::to_string(id)+"/x", initial_graph_node.x);
+                n_.getParam(ns_uav_prefix_+std::to_string(id)+"/y", initial_graph_node.y);
+                n_.getParam(ns_uav_prefix_+std::to_string(id)+"/z", initial_graph_node.z);
+                n_.getParam(ns_uav_prefix_+std::to_string(id)+"/latitude", initial_graph_node.latitude);
+                n_.getParam(ns_uav_prefix_+std::to_string(id)+"/longitude", initial_graph_node.longitude);
+                n_.getParam(ns_uav_prefix_+std::to_string(id)+"/altitude", initial_graph_node.altitude);
             }
+
+            geometry_msgs::PoseStamped uav_pose;
+            uav_pose.pose.position.x = initial_graph_node.x;
+            uav_pose.pose.position.y = initial_graph_node.y;
+            uav_pose.pose.position.z = initial_graph_node.z;
+            if (uav_pose.pose.position.z <= FLYING_THRESHOLD) {
+                uav_pose.pose.position.z += 30;
+                current_flight_plan.type.push_back(aerialcore_msgs::FlightPlan::TYPE_TAKEOFF_WP);
+            } else {
+                current_flight_plan.type.push_back(aerialcore_msgs::FlightPlan::TYPE_PASS_PYLON_WP);
+            }
+            current_flight_plan.poses.push_back(uav_pose);
+            current_flight_plan.nodes.push_back(current_graph_.size());
 
             current_graph_mutex_.lock();
             current_graph_.push_back(initial_graph_node);
@@ -1162,9 +1184,14 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
             UAVs_[current_uav_index].mission->start();
         }
         _res.success=true;
-    } else if (UAV_command_mode_=="DJI_SDK") {
+    } else if (UAV_command_mode_=="DJI_SDK_yaml") {
         aerialcore_msgs::PostString post_yaml_string;
         post_yaml_string.request.data = translateFlightPlanIntoDJIyaml(flight_plans_);
+
+        std::ofstream file_out("plan.yaml");
+        file_out << post_yaml_string.request.data << std::endl;
+        file_out.close();
+
         if (post_yaml_client_.call(post_yaml_string)) {
             ROS_INFO("Mission Controller: yaml sent to DJI SDK.");
             _res.success=true;
@@ -1172,9 +1199,14 @@ bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_m
             ROS_WARN("Mission Controller: yaml not sent to DJI SDK, service didn't answer.");
             _res.success=false;
         }
-    } else if (UAV_command_mode_=="std_yaml") {
+    } else if (UAV_command_mode_=="USE_CTU_yaml") {
         aerialcore_msgs::PostString post_yaml_string;
         post_yaml_string.request.data = translateFlightPlanIntoStdYaml(flight_plans_);
+
+        std::ofstream file_out("plan.yaml");
+        file_out << post_yaml_string.request.data << std::endl;
+        file_out.close();
+
         if (post_yaml_client_.call(post_yaml_string)) {
             ROS_INFO("Mission Controller: standard yaml sent.");
         } else {

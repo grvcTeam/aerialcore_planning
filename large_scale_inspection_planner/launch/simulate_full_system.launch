@@ -85,8 +85,8 @@
 
     <!-- Argument UAV_command_mode can be:
         - mission_lib: the plan from the planner will be translated to a plan with mission_lib.
-        - DJI_SDK: the plan from the planner will be translated to a yaml plan and sent to the DJI SDK.
-        - std_yaml: the plan from the planner will be translated to a standard yaml plan and sent to a given ros service (CTU integration).
+        - DJI_SDK_yaml: the plan from the planner will be translated to a yaml plan and sent to the DJI SDK.
+        - USE_CTU_yaml: the plan from the planner will be translated to a standard yaml plan and sent to a given ros service (USE-CTU integration).
     -->
     <arg name="UAV_command_mode" default="mission_lib"/>
 

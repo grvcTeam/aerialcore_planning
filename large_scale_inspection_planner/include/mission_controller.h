@@ -106,22 +106,23 @@ private:
 
   // Argument UAV_command_mode can be:
   //  - mission_lib: the plan from the planner will be translated to a plan with mission_lib.
-  //  - DJI_SDK: the plan from the planner will be translated to a yaml plan and sent to the DJI SDK.
-  //  - std_yaml: the plan from the planner will be translated to a standard yaml plan and sent to a given ros service (CTU integration).
+  //  - DJI_SDK_yaml: the plan from the planner will be translated to a yaml plan and sent to the DJI SDK.
+  //  - USE_CTU_yaml: the plan from the planner will be translated to a standard yaml plan and sent to a given ros service (USE-CTU integration).
   std::string UAV_command_mode_ = "mission_lib";
 
-  // The following argument defines which method or algorithm computes the plan (vector of FlightPlan, one per UAV), and it can be:
+  // The following argument defines which solver method or algorithm computes the plan for the regular inspection problem (not urgent, for maintenance, minimize the total flight time), and it can be:
   // - Greedy: plan calculated with a Greedy algorithm.
-  // - MILP:   plan calculated with the MILP formulation and OR-Tools.
-  // - VNS:    plan calculated with a VNS algorithm.
-  // - MEM:    plan calculated with the MEM algorithm (default if not specified).
+  // - MILP:   plan calculated with the MILP formulation and OR-Tools (NOT WORKING, not sure if problem in the formulation, if no valid solution or problem with OR-Tools in the C++ version).
   // - Mstsp:  plan calculated with the Mstsp algorithm.
-  std::string planner_method_ = "MEM";
+  // - MEM:    plan calculated with the MEM algorithm.
+  // - VNS:    plan calculated with a VNS algorithm (default if not specified).
+  std::string planner_method_ = "VNS";
 
-  // The following argument defines which method or algorithm computes the plan for the electric fault inspection problem (vector of FlightPlan, one per UAV), and it can be:
-  // - Minimax-MEM: plan calculated with the MEM algorithm (default if not specified).
-  // - Minimax-VNS: plan calculated with a VNS algorithm.
-  std::string planner_method_electric_fault_ = "Minimax-MEM";
+  // The following argument defines which solver method or algorithm computes the plan for the electric fault inspection problem (urgent, using all UAVs minimize the inspection time of the UAV that lasts inspecting the most), and it can be:
+  // - Minimax-Greedy: plan calculated with the Greedy algorithm adapted to the minimax problem.
+  // - Minimax-MEM: plan calculated with the MEM algorithm adapted to the minimax problem (NOT IMPLEMENTED YET).
+  // - Minimax-VNS: plan calculated with a VNS algorithm (default if not specified).
+  std::string planner_method_electric_fault_ = "Minimax-VNS";
 
   std::atomic<bool> stop_current_supervising_ = {false};
 
@@ -131,6 +132,8 @@ private:
 
   bool simulation_ = true;
   bool replanning_enabled_ = true;
+
+  std::string ns_uav_prefix_ = "";
 
   // UAVs:
   struct UAV {

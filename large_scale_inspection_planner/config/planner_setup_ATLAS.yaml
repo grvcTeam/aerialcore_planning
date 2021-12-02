@@ -2,21 +2,22 @@
 
 
 # Argument to activate or deactivate the replanning functionality:
-replanning_enabled: true
+replanning_enabled: false
 
 
-# The following argument defines which solver method or algorithm computes the plan for the regular inspection problem (vector of FlightPlan, one per UAV), and it can be:
+# The following argument defines which solver method or algorithm computes the plan for the regular inspection problem (not urgent, for maintenance, minimize the total flight time), and it can be:
 # - Greedy: plan calculated with a Greedy algorithm.
-# - MILP:   plan calculated with the MILP formulation and OR-Tools.
-# - VNS:    plan calculated with a VNS algorithm.
-# - MEM:    plan calculated with the MEM algorithm (default if not specified).
+# - MILP:   plan calculated with the MILP formulation and OR-Tools (NOT WORKING, not sure if problem in the formulation, if no valid solution or problem with OR-Tools in the C++ version).
 # - Mstsp:  plan calculated with the Mstsp algorithm.
+# - MEM:    plan calculated with the MEM algorithm.
+# - VNS:    plan calculated with a VNS algorithm (default if not specified).
 planner_method: "VNS"
 
 
-# The following argument defines which solver method or algorithm computes the plan for the electric fault inspection problem (vector of FlightPlan, one per UAV), and it can be:
-# - Minimax-MEM: plan calculated with the MEM algorithm (default if not specified).
-# - Minimax-VNS: plan calculated with a VNS algorithm.
+# The following argument defines which solver method or algorithm computes the plan for the electric fault inspection problem (urgent, flying all the UAVs, minimize the inspection time of the UAV that lasts inspecting the most), and it can be:
+# - Minimax-Greedy: plan calculated with the Greedy algorithm adapted to the minimax problem.
+# - Minimax-MEM: plan calculated with the MEM algorithm adapted to the minimax problem (NOT IMPLEMENTED YET).
+# - Minimax-VNS: plan calculated with a VNS algorithm (default if not specified).
 planner_method_electric_fault: "Minimax-VNS"
 
 
@@ -323,3 +324,26 @@ pylons_connections_indexes: [
   [30],
   [30],
 ]
+
+
+# ONLY NEEDED IF NOT COMMANDING WITH MISSION_LIB.
+# The planner needs the initial position and battery of the UAVs. These are extracted from mission_lib, but if you don't use it (e.g.,
+# you use DJI_SDK, which by the moment doesn't provide this information), you can enter it here. The problem is that the initial position
+# will always be the same, this is troublesome for the replanning. The best solution is to provide the real pose and battery of the UAVs
+# in the mission_controller.
+uav_1:
+  x: 38.8
+  y: 65
+  z: 0
+  latitude: 38.139309
+  longitude: -3.173386
+  altitude: 444
+  battery: 1.0
+uav_2:
+  x: 28
+  y: 61
+  z: 0.32
+  latitude: 38.139275
+  longitude: -3.173516
+  altitude: 444
+  battery: 1.0
