@@ -93,8 +93,8 @@ air_density : 1.225 # default value of the air density [kg/m^3]. It will be esti
 
 
 # Time (in seconds) between iterations for the Parameter Estimator thread and Plan Monitor thread in the Mission Controller:
-parameter_estimator_time: 20.0
-plan_monitor_time: 30.0         # Just after replanning it will be waited this amount of time x4 for the time estimation to settle.
+parameter_estimator_time: 10.0
+plan_monitor_time: 10.0         # Just after replanning it will be waited this amount of time x6 for the time estimation to settle.
 
 
 # Deviation limit (in parts per unit of the duration of the plans), if this is surpassed (greater or lower) the Plan Monitor will tell the planner to trigger the replanning:

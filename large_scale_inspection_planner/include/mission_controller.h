@@ -58,6 +58,7 @@ private:
   bool doSpecificSupervisionServiceCallback(aerialcore_msgs::DoSpecificSupervision::Request& _req, aerialcore_msgs::DoSpecificSupervision::Response& _res);
   bool doContinuousSupervisionServiceCallback(std_srvs::Trigger::Request& _req, std_srvs::Trigger::Response& _res);
   bool doFastSupervisionServiceCallback(std_srvs::Trigger::Request& _req, std_srvs::Trigger::Response& _res);
+  bool triggerReplanningManuallyServiceCallback(std_srvs::Trigger::Request& _req, std_srvs::Trigger::Response& _res);
   bool startSpecificSupervisionPlanServiceCallback(aerialcore_msgs::PostString::Request& _req, aerialcore_msgs::PostString::Response& _res);
 
   void parameterEstimatorThread(void);
@@ -81,6 +82,7 @@ private:
   ros::ServiceServer do_specific_supervision_srv_;
   ros::ServiceServer do_continuous_supervision_srv_;
   ros::ServiceServer do_fast_supervision_srv_;
+  ros::ServiceServer trigger_replanning_manually_srv_;
   ros::ServiceServer start_specific_supervision_plan_srv_;
   ros::ServiceClient post_yaml_client_;
 #ifdef USING_MS_TSP_PLANNER
@@ -125,6 +127,7 @@ private:
   std::string planner_method_electric_fault_ = "Minimax-VNS";
 
   std::atomic<bool> stop_current_supervising_ = {false};
+  std::atomic<bool> trigger_replanning_manually_ = {false};
 
   geographic_msgs::GeoPoint map_origin_geo_;
   std::vector<geometry_msgs::Polygon> no_fly_zones_;

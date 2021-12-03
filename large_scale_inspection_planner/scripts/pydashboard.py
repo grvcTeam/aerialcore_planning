@@ -23,6 +23,7 @@ def main_menu():
     print "6. Do continuous supervision"
     print "7. Do fast supervision"
     print "8. Set wind vector"
+    print "9. Trigger replanning manually"
 
     selected = raw_input(" >> ")
     system("clear")
@@ -42,6 +43,8 @@ def main_menu():
         do_fast_supervision_menu()
     elif selected == "8":
         set_wind_vector_menu()
+    elif selected == "9":
+        trigger_replanning_manually_menu()
 
     else:
         system("clear")
@@ -344,6 +347,16 @@ def set_wind_vector_menu():
         print "\nService call failed: %s"%e
 
 
+# 9. Trigger replanning manually:
+def trigger_replanning_manually_menu():
+    system("clear")
+    print "Trigger replanning manually selected."
+    try:
+        print trigger_replanning_manually_client.call()
+    except rospy.ServiceException, e:
+        print "\nService call failed: %s"%e
+
+
 # Finish the execution directly when Ctrl+C is pressed (signal.SIGINT received), without escalating to SIGTERM.
 def signal_handler(sig, frame):
     print('Ctrl+C pressed, signal.SIGINT received.')
@@ -361,6 +374,7 @@ if __name__ == "__main__":
     do_continuous_supervision_client = rospy.ServiceProxy('mission_controller/do_continuous_supervision',Trigger)
     do_fast_supervision_client = rospy.ServiceProxy('mission_controller/do_fast_supervision',Trigger)
     set_wind_vector_client = rospy.ServiceProxy('parameter_estimator/set_wind_vector',SetWindVector)
+    trigger_replanning_manually_client = rospy.ServiceProxy('mission_controller/trigger_replanning_manually',Trigger)
     signal.signal(signal.SIGINT, signal_handler)    # Associate signal SIGINT (Ctrl+C pressed) to handler (function "signal_handler")
 
     system("clear")

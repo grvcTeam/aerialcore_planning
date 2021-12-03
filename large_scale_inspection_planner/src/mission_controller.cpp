@@ -314,6 +314,7 @@ MissionController::MissionController() {
     do_continuous_supervision_srv_ = n_.advertiseService("mission_controller/do_continuous_supervision", &MissionController::doContinuousSupervisionServiceCallback, this);
     do_fast_supervision_srv_ = n_.advertiseService("mission_controller/do_fast_supervision", &MissionController::doFastSupervisionServiceCallback, this);
     start_specific_supervision_plan_srv_ = n_.advertiseService("mission_controller/start_specific_supervision_plan", &MissionController::startSpecificSupervisionPlanServiceCallback, this);
+    trigger_replanning_manually_srv_ = n_.advertiseService("mission_controller/trigger_replanning_manually", &MissionController::triggerReplanningManuallyServiceCallback, this);
 
     // Clients:
     post_yaml_client_ = n_.serviceClient<aerialcore_msgs::PostString>("post_yaml");
@@ -507,7 +508,12 @@ void MissionController::planThread(void) {
             parameter_estimator_.updateMatrices(planner_current_graph, no_fly_zones_, geofence_, true, false);
             update_matrices_mutex_.unlock();
         } else {
-            replan = replanning_enabled_ ? plan_monitor_.enoughDeviationToReplan(planner_current_graph, flight_plans_, drone_info, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices()) : false;
+            if (trigger_replanning_manually_) {
+                trigger_replanning_manually_ = false;
+                replan = true;
+            } else {
+                replan = replanning_enabled_ ? plan_monitor_.enoughDeviationToReplan(planner_current_graph, flight_plans_, drone_info, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices()) : false;
+            }
         }
 
         if (replan || plan_from_scratch) {
@@ -759,8 +765,8 @@ void MissionController::planThread(void) {
                 }
             }
 
-            // After a replanning wait for 3x the plan_monitor_time_ before checking again if it needs replanning:
-            std::this_thread::sleep_for(std::chrono::seconds((int) plan_monitor_time_*4));
+            // After a replanning wait for 6x the plan_monitor_time_ before checking again if it needs replanning:
+            std::this_thread::sleep_for(std::chrono::seconds((int) plan_monitor_time_*6));
             continue;
         }
 
@@ -1014,6 +1020,14 @@ bool MissionController::doFastSupervisionServiceCallback(std_srvs::Trigger::Requ
     _res.success=true;
     return true;
 } // end doFastSupervisionServiceCallback
+
+
+bool MissionController::triggerReplanningManuallyServiceCallback(std_srvs::Trigger::Request& _req, std_srvs::Trigger::Response& _res) {
+    trigger_replanning_manually_ = true;
+
+    _res.success=true;
+    return true;
+} // end triggerReplanningManuallyServiceCallback
 
 
 bool MissionController::startSpecificSupervisionPlanServiceCallback(aerialcore_msgs::PostString::Request& _req, aerialcore_msgs::PostString::Response& _res) {
