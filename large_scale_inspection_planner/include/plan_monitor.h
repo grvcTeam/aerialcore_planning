@@ -70,7 +70,9 @@ private:
     };
     std::vector<UAV> UAVs_;
 
-    float deviation_limit_;         // Parameter read from the configuration file. Parts per unit of the duration of the plans, if this is surpassed (greater or lower) the replanning will be triggered.
+    float deviation_limit_;             // Deviation limit (in parts per unit of the duration and battery drop of the plans), if this is surpassed (greater or lower) the Plan Monitor will tell the planner to trigger the replanning.
+    float minimum_battery_difference_;  // Parts per unit of difference that has to be deviated the battery (apart from the deviation limit).
+    float minimum_time_difference_;     // Seconds difference that has to be deviated the duration of the plan (apart from the deviation limit).
 
 };  // end PlanMonitor class
 

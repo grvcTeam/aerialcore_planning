@@ -113,8 +113,8 @@ private:
     };
     std::vector<UAV> UAVs_;
 
-    std::vector< std::pair<int,int> > complete_connection_edges_;   // Edges or connections of the graph (nothing inspected yet), being the pair of indexes of the graph nodes connected by wires. Always the first int index lower than the second of the pair.
     std::vector< std::pair<int,int> > connection_edges_;            // Edges or connections of the graph (some edges inspected, smaller than the complete), being the pair of indexes of the graph nodes connected by wires. Always the first int index lower than the second of the pair.
+    std::vector< std::pair<int,int> > previous_connection_edges_;   // Edges or connections of the graph of the previous solution, being the pair of indexes of the graph nodes connected by wires. Always the first int index lower than the second of the pair.
 
     struct Edge {
         int i;      // Refered to the time cost and battery drop matrices.
@@ -158,9 +158,9 @@ private:
     geographic_msgs::GeoPoint map_origin_geo_;
 
     void constructUAVs(const std::vector< std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> >& _drone_info);
-    void constructConnectionEdges(const std::vector<aerialcore_msgs::GraphNode>& _graph, std::map<int, int> _last_flight_plan_graph_node);
     void constructEdges(std::vector<aerialcore_msgs::GraphNode>& _graph);
     void constructUnorderedMaps(const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices);
+    void updateConnectionEdges(const std::vector<aerialcore_msgs::GraphNode>& _graph, std::map<int, int> _last_flight_plan_graph_node);
 
     // Greedy:
     float nearestGraphNodeLandStation(int _from_this_index_graph, int& _index_graph_node_to_return, int _uav_id);
@@ -219,10 +219,6 @@ private:
     // Numerical experiments:
     double time_computing_plan_ = 0;                    // seconds
     double accumulated_time_checking_solutions_ = 0;    // seconds
-    double aux_accumulated_1_ = 0;    // seconds
-    double aux_accumulated_2_ = 0;    // seconds
-    double aux_accumulated_3_ = 0;    // seconds
-    double aux_accumulated_4_ = 0;    // seconds
 
 };  // end CentralizedPlanner class
 

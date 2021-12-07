@@ -127,7 +127,7 @@ const std::map<int, std::map<int, std::map<int, float> > >& ParameterEstimator::
 void ParameterEstimator::updateMatrices(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector<geometry_msgs::Polygon>& _no_fly_zones, const geometry_msgs::Polygon& _geofence, bool _recalculate_initial_UAV_points, bool _update_wind) {
 
 # ifdef UPDATE_WEATHER_CONTINUOUSLY
-    if (_update_wind) {
+    if (_update_wind && !wind_set_manually_) {
         getCurrentWeatherFromInternet();
     }
 # endif
@@ -450,6 +450,8 @@ void ParameterEstimator::getCurrentWeatherFromInternet() {
 
 
 bool ParameterEstimator::setWindVectorServiceCallback(aerialcore_msgs::SetWindVector::Request& _req, aerialcore_msgs::SetWindVector::Response& _res) {
+    wind_set_manually_ = true;
+
     // Wind direction is reported by the direction from which it originates (from which is COMING). For example, a north wind blows from the north to the south, with a direction angle of 0° (or 360°). A wind blowing from the east has a wind direction referred to as 90°, etc.
     wind_vector_.x = -_req.speed * sin(_req.direction_deg * M_PI/180.0);
     wind_vector_.y = -_req.speed * cos(_req.direction_deg * M_PI/180.0);

@@ -15,7 +15,7 @@
 #include "ms_tsp_planner/ConfigToFlightPlans.h"
 #endif
 
-#define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
+// #define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
 // #define NUMERICAL_EXPERIMENTS
 
 #define FLYING_THRESHOLD 1  // Height threshold above which an UAV is considered to be flying (in meters). TODO: better way to know if flying?
@@ -333,7 +333,7 @@ MissionController::MissionController() {
         battery_faker_thread_ = std::thread(&MissionController::batteryFakerThread, this);
     }
 
-    ROS_INFO("Mission Controller running!");
+    ROS_INFO("Mission Controller: running! Waiting for commands.");
 
 } // end MissionController constructor
 
@@ -511,6 +511,7 @@ void MissionController::planThread(void) {
             if (trigger_replanning_manually_) {
                 trigger_replanning_manually_ = false;
                 replan = true;
+                plan_monitor_.enoughDeviationToReplan(planner_current_graph, flight_plans_, drone_info, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices());
             } else {
                 replan = replanning_enabled_ ? plan_monitor_.enoughDeviationToReplan(planner_current_graph, flight_plans_, drone_info, parameter_estimator_.getTimeCostMatrices(), parameter_estimator_.getBatteryDropMatrices()) : false;
             }
@@ -518,9 +519,9 @@ void MissionController::planThread(void) {
 
         if (replan || plan_from_scratch) {
 
-#ifdef DEBUG
+// #ifdef DEBUG
             printCurrentGraph();
-#endif
+// #endif
 
 #ifdef NUMERICAL_EXPERIMENTS
             std::vector<std::string> methods{"Greedy"/*, "MILP"*/, "MEM", "VNS"/*, "Mstsp"*/, "Minimax-MEM", "Minimax-VNS", "Minimax-Greedy"};
@@ -547,7 +548,7 @@ void MissionController::planThread(void) {
 
             // Calculate the solution with computation time:
 
-            std::cout << "Start the computation of the plan." << std::endl;
+            ROS_INFO("Mission Controller: start the computation of the plan calling the solver.");
             clock_t t_begin, t_end;
             t_begin = clock();
 
@@ -637,9 +638,9 @@ void MissionController::planThread(void) {
 
             double seconds = ((float)(t_end-t_begin))/CLOCKS_PER_SEC;
             // std::cout << "Computation time for the MILP planning with OR-Tools: " << seconds << " seconds." << std::endl << std::endl;
-            std::cout << "Computation time of the planning: " << seconds << " seconds." << std::endl << std::endl;
+            ROS_INFO("Mission Controller: computation time of the planning: %f seconds.", seconds);
 
-#ifdef DEBUG
+// #ifdef DEBUG
             if (continuous_or_fast_supervision_ && planner_method_ == "Mstsp") {
                 std::cout << "Planner's results calculated in the MC:" << std::endl;
                 float total_time_cost = 0;
@@ -720,7 +721,7 @@ void MissionController::planThread(void) {
             }
 #endif
 
-#endif
+// #endif
 
             if (UAV_command_mode_=="mission_lib") {
                 translateFlightPlanIntoUAVMission(flight_plans_);
@@ -731,9 +732,9 @@ void MissionController::planThread(void) {
                     battery_level_when_planned[ flight_plan.uav_id ] = simulation_ ? UAVs_[current_uav_index].battery_faked : UAVs_[current_uav_index].mission->battery();
 
                     if (current_uav_index == -1) continue;  // If UAV id not found just skip it.
-#ifdef DEBUG
+// #ifdef DEBUG
                     UAVs_[current_uav_index].mission->print();
-#endif
+// #endif
                     UAVs_[current_uav_index].mission->push();
                     UAVs_[current_uav_index].mission->start();
                 }
@@ -765,9 +766,9 @@ void MissionController::planThread(void) {
                 }
             }
 
-            // After a replanning wait for 6x the plan_monitor_time_ before checking again if it needs replanning:
-            std::this_thread::sleep_for(std::chrono::seconds((int) plan_monitor_time_*6));
-            continue;
+            // // After a replanning wait for 10x the plan_monitor_time_ before checking again if it needs replanning:
+            // std::this_thread::sleep_for(std::chrono::seconds((int) plan_monitor_time_*10));
+            // continue;
         }
 
         loop_rate.sleep();
@@ -1302,19 +1303,30 @@ int MissionController::findUavIndexById(int _UAV_id) {
 
 
 void MissionController::printCurrentGraph() {
+    ROS_INFO("Mission Controller: printing the current graph.");
     current_graph_mutex_.lock();
     for (int i=0; i<current_graph_.size(); i++) {      // Print current_graph_ to check that the yaml file was parsed correctly:
-        std::cout << "current_graph_node[ " << i << " ].type                     = " << (int) current_graph_[i].type << std::endl;
-        std::cout << "current_graph_node[ " << i << " ].id                       = " << current_graph_[i].id << std::endl;
-        for (int j=0; j<current_graph_[i].connections_indexes.size(); j++) {
-            std::cout << "current_graph_node[ " << i << " ].connections_indexes[ " << j << " ] = " << current_graph_[i].connections_indexes[j] << std::endl;
+        if (current_graph_[i].type == aerialcore_msgs::GraphNode::TYPE_PYLON) {
+            std::cout << "graph_node[ " << i << " ].type                     = TYPE_PYLON" << std::endl;
+        } else if (current_graph_[i].type == aerialcore_msgs::GraphNode::TYPE_RECHARGE_LAND_STATION) {
+            std::cout << "graph_node[ " << i << " ].type                     = TYPE_RECHARGE_LAND_STATION" << std::endl;
+        } else if (current_graph_[i].type == aerialcore_msgs::GraphNode::TYPE_REGULAR_LAND_STATION) {
+            std::cout << "graph_node[ " << i << " ].type                     = TYPE_REGULAR_LAND_STATION" << std::endl;
+        } else if (current_graph_[i].type == aerialcore_msgs::GraphNode::TYPE_UAV_INITIAL_POSITION) {
+            std::cout << "graph_node[ " << i << " ].type                     = TYPE_UAV_INITIAL_POSITION" << std::endl;
+        } else if (current_graph_[i].type == aerialcore_msgs::GraphNode::TYPE_NO_FLY_ZONE) {
+            std::cout << "graph_node[ " << i << " ].type                     = TYPE_NO_FLY_ZONE" << std::endl;
         }
-        std::cout << "current_graph_node[ " << i << " ].x                        = " << current_graph_[i].x << std::endl;
-        std::cout << "current_graph_node[ " << i << " ].y                        = " << current_graph_[i].y << std::endl;
-        std::cout << "current_graph_node[ " << i << " ].z                        = " << current_graph_[i].z << std::endl;
-        std::cout << "current_graph_node[ " << i << " ].latitude                 = " << current_graph_[i].latitude << std::endl;
-        std::cout << "current_graph_node[ " << i << " ].longitude                = " << current_graph_[i].longitude << std::endl;
-        std::cout << "current_graph_node[ " << i << " ].altitude                 = " << current_graph_[i].altitude << std::endl;
+        std::cout << "graph_node[ " << i << " ].id                       = " << current_graph_[i].id << std::endl;
+        for (int j=0; j<current_graph_[i].connections_indexes.size(); j++) {
+            std::cout << "graph_node[ " << i << " ].connections_indexes[ " << j << " ] = " << current_graph_[i].connections_indexes[j] << std::endl;
+        }
+        std::cout << "graph_node[ " << i << " ].x                        = " << current_graph_[i].x << std::endl;
+        std::cout << "graph_node[ " << i << " ].y                        = " << current_graph_[i].y << std::endl;
+        std::cout << "graph_node[ " << i << " ].z                        = " << current_graph_[i].z << std::endl;
+        std::cout << "graph_node[ " << i << " ].latitude                 = " << current_graph_[i].latitude << std::endl;
+        std::cout << "graph_node[ " << i << " ].longitude                = " << current_graph_[i].longitude << std::endl;
+        std::cout << "graph_node[ " << i << " ].altitude                 = " << current_graph_[i].altitude << std::endl;
     }
     current_graph_mutex_.unlock();
 }

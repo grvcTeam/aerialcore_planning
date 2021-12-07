@@ -131,6 +131,8 @@ private:
 
     float gravity_;     // [m/s^2]
 
+    bool wind_set_manually_ = false;
+
     ros::NodeHandle n_;
     bool setWindVectorServiceCallback(aerialcore_msgs::SetWindVector::Request& _req, aerialcore_msgs::SetWindVector::Response& _res);
     ros::ServiceServer set_wind_vector_srv_;

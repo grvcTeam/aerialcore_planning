@@ -18,12 +18,14 @@ namespace plt = matplotlibcpp;
 
 namespace aerialcore {
 
-#define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
+// #define DEBUG       // UNCOMMENT FOR PRINTING VISUALIZATION OF RESULTS (DEBUG MODE)
 
 // Brief Constructor
 PlanMonitor::PlanMonitor() {
     ros::NodeHandle nh;
-    nh.param<float>("deviation_limit", deviation_limit_, 0.1);
+    nh.param<float>("deviation_limit", deviation_limit_, 0.2);
+    nh.param<float>("minimum_battery_difference", minimum_battery_difference_, 0.1);
+    nh.param<float>("minimum_time_difference", minimum_time_difference_, 20);
 }
 
 
@@ -33,7 +35,7 @@ PlanMonitor::~PlanMonitor() {}
 
 // Method called periodically in an external thread, located in the Mission Controller, that will call the planner in the same thread if it returns true:
 bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::GraphNode>& _graph, const std::vector<aerialcore_msgs::FlightPlan>& _flight_plans, const std::vector< std::tuple<float, float, float, int, int, int, int, int, int, bool, bool> >& _drone_info, const std::map<int, std::map<int, std::map<int, float> > >& _time_cost_matrices, const std::map<int, std::map<int, std::map<int, float> > >& _battery_drop_matrices) {
-    ROS_INFO("Plan Monitor: checking if enoughDeviationToReplan.");
+    ROS_INFO("Plan Monitor: checking if enough deviation to replan.");
 
     ros::Time time_now = ros::Time::now();
 
@@ -86,10 +88,10 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
             // With that intersection calculate its perpendicular distance:
             if (_flight_plans[i].poses[j].pose.position.x<=_flight_plans[i].poses[j+1].pose.position.x && x_inter>=_flight_plans[i].poses[j].pose.position.x && x_inter<=_flight_plans[i].poses[j+1].pose.position.x
              || _flight_plans[i].poses[j].pose.position.x>=_flight_plans[i].poses[j+1].pose.position.x && x_inter<=_flight_plans[i].poses[j].pose.position.x && x_inter>=_flight_plans[i].poses[j+1].pose.position.x) {
-                perpendicular_distances.push_back(sqrt( pow(x_ini-x_inter,2) + pow(y_ini-y_inter,2) ));
+                perpendicular_distances.push_back(sqrt( pow(x_ini-x_inter,2) + pow(y_ini-y_inter,2) )+0.2*j);   // +0.2*j because the later poses should be penalized with greater cost.
             } else {
                 // If the initial point isn't in the projection of the segment, push its distance to the start of the segment.
-                perpendicular_distances.push_back( sqrt( pow(x_ini - _flight_plans[i].poses[j].pose.position.x,2) + pow(y_ini - _flight_plans[i].poses[j].pose.position.y,2) ) );
+                perpendicular_distances.push_back( sqrt( pow(x_ini - _flight_plans[i].poses[j].pose.position.x,2) + pow(y_ini - _flight_plans[i].poses[j].pose.position.y,2) )+0.2*j ); // +0.2*j because the later poses should be penalized with greater cost.
             }
             indexes.push_back(j);
         }
@@ -237,7 +239,7 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
 
 # ifdef DEBUG
         // std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> last_node_in_poses = " << last_node_in_poses << std::endl;
-        // std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> last_pose_index          = " << UAVs_[uav_index].last_pose_index << std::endl;
+        // std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> last_pose_index    = " << UAVs_[uav_index].last_pose_index << std::endl;
         // std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> next_node_in_poses = " << next_node_in_poses << std::endl;
         // std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> last_node_in_graph = " << last_node_in_graph << std::endl;
         // std::cout << "UAV_id " << _flight_plans[i].uav_id << " -> next_node_in_graph = " << next_node_in_graph << std::endl;
@@ -257,29 +259,29 @@ bool PlanMonitor::enoughDeviationToReplan(const std::vector<aerialcore_msgs::Gra
 # endif
 
     // Compare the total planned duration and battery drop with the real ones:
-    if ( (total_duration_planned>0 && total_duration_real>0) && (total_duration_planned<total_duration_real*(1-deviation_limit_) || total_duration_planned>total_duration_real*(1+deviation_limit_)) ) {
-        ROS_INFO("Plan Monitor: Replanning true. Total sum of duration deviations among all UAVs greater than threshold.");
+    if ( total_duration_planned>0 && total_duration_real>0 && (total_duration_planned<total_duration_real*(1-deviation_limit_) || total_duration_planned>total_duration_real*(1+deviation_limit_))  && (abs(total_duration_planned-total_duration_real)>=minimum_time_difference_)) {
+        ROS_INFO("Plan Monitor: replanning true. Total sum of duration deviations among all UAVs greater than threshold.");
         return true;
-    } else if ( (total_battery_drop_planned>0 && total_battery_drop_real>0) && (total_battery_drop_planned<total_battery_drop_real*(1-deviation_limit_) || total_battery_drop_planned>total_battery_drop_real*(1+deviation_limit_)) ) {
-        ROS_INFO("Plan Monitor: Replanning true. Total sum of battery drop deviations among all UAVs greater than threshold.");
+    } else if ( total_battery_drop_planned>0 && total_battery_drop_real>0 && (total_battery_drop_planned<total_battery_drop_real*(1-deviation_limit_) || total_battery_drop_planned>total_battery_drop_real*(1+deviation_limit_))  && (abs(total_battery_drop_planned-total_battery_drop_real)>=minimum_battery_difference_)) {
+        ROS_INFO("Plan Monitor: replanning true. Total sum of battery drop deviations among all UAVs greater than threshold.");
         return true;
     } else {
         // Compare the planned duration of each UAV with the real one:
         for (int i=0; i<_flight_plans.size(); i++) {
             int uav_index = findUavIndexById(_flight_plans[i].uav_id);
 
-            if (duration_real.count(uav_index)>0 && duration_real[uav_index]>0 && (duration_planned[uav_index]<duration_real[uav_index]*(1-deviation_limit_) || duration_planned[uav_index]>duration_real[uav_index]*(1+deviation_limit_))) {
-                ROS_INFO("Plan Monitor: Replanning true. Deviation of duration for the UAV of id=%d greater than threshold.", _flight_plans[i].uav_id);
+            if (duration_real.count(uav_index)>0 && duration_real[uav_index]>0 && (duration_planned[uav_index]<duration_real[uav_index]*(1-deviation_limit_) || duration_planned[uav_index]>duration_real[uav_index]*(1+deviation_limit_)) && (abs(duration_planned[uav_index]-duration_real[uav_index])>=minimum_time_difference_)) {
+                ROS_INFO("Plan Monitor: replanning true. Deviation of duration for the UAV of id=%d greater than threshold.", _flight_plans[i].uav_id);
                 return true;
-            } else if (battery_drop_real.count(uav_index)>0 && battery_drop_real[uav_index]>0 && battery_drop_planned[uav_index]<battery_drop_real[uav_index]*(1-deviation_limit_) || battery_drop_planned[uav_index]>battery_drop_real[uav_index]*(1+deviation_limit_)) {
-                ROS_INFO("Plan Monitor: Replanning true. Deviation of battery drop for the UAV of id=%d greater than threshold.", _flight_plans[i].uav_id);
+            } else if (battery_drop_real.count(uav_index)>0 && battery_drop_real[uav_index]>0 && (battery_drop_planned[uav_index]<battery_drop_real[uav_index]*(1-deviation_limit_) || battery_drop_planned[uav_index]>battery_drop_real[uav_index]*(1+deviation_limit_)) && (abs(battery_drop_planned[uav_index]-battery_drop_real[uav_index])>=minimum_battery_difference_)) {
+                ROS_INFO("Plan Monitor: replanning true. Deviation of battery drop for the UAV of id=%d greater than threshold.", _flight_plans[i].uav_id);
                 return true;
             } else if (battery_drop_real.count(uav_index)>0 && ( battery_drop_real[uav_index]>1-UAVs_[uav_index].minimum_battery || battery_drop_planned[uav_index]>1-UAVs_[uav_index].minimum_battery ) ) {
-                ROS_INFO("Plan Monitor: Replanning true. Battery drop real or planned for the UAV of id=%d greater than possible.", _flight_plans[i].uav_id);
+                ROS_INFO("Plan Monitor: replanning true. Battery drop real or planned for the UAV of id=%d greater than possible.", _flight_plans[i].uav_id);
                 return true;
             }
         }
-        ROS_INFO("Plan Monitor: Replanning false.");
+        ROS_INFO("Plan Monitor: replanning false.");
         return false;
     }
 
