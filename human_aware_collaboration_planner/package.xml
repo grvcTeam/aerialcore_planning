@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>human_aware_collaboration_planner</name>
+  <version>0.0.0</version>
+  <description>human-aware collanboration planner using behaviors trees</description>
+  <maintainer email="alvarocalvomatos@gmail.com">Alvaro</maintainer>
+  <license>TODO</license>
+
+  <!-- <depend>behaviortree_cpp_v3</depend> -->
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>message_generation</build_depend>
+  <build_depend>actionlib</build_depend>
+  <build_depend>actionlib_msgs</build_depend>
+  <build_depend>behaviortree_cpp_v3</build_depend>
+  <build_depend>uav_abstraction_layer</build_depend>
+  <build_export_depend>behaviortree_cpp_v3</build_export_depend>
+  <exec_depend>message_runtime</exec_depend>
+  <exec_depend>actionlib</exec_depend>
+  <exec_depend>actionlib_msgs</exec_depend>
+  <exec_depend>behaviortree_cpp_v3</exec_depend>
+  <exec_depend>uav_abstraction_layer</exec_depend>
+
+  <depend>yaml-cpp</depend>
+
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+
+  </export>
+</package>

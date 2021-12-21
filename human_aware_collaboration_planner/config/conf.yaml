@@ -1,0 +1,138 @@
+positions:
+  towers:
+    tower_1:
+      x: -15.0
+      y: 0.0
+      z: 20.0
+    
+    tower_2:
+      x: 0.0
+      y: 5.0
+      z: 15.0
+    
+    tower_3:
+      x: 5.0
+      y: 0.0
+      z: 17.0
+    
+  charging_stations:
+    charging_station_1:
+      x: -10.0
+      y: 10.0
+      z: 0.0
+    
+    charging_station_2:
+      x: 0.0
+      y: 20.0
+      z: 0.0
+
+    charging_station_3:
+      x: 10.0
+      y: 10.0
+      z: 0.0
+    
+    charging_station_4:
+      x: -10.0
+      y: 20.0
+      z: 0.0
+    
+    charging_station_5:
+      x: 10.0
+      y: 20.0
+      z: 0.0
+    
+  stations:
+    station_1:
+      x: -5.0
+      y: 5.0
+      z: 0.0
+    
+    station_2:
+      x: 0.0
+      y: 15.0
+      z: 0.0
+
+    station_3:
+      x: 5.0
+      y: 10.0
+      z: 0.0
+
+    station_4:
+      x: -5.0
+      y: 20.0
+      z: 0.0
+
+    station_5:
+      x: 5.0
+      y: 20.0
+      z: 0.0
+
+  wires:
+    wire_1_2:
+      x: -15.0
+      y: 0.0
+      z: 45.0
+    
+    wire_2_3:
+      x: 15.0
+      y: 0.0
+      z: 45.0
+
+human_targets:
+  human_target_1:
+    x: 0.0
+    y: 10.0
+    z: 3
+  
+  human_target_2:
+    x: -5.0
+    y: 15.0
+    z: 3
+  
+  human_target_3:
+    x: 5.0
+    y: 20.0
+    z: 3
+  
+tools:
+  hammer:
+    weight: 1.5
+    x: -2
+    y: 5
+    z: 3
+  
+  wrench:
+    weight: 0.7
+    x: 1
+    y: 5
+    z: 3
+  
+  allen_wrench:
+    weight: 0.05
+    x: 2
+    y: 5
+    z: 3
+  
+  fixed_wrench:
+    weight: 0.15
+    x: 3
+    y: 5
+    z: 3
+  
+  multimeter:
+    weight: 0.25
+    x: 4
+    y: 5
+    z: 3
+  
+  pliers:
+    weight: 0.25
+    x: 5
+    y: 5
+    z: 3
+  
+  tweezers:
+    weight: 0.2
+    x: 6
+    y: 5
+    z: 3

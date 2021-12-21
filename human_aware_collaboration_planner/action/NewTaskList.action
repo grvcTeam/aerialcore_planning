@@ -1,0 +1,6 @@
+string agent_id
+Task[] task_list
+---
+bool ack
+---
+string status

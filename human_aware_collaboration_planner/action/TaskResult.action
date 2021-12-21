@@ -1,0 +1,6 @@
+Task task
+bool result
+---
+bool ack
+---
+string status

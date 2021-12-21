@@ -1,0 +1,3 @@
+string charging_station_id
+float32 initial_percentage
+float32 final_percentage

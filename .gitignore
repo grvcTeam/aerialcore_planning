@@ -32,3 +32,8 @@
 *.app
 
 .vscode
+
+# Human Aware Collaboration Planner
+*.fbl
+*.json
+*.swp

@@ -1,0 +1,117 @@
+<launch>
+  <!-- Debuggers: gdb, valgrind, none -->
+  <arg name="number_UAV" value="1"/>
+  <arg name="planner_debugger" value="none"/>
+  <arg name="agent_debugger" value="none"/>
+
+  <arg name="config_file" value="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
+
+  <!-- Launch Gazebo simulation -->
+  <rosparam param="/use_sim_time">true</rosparam>
+  <node pkg="aerialcore_simulation" type="launch_gzworld.py" name="gazebo_world" 
+    args="-physics=none -world=$(find aerialcore_simulation)/worlds/leader_follower_inspection.world
+    -add_model_path=$(find aerialcore_simulation)/models
+    -description_package=robots_description">
+    <rosparam param="sim_origin">[38.138728, -3.173825, 0]</rosparam>  <!-- [lat,lon,alt] -->
+  </node>
+
+  <!-- Launch Planner Node (there's only one node of this type for the whole simulation and it's outside any ns)-->
+  <node pkg="human_aware_collaboration_planner" type="high_level_planner" name="high_level_planner" output="screen" launch-prefix="xterm -e gdb -ex 'set print thread-events off' -ex run --args" if="$(eval planner_debugger=='gdb')">
+    <param name="config_file" value="$(arg config_file)"/>
+  </node>
+  <node pkg="human_aware_collaboration_planner" type="high_level_planner" name="high_level_planner" output="screen" launch-prefix="valgrind -v --leak-check=full --show-leak-kinds=all --track-origins=yes --log-file=/home/baldman/valgrind_planner.log" if="$(eval planner_debugger=='valgrind')">
+    <param name="config_file" value="$(arg config_file)"/>
+  </node>
+  <node pkg="human_aware_collaboration_planner" type="high_level_planner" name="high_level_planner" output="screen" if="$(eval planner_debugger=='none')"> 
+    <param name="config_file" value="$(arg config_file)"/>
+  </node>
+
+  <!-- Launch Groot to monitor the BTs -->
+  <!-- node pkg="groot" type="Groot" name="Groot"> </node-->
+
+  <!-- Launch Agent Node for robot id=uav_1. Type: PhysicalACW-->
+  <include file="$(find human_aware_collaboration_planner)/launch/agent.launch">
+    <arg name="agent_debugger" value="$(arg agent_debugger)"/>
+
+    <arg name="id" value="1"/>
+    <arg name="type" value="PhysicalACW"/>
+    <arg name="material" value="Indigo"/>
+
+    <arg name="x" value="-10"/>
+    <arg name="y" value="10"/>
+    <arg name="z" value="0.0"/>
+    <arg name="yaw" value="0"/>
+    <arg name="frame_id" value="map"/>
+
+    <arg name="config_file" value="$(arg config_file)"/>
+  </include>
+
+  <!-- Launch Agent Node for robot id=uav_2. Type: InspectionACW-->
+  <include file="$(find human_aware_collaboration_planner)/launch/agent.launch" if="$(eval number_UAV >= 2)">
+    <arg name="agent_debugger" value="$(arg agent_debugger)"/>
+
+    <arg name="id" value="2"/>
+    <arg name="type" value="InspectionACW"/>
+    <arg name="material" value="Orange"/>
+
+    <arg name="x" value="0"/>
+    <arg name="y" value="20"/>
+    <arg name="z" value="0.0"/>
+    <arg name="yaw" value="0"/>
+    <arg name="frame_id" value="map"/>
+
+    <arg name="config_file" value="$(arg config_file)"/>
+  </include>
+
+  <!-- Launch Agent Node for robot id=uav_3. Type: SafetyACW-->
+  <include file="$(find human_aware_collaboration_planner)/launch/agent.launch" if="$(eval number_UAV >= 3)">
+    <arg name="agent_debugger" value="$(arg agent_debugger)"/>
+
+    <arg name="id" value="3"/>
+    <arg name="type" value="SafetyACW"/>
+    <arg name="material" value="Green"/>
+
+    <arg name="x" value="10"/>
+    <arg name="y" value="10"/>
+    <arg name="z" value="0"/>
+    <arg name="yaw" value="0"/>
+    <arg name="frame_id" value="map"/>
+
+    <arg name="config_file" value="$(arg config_file)"/>
+  </include>
+
+  <!-- Launch Agent Node for robot id=uav_4. Type: SafetyACW-->
+  <include file="$(find human_aware_collaboration_planner)/launch/agent.launch" if="$(eval number_UAV >= 4)">
+    <arg name="agent_debugger" value="$(arg agent_debugger)"/>
+
+    <arg name="id" value="4"/>
+    <arg name="type" value="SafetyACW"/>
+    <arg name="material" value="Green"/>
+
+    <arg name="x" value="-10"/>
+    <arg name="y" value="20"/>
+    <arg name="z" value="0"/>
+    <arg name="yaw" value="0"/>
+    <arg name="frame_id" value="map"/>
+
+    <arg name="config_file" value="$(arg config_file)"/>
+  </include>
+
+  <!-- Launch Agent Node for robot id=uav_5. Type: SafetyACW-->
+  <include file="$(find human_aware_collaboration_planner)/launch/agent.launch" if="$(eval number_UAV >= 5)">
+    <arg name="agent_debugger" value="$(arg agent_debugger)"/>
+
+    <arg name="id" value="5"/>
+    <arg name="type" value="SafetyACW"/>
+    <arg name="material" value="Green"/>
+
+    <arg name="x" value="10"/>
+    <arg name="y" value="20"/>
+    <arg name="z" value="0"/>
+    <arg name="yaw" value="0"/>
+    <arg name="frame_id" value="map"/>
+
+    <arg name="config_file" value="$(arg config_file)"/>
+  </include>
+
+</launch>
