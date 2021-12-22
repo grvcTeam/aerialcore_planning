@@ -40,9 +40,9 @@ add_message_files(
   MissionOver.msg
 )
 
-add_service_files(
-  FILES
-)
+#add_service_files(
+#  FILES
+#)
 
 add_action_files(
   DIRECTORY action 
