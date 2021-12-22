@@ -144,4 +144,25 @@ rosrun human_aware_collaboration_planner agent_behaviour_manager __ns:uav_1
 rosnode kill /high_level_planner
 ```
 
-**Note**: For information on how to launch tasks manually you can run "make gesture_info" or just read the recipes in the Makefile.
+**Note**: For information on how to launch tasks manually you can run `make gesture_info` or just read the recipes in the Makefile.
+
+## Monitoring the Behaviour Tree execution with Groot
+
+There is a Make recipe for launching a Groot node to monitor the execution of the BT in real time or replay a log file.
+
+
+```
+make groot
+```
+
+To monitor a BT we just has to specify:
+* Server IP: localhost
+* Publisher Port: 1666 + ID * 2
+* Server Port: 1667 + ID * 2
+
+E.g. for the UAV_1:
+* Server IP: localhost
+* Publisher Port: 1668
+* Server Port: 1669
+
+**Note**: fbl log files are stored in `~/.ros` and are named as `bt_trace_uav_` + ID + `.fbl`

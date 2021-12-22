@@ -1448,7 +1448,6 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   RegisterNodes(factory);
 
   auto tree = factory.createTreeFromFile(path + "/src/behaviour_tree.xml");
-  //auto tree = factory.createTreeFromFile(path + "/src/behaviour_tree.xml");
   //auto tree = factory.createTreeFromText(behavioiur_tree_xml);
   
   for(auto& node: tree.nodes)
