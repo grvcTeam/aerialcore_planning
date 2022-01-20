@@ -32,6 +32,7 @@ add_message_files(
   InspectParams.msg
   DeliverToolParams.msg
   RechargeParams.msg
+  WaitParams.msg
   Task.msg
   HumanTarget.msg
   Position.msg

@@ -255,6 +255,21 @@ class Recharge : public Task
 		void updateParams(classes::Task* task);
 };
 
+class Wait : public Task
+{
+  protected:
+
+  public:
+    Wait();
+    Wait(const Wait& w);
+    ~Wait();
+		//Getters
+    std::string getID();
+    char getType();
+    void print(std::ostream& os) const;
+		//Setters
+};
+
 std::ostream& operator << (std::ostream& os, const Task& m)
 {
 	m.print(os);

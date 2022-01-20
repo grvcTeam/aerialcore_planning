@@ -1,5 +1,9 @@
+#result 0 -> FAILURE
+#result 1 -> SUCCESS
+#result 2 -> HALTED
+
 Task task
-bool result
+uint8 result
 ---
 bool ack
 ---

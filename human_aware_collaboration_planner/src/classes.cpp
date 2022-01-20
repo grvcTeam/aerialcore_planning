@@ -307,3 +307,16 @@ void Recharge::updateParams(classes::Task* task)
     final_percentage_ = task->getFinalPercentage();
   }
 }
+
+//class Wait : public Task
+Wait::Wait(){}
+Wait::Wait(const Wait& w) : Task(w.id_){}
+Wait::~Wait(){}
+//Wait Getters
+std::string Wait::getID(){return id_;}
+char Wait::getType(){return 'W';}
+void Wait::print(std::ostream& os) const
+{
+  os << "\t" << id_ << ": Wait";
+}
+//Wait Setters

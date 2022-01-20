@@ -160,7 +160,6 @@ BT::NodeStatus Recharge::tick(){
       agent_->beacon_.id + "/task_result", true);
   human_aware_collaboration_planner::TaskResultGoal goal;
   
-  //TODO: Calling Recharge lower level controllers (faked) 
   //Emergency Recharging
   if(agent_->task_queue_.empty())
     final_percentage = 0.99;
@@ -180,6 +179,10 @@ BT::NodeStatus Recharge::tick(){
     goal.task.id = task->getID();
     goal.task.type = task->getType();
   }
+
+  //TODO: Calling Recharge lower level controllers (faked) 
+  ROS_INFO("[Recharge] Calling Lower-level controllers...");
+  //********************************************* FAKED *************************************************************
   while(!isHaltRequested())
   {
     switch(agent_->state_)
@@ -187,7 +190,15 @@ BT::NodeStatus Recharge::tick(){
       case 1: //LANDED_DISARMED
       case 2: //LANDED_ARMED
         if(isHaltRequested())
+        {
+          if(recharge_task)
+          {
+            task_result_ac_.waitForServer(ros::Duration(1.0));
+            goal.result = 0; //TODO: Change with the result of Lower-level controllers
+            task_result_ac_.sendGoal(goal);
+          }
           return BT::NodeStatus::IDLE;
+        }
         ROS_INFO("[Recharge] Recharging...");
         while(!isHaltRequested())
         {
@@ -198,7 +209,7 @@ BT::NodeStatus Recharge::tick(){
             if(recharge_task)
             {
               task_result_ac_.waitForServer(ros::Duration(1.0));
-              goal.result = isHaltRequested() ? false : true; //TODO: Change with the result of Lower-level controllers
+              goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
               task_result_ac_.sendGoal(goal);
             }
             return BT::NodeStatus::SUCCESS;
@@ -208,23 +219,39 @@ BT::NodeStatus Recharge::tick(){
         if(recharge_task)
         {
           task_result_ac_.waitForServer(ros::Duration(1.0));
-          goal.result = isHaltRequested() ? false : true; //TODO: Change with the result of Lower-level controllers
+          goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
           task_result_ac_.sendGoal(goal);
         }
         return BT::NodeStatus::IDLE;
         break;
       case 4: //FLYING_AUTO
         if(isHaltRequested())
+        {
+          if(recharge_task)
+          {
+            task_result_ac_.waitForServer(ros::Duration(1.0));
+            goal.result = 0; //TODO: Change with the result of Lower-level controllers
+            task_result_ac_.sendGoal(goal);
+          }
           return BT::NodeStatus::IDLE;
+        }
         if(!agent_->land(false))
         {
           if(isHaltRequested())
+          {
+            if(recharge_task)
+            {
+              task_result_ac_.waitForServer(ros::Duration(1.0));
+              goal.result = 0; //TODO: Change with the result of Lower-level controllers
+              task_result_ac_.sendGoal(goal);
+            }
             return BT::NodeStatus::IDLE;
+          }
           ROS_ERROR("[Recharge] Failed to call service land");
           if(recharge_task)
           {
             task_result_ac_.waitForServer(ros::Duration(1.0));
-            goal.result = isHaltRequested() ? false : true; //TODO: Change with the result of Lower-level controllers
+            goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
             task_result_ac_.sendGoal(goal);
           }
           return BT::NodeStatus::FAILURE;
@@ -234,7 +261,15 @@ BT::NodeStatus Recharge::tick(){
           while(agent_->state_ != 1 && agent_->state_ != 2)
           {
             if(isHaltRequested())
+            {
+              if(recharge_task)
+              {
+                task_result_ac_.waitForServer(ros::Duration(1.0));
+                goal.result = 0; //TODO: Change with the result of Lower-level controllers
+                task_result_ac_.sendGoal(goal);
+              }
               return BT::NodeStatus::IDLE;
+            }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
           }
         }
@@ -247,7 +282,15 @@ BT::NodeStatus Recharge::tick(){
         break;
     }
   }
+
+  if(recharge_task)
+  {
+    task_result_ac_.waitForServer(ros::Duration(1.0));
+    goal.result = 0; //TODO: Change with the result of Lower-level controllers
+    task_result_ac_.sendGoal(goal);
+  }
   return BT::NodeStatus::IDLE;
+  //*****************************************************************************************************************
 }
 void Recharge::halt(){
   ROS_INFO("[Recharge] halt requested");
@@ -587,11 +630,11 @@ BT::NodeStatus MonitorHumanTarget::tick(){
   task_result_ac_.waitForServer(ros::Duration(1.0));
   goal.task.id = task_id;
   goal.task.type = 'M';
-  goal.result = isHaltRequested() ? false : true; //TODO: Change with the result of Lower-level controllers
+  goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
   task_result_ac_.sendGoal(goal);
   if(goal.result)
       agent_->removeTaskFromQueue(task_id, 'M');
-  ROS_INFO("[MonitorHumanTarget] MONITOR TASK FINISHED (%s)", goal.result ? "true" : "false");
+  ROS_INFO("[MonitorHumanTarget] MONITOR TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
   agent_->infoQueue();
   
   return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
@@ -753,18 +796,18 @@ BT::NodeStatus TakeImage::tick(){
   for(int i = 0; i <= 1000; i++)
   {
     if(isHaltRequested())
-      return BT::NodeStatus::IDLE;
+      break;
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
   task_result_ac_.waitForServer(ros::Duration(1.0));
   goal.task.id = task_id;
   goal.task.type = 'I';
-  goal.result = isHaltRequested() ? false : true; //TODO: Change with the result of Lower-level controllers
+  goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
   task_result_ac_.sendGoal(goal);
   if(goal.result)
       agent_->removeTaskFromQueue(task_id, 'I');
-  ROS_INFO("[TakeImage] INSPECT TASK FINISHED (%s)", goal.result ? "true" : "false");
+  ROS_INFO("[TakeImage] INSPECT TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
   agent_->infoQueue();
 
   return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
@@ -1005,7 +1048,7 @@ BT::NodeStatus DeliverTool::tick(){
   for(int i = 0; i <= 1000; i++)
   {
     if(isHaltRequested())
-      return BT::NodeStatus::IDLE;
+      break;
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   agent_->tool_flag_ = isHaltRequested() ? tool_id : "none";
@@ -1013,11 +1056,11 @@ BT::NodeStatus DeliverTool::tick(){
   task_result_ac_.waitForServer(ros::Duration(1.0));
   goal.task.id = task_id;
   goal.task.type = 'D';
-  goal.result = isHaltRequested() ? false : true; //TODO: Change with the result of Lower-level controllers
+  goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
   task_result_ac_.sendGoal(goal);
   if(goal.result)
       agent_->removeTaskFromQueue(task_id, 'D');
-  ROS_INFO("[DeliverTool] DELIVER TOOL TASK FINISHED (%s)", goal.result ? "true" : "false");
+  ROS_INFO("[DeliverTool] DELIVER TOOL TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
   agent_->infoQueue();
 
   return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
@@ -1045,10 +1088,22 @@ BT::NodeStatus MissionOver::tick(){
 Idle::Idle(const std::string& name) : BT::ConditionNode(name, {}) {}
 void Idle::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus Idle::tick(){
-  if(agent_->getQueueSize() == 0)
+  classes::Task* task;
+
+  if(agent_->task_queue_.empty())
     return BT::NodeStatus::SUCCESS;
-  else
-    return BT::NodeStatus::FAILURE;
+
+  task = agent_->task_queue_.front();
+  switch(task->getType())
+  {
+    case 'W':
+    case 'w':
+      return BT::NodeStatus::SUCCESS;
+      break;
+    default:
+      return BT::NodeStatus::FAILURE;
+      break;
+  }
 }
 
 //IsBatteryEnough
@@ -1515,6 +1570,7 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
     if(!checkBeaconTimeout(ros::Time::now()))
       beacon_pub_.publish(beacon_);
     isBatteryEnough();
+    task_queue_manager();
     ros::spinOnce();
     loop_rate_.sleep();
 
@@ -1627,17 +1683,60 @@ void AgentNode::emptyTheQueue(){
 int AgentNode::getQueueSize(){return task_queue_.size();}
 void AgentNode::infoQueue(){
   classes::Task* tmp;
+  char task_type;
   for(int i = 0; i < getQueueSize(); ++i)
   {
     tmp = task_queue_.front();
+    task_type = tmp->getType();
     ROS_INFO_STREAM("" << tmp->getID() << ": " << (
-      tmp->getType() == 'M' ? "Monitor" : 
-      tmp->getType() == 'I' ? "Inspect" : 
-      tmp->getType() == 'D' ? "DeliverTool" :
-      "Task"));
+          task_type == 'M' ? "Monitor" : 
+          task_type == 'I' ? "Inspect" : 
+          task_type == 'D' ? "DeliverTool" :
+          task_type == 'R' ? "Recharge" :
+          task_type == 'W' ? "Wait" :
+          "Task"));
     task_queue_.push(task_queue_.front());
     task_queue_.pop();
   }
+}
+void AgentNode::task_queue_manager(){
+  std::queue<classes::Task*> task_queue_aux(task_queue_);
+  classes::Task* current_task;
+  classes::Task* next_task;
+  char next_task_type;
+  float initial_percentage;
+  actionlib::SimpleActionClient<human_aware_collaboration_planner::TaskResultAction> task_result_ac_("/" +
+      beacon_.id + "/task_result", true);
+  human_aware_collaboration_planner::TaskResultGoal goal;
+
+  //Check if there are some waiting tasks in the queue
+  if(task_queue_.size() < 2)
+    return;
+  task_queue_aux.pop();
+  current_task = task_queue_.front();
+  next_task = task_queue_aux.front();
+  next_task_type = next_task->getType();
+  //Check if the second task is a Recharge task
+  if(next_task_type != 'R')
+    return;
+  initial_percentage = next_task->getInitialPercentage();
+  //Check if the Agent's battery is equal or lower than the recharge task initial percentage
+  if(battery_ > initial_percentage)
+    return;
+  //Halt the first task, delete it from queue and start the Recharge task
+  goal.task.id = current_task->getID();
+  goal.task.type = current_task->getType();
+  ROS_INFO_STREAM("[task_queue_manager] " << goal.task.id << ": " << (
+          goal.task.type == 'M' ? "Monitor" : 
+          goal.task.type == 'I' ? "Inspect" : 
+          goal.task.type == 'D' ? "DeliverTool" :
+          goal.task.type == 'R' ? "Recharge" :
+          goal.task.type == 'W' ? "Wait" :
+          "Halted to Recharge"));
+  task_result_ac_.waitForServer(ros::Duration(1.0));
+  goal.result = 2; //TODO: Change with the result of Lower-level controllers
+  task_result_ac_.sendGoal(goal);
+  return;
 }
 //New Task List Action callback
 void AgentNode::newTaskList(const human_aware_collaboration_planner::NewTaskListGoalConstPtr& goal){

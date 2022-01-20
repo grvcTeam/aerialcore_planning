@@ -560,15 +560,18 @@ void Agent::batteryEnoughCB(const human_aware_collaboration_planner::BatteryEnou
 void Agent::taskResultCB(const human_aware_collaboration_planner::TaskResultGoalConstPtr& goal){
   human_aware_collaboration_planner::TaskResultResult task_result_result_;
   classes::Task* task = planner_->getPendingTask(goal->task.id);
+  char task_type = task->getType();
 
   //Check if task ended becouse mission is over
   if(planner_->getMissionOver())
   {
     ROS_INFO_STREAM("[taskResultCB] (" << id_ << ") " << goal->task.id << "(" << (
-      task->getType() == 'M' ? "Monitor" : 
-      task->getType() == 'I' ? "Inspect" : 
-      task->getType() == 'D' ? "DeliverTool" : "Task")
-      << ") Halted becouse mission is over.");
+            task_type == 'M' ? "Monitor" : 
+            task_type == 'I' ? "Inspect" : 
+            task_type == 'D' ? "DeliverTool" :
+            task_type == 'R' ? "Recharge" :
+            task_type == 'W' ? "Wait" : 
+            "Task") << ") Halted becouse mission is over.");
     task_result_result_.ack = true;
     task_result_as_.setSucceeded(task_result_result_);
     return;
@@ -584,27 +587,45 @@ void Agent::taskResultCB(const human_aware_collaboration_planner::TaskResultGoal
   }
 
   //Check if this task's action node ended becouse a task with the same ID arrived
-  if(goal->task.type != task->getType())
+  if(goal->task.type != task_type)
   {
     ROS_INFO_STREAM("[taskResultCB] (" << id_ << ") " << goal->task.id << "(" << goal->task.type << ")"
       << ") Halted becouse of a task (" << (
-      task->getType() == 'M' ? "Monitor" : 
-      task->getType() == 'I' ? "Inspect" : 
-      task->getType() == 'D' ? "DeliverTool" : "Task")
-      << ") with a duplicated ID.");
+          task_type == 'M' ? "Monitor" : 
+          task_type == 'I' ? "Inspect" : 
+          task_type == 'D' ? "DeliverTool" :
+          task_type == 'R' ? "Recharge" :
+          task_type == 'W' ? "Wait" : 
+          "Task") << ") with a duplicated ID.");
     task_result_result_.ack = true;
     task_result_as_.setSucceeded(task_result_result_);
     return;
   }
 
-  //If task ended with SUCCESS, delete task from Planner's pending tasks list
-  if(goal->result)
+  //If task has been HALTED by the task queue manager as scheduled. Not deleted in this case (relieved or postponed)
+  if(goal->result == 2)
   {
     ROS_INFO_STREAM("[taskResultCB] (" << id_ << ") " << goal->task.id << "(" << (
-      task->getType() == 'M' ? "Monitor" : 
-      task->getType() == 'I' ? "Inspect" : 
-      task->getType() == 'D' ? "DeliverTool" : "Task")
-      << ") SUCCEEDED. Reallocating just in case...");
+            task_type == 'M' ? "Monitor" : 
+            task_type == 'I' ? "Inspect" : 
+            task_type == 'D' ? "DeliverTool" :
+            task_type == 'R' ? "Recharge" :
+            task_type == 'W' ? "Wait" : 
+            "Task") << ") HALTED by the task queue manager to Recharge. Reallocating...");
+    if(task_queue_.front() == task)
+      task_queue_.pop();
+    planner_->performTaskAllocation();
+  }
+  //If task ended with SUCCESS, delete task from Planner's pending tasks list
+  else if(goal->result)
+  {
+    ROS_INFO_STREAM("[taskResultCB] (" << id_ << ") " << goal->task.id << "(" << (
+            task_type == 'M' ? "Monitor" : 
+            task_type == 'I' ? "Inspect" : 
+            task_type == 'D' ? "DeliverTool" :
+            task_type == 'R' ? "Recharge" :
+            task_type == 'W' ? "Wait" : 
+            "Task") << ") SUCCEEDED. Reallocating just in case...");
     if(task_queue_.front() == task)
       task_queue_.pop();
     planner_->deletePendingTask(goal->task.id);
@@ -617,10 +638,12 @@ void Agent::taskResultCB(const human_aware_collaboration_planner::TaskResultGoal
     if(!battery_enough_)
     {
       ROS_INFO_STREAM("[taskResultCB] (" << id_ << ") " << goal->task.id << " (" << (
-      task->getType() == 'M' ? "Monitor" : 
-      task->getType() == 'I' ? "Inspect" : 
-      task->getType() == 'D' ? "DeliverTool" : "Task")
-      << ") in " << id_ << " FAILED due to low battery.");
+              task_type == 'M' ? "Monitor" : 
+              task_type == 'I' ? "Inspect" : 
+              task_type == 'D' ? "DeliverTool" :
+              task_type == 'R' ? "Recharge" :
+              task_type == 'W' ? "Wait" : 
+              "Task") << ") in " << id_ << " FAILED due to low battery.");
       //TODO: planned battery recharges initial percentage should always be higher than the emergency !battery_enough_
       //planner_->performTaskAllocation(); //Not needed becouse has already been executed in batteryEnoughCB
     }
@@ -630,10 +653,12 @@ void Agent::taskResultCB(const human_aware_collaboration_planner::TaskResultGoal
       ROS_WARN_STREAM("[taskResultCB] (" << id_ << 
           ") Halt() is executed before the new node's tick(), so taskResultCB() runs before batteryEnoughCB()");
       ROS_INFO_STREAM("[taskResultCB] (" << id_ << ") " << goal->task.id << " (" << (
-      task->getType() == 'M' ? "Monitor" : 
-      task->getType() == 'I' ? "Inspect" : 
-      task->getType() == 'D' ? "DeliverTool" : "Task")
-      << ") in " << id_ << " FAILED due to low battery.");
+              task_type == 'M' ? "Monitor" : 
+              task_type == 'I' ? "Inspect" : 
+              task_type == 'D' ? "DeliverTool" :
+              task_type == 'R' ? "Recharge" :
+              task_type == 'W' ? "Wait" : 
+              "Task") << ") in " << id_ << " FAILED due to low battery.");
       //TODO: planned battery recharges initial percentage should always be higher than the emergency !battery_enough_
       //planner_->performTaskAllocation(); //Not needed becouse has already been executed in batteryEnoughCB
     }
@@ -641,20 +666,24 @@ void Agent::taskResultCB(const human_aware_collaboration_planner::TaskResultGoal
     else if(task == task_queue_.front())
     {
       ROS_ERROR_STREAM("[taskResultCB] (" << id_ << ") " << goal->task.id << " (" << (
-      task->getType() == 'M' ? "Monitor" : 
-      task->getType() == 'I' ? "Inspect" : 
-      task->getType() == 'D' ? "DeliverTool" : "Task")
-      << ") FAILED. Deleting and Reallocating...");
+              task_type == 'M' ? "Monitor" : 
+              task_type == 'I' ? "Inspect" : 
+              task_type == 'D' ? "DeliverTool" :
+              task_type == 'R' ? "Recharge" :
+              task_type == 'W' ? "Wait" : 
+              "Task") << ") FAILED. Deleting and Reallocating...");
       task_queue_.pop();
       planner_->deletePendingTask(goal->task.id);
       planner_->performTaskAllocation();
     }
     else
       ROS_INFO_STREAM("[taskResultCB] (" << id_ << ") " << goal->task.id << " (" << (
-      task->getType() == 'M' ? "Monitor" : 
-      task->getType() == 'I' ? "Inspect" : 
-      task->getType() == 'D' ? "DeliverTool" : "Task")
-      << ") in " << id_ << " FAILED but seems to be planned (reallocation).");
+              task_type == 'M' ? "Monitor" : 
+              task_type == 'I' ? "Inspect" : 
+              task_type == 'D' ? "DeliverTool" :
+              task_type == 'R' ? "Recharge" :
+              task_type == 'W' ? "Wait" : 
+              "Task") << ") in " << id_ << " FAILED but seems to be planned (reallocation).");
   }
 
   task_result_result_.ack = true;
@@ -670,14 +699,18 @@ void Agent::print(std::ostream& os){
   //os << "Battery percentage: " << battery_ << std::endl;
   //os << "Task list: (" << task_queue_.size() << " tasks)";
   classes::Task* tmp;
+  char task_type = tmp->getType();
   auto queue_size = task_queue_.size(); 
   for(int i = 0; i < queue_size; ++i)
   {
     tmp = task_queue_.front();
     os << "\n\t" << tmp->getID() << ": " << (
-      tmp->getType() == 'M' ? "Monitor" : 
-      tmp->getType() == 'I' ? "Inspect" : 
-      tmp->getType() == 'D' ? "DeliverTool" : "Task");
+        task_type == 'M' ? "Monitor" : 
+        task_type == 'I' ? "Inspect" : 
+        task_type == 'D' ? "DeliverTool" :
+        task_type == 'R' ? "Recharge" :
+        task_type == 'W' ? "Wait" : 
+        "Task");
     task_queue_.push(task_queue_.front());
     task_queue_.pop();
   }
@@ -818,6 +851,7 @@ bool Planner::checkTaskParams(const human_aware_collaboration_planner::NewTaskGo
 //New Tasks callback
 void Planner::incomingTask(const human_aware_collaboration_planner::NewTaskGoalConstPtr& goal){
   //Recharge tasks are not supposed to come from this way. Recharge tasks are created by the High-Level Planner
+  //Wait tasks are not supposed to come from this way. Wait tasks are created by the High-Level Planner
   nt_feedback_.status = "Reading the New Task";
   nt_as_.publishFeedback(nt_feedback_);
 
@@ -839,9 +873,15 @@ void Planner::incomingTask(const human_aware_collaboration_planner::NewTaskGoalC
     std::map<std::string, classes::Task*>::iterator task_itr = pending_tasks_.find(id);
     if(task_itr != pending_tasks_.end())
     {
+      old_type = task_itr->second->getType();
       //Warn Operators that a task has been deleted due to repeated IDs.
-      ROS_INFO_STREAM("[incomingTask] " << id << "(" << (old_type == 'M' ? "Monitor" : old_type == 'I' ? "Inspect" :
-              old_type == 'D' ? "DeliverTool" : "Task") << ") is going to be deleted");
+      ROS_INFO_STREAM("[incomingTask] " << id << "(" << (
+              old_type == 'M' ? "Monitor" : 
+              old_type == 'I' ? "Inspect" :
+              old_type == 'D' ? "DeliverTool" : 
+              old_type == 'R' ? "Recharge" : 
+              old_type == 'W' ? "Wait" : 
+              "Task") << ") is going to be deleted");
       deletePendingTask(id);
 
       ROS_INFO("[incomingTask] Allocating tasks...");
@@ -891,8 +931,13 @@ void Planner::incomingTask(const human_aware_collaboration_planner::NewTaskGoalC
     else
     {
       //Warn Operators that a task has been deleted due to repeated IDs.
-      ROS_WARN_STREAM("[incomingTask] Duplicated ID. An unfinished task is going to be deleted: " << id << "(" <<
-          (old_type == 'M' ? "Monitor" : old_type == 'I' ? "Inspect" : old_type == 'D' ? "DeliverTool" : "Task") << ")");
+      ROS_WARN_STREAM("[incomingTask] Duplicated ID. An unfinished task is going to be deleted: " << id << "(" << (
+              old_type == 'M' ? "Monitor" : 
+              old_type == 'I' ? "Inspect" : 
+              old_type == 'D' ? "DeliverTool" : 
+              old_type == 'R' ? "Recharge" : 
+              old_type == 'W' ? "Wait" : 
+              "Task") << ")");
       //Delete old pending task and change the task in Agents tasks queue by a classes::Task (for cost calculation)
       deletePendingTask(id);
     }
