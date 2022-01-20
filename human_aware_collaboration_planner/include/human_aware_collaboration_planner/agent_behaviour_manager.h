@@ -483,7 +483,7 @@ class AgentNode
     void emptyTheQueue();
     int getQueueSize();
     void infoQueue();
-		void task_queue_manager();
+		void taskQueueManager();
     //New Task List Action callback
     void newTaskList(const human_aware_collaboration_planner::NewTaskListGoalConstPtr& goal);
     void positionCallback(const geometry_msgs::PoseStamped& pose);

@@ -1570,7 +1570,7 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
     if(!checkBeaconTimeout(ros::Time::now()))
       beacon_pub_.publish(beacon_);
     isBatteryEnough();
-    task_queue_manager();
+    taskQueueManager();
     ros::spinOnce();
     loop_rate_.sleep();
 
@@ -1699,7 +1699,7 @@ void AgentNode::infoQueue(){
     task_queue_.pop();
   }
 }
-void AgentNode::task_queue_manager(){
+void AgentNode::taskQueueManager(){
   std::queue<classes::Task*> task_queue_aux(task_queue_);
   classes::Task* current_task;
   classes::Task* next_task;
@@ -1726,7 +1726,7 @@ void AgentNode::task_queue_manager(){
   //Halt the first task, delete it from queue and start the Recharge task
   goal.task.id = current_task->getID();
   goal.task.type = current_task->getType();
-  ROS_INFO_STREAM("[task_queue_manager] " << goal.task.id << ": " << (
+  ROS_INFO_STREAM("[taskQueueManager] " << goal.task.id << ": " << (
           goal.task.type == 'M' ? "Monitor" : 
           goal.task.type == 'I' ? "Inspect" : 
           goal.task.type == 'D' ? "DeliverTool" :
