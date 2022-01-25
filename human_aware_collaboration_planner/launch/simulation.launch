@@ -1,6 +1,6 @@
 <launch>
   <!-- Debuggers: gdb, valgrind, none -->
-  <arg name="number_UAV" value="5"/>
+  <arg name="number_UAV" value="3"/>
   <arg name="planner_debugger" value="none"/>
   <arg name="agent_debugger" value="none"/>
 

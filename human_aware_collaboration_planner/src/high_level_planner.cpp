@@ -699,11 +699,12 @@ void Agent::print(std::ostream& os){
   //os << "Battery percentage: " << battery_ << std::endl;
   //os << "Task list: (" << task_queue_.size() << " tasks)";
   classes::Task* tmp;
-  char task_type = tmp->getType();
+  char task_type;
   auto queue_size = task_queue_.size(); 
   for(int i = 0; i < queue_size; ++i)
   {
     tmp = task_queue_.front();
+    task_type = tmp->getType();
     os << "\n\t" << tmp->getID() << ": " << (
         task_type == 'M' ? "Monitor" : 
         task_type == 'I' ? "Inspect" : 
