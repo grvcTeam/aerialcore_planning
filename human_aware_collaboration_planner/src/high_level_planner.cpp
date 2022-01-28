@@ -560,11 +560,12 @@ void Agent::batteryEnoughCB(const human_aware_collaboration_planner::BatteryEnou
 void Agent::taskResultCB(const human_aware_collaboration_planner::TaskResultGoalConstPtr& goal){
   human_aware_collaboration_planner::TaskResultResult task_result_result_;
   classes::Task* task = planner_->getPendingTask(goal->task.id);
-  char task_type = task->getType();
+  char task_type;
 
   //Check if task ended becouse mission is over
   if(planner_->getMissionOver())
   {
+    task_type = task->getType();
     ROS_INFO_STREAM("[taskResultCB] (" << id_ << ") " << goal->task.id << "(" << (
             task_type == 'M' ? "Monitor" : 
             task_type == 'I' ? "Inspect" : 
@@ -585,6 +586,7 @@ void Agent::taskResultCB(const human_aware_collaboration_planner::TaskResultGoal
     task_result_as_.setSucceeded(task_result_result_);
     return;
   }
+  task_type = task->getType();
 
   //Check if this task's action node ended becouse a task with the same ID arrived
   if(goal->task.type != task_type)
