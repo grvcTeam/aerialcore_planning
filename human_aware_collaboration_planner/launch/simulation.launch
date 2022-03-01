@@ -1,6 +1,6 @@
 <launch>
   <!-- Debuggers: gdb, valgrind, none -->
-  <arg name="number_UAV" value="3"/>
+  <arg name="number_UAV" value="5"/>
   <arg name="planner_debugger" value="none"/>
   <arg name="agent_debugger" value="none"/>
 
@@ -35,7 +35,10 @@
 
     <arg name="id" value="1"/>
     <arg name="type" value="PhysicalACW"/>
-    <arg name="material" value="Indigo"/>
+    <!--arg name="material" value="Indigo"/>
+    <arg name="robot_model" value="typhoon_h480"/-->
+    <arg name="material" value="Red"/>
+    <arg name="robot_model" value="mbzirc"/>
 
     <arg name="x" value="-10"/>
     <arg name="y" value="10"/>
@@ -52,7 +55,8 @@
 
     <arg name="id" value="2"/>
     <arg name="type" value="InspectionACW"/>
-    <arg name="material" value="Orange"/>
+    <arg name="material" value="Green"/>
+    <arg name="robot_model" value="mbzirc"/>
 
     <arg name="x" value="0"/>
     <arg name="y" value="20"/>
@@ -69,7 +73,8 @@
 
     <arg name="id" value="3"/>
     <arg name="type" value="SafetyACW"/>
-    <arg name="material" value="Green"/>
+    <arg name="material" value="Blue"/>
+    <arg name="robot_model" value="mbzirc"/>
 
     <arg name="x" value="10"/>
     <arg name="y" value="10"/>
@@ -86,7 +91,8 @@
 
     <arg name="id" value="4"/>
     <arg name="type" value="SafetyACW"/>
-    <arg name="material" value="Green"/>
+    <arg name="material" value="Blue"/>
+    <arg name="robot_model" value="mbzirc"/>
 
     <arg name="x" value="-10"/>
     <arg name="y" value="20"/>
@@ -103,7 +109,8 @@
 
     <arg name="id" value="5"/>
     <arg name="type" value="SafetyACW"/>
-    <arg name="material" value="Green"/>
+    <arg name="material" value="Blue"/>
+    <arg name="robot_model" value="mbzirc"/>
 
     <arg name="x" value="10"/>
     <arg name="y" value="20"/>

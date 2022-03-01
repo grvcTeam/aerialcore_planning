@@ -188,7 +188,7 @@ float Agent::computeTaskCost(classes::Task* task){
   float interruption_cost;
 
   //Costs weights. TODO: calibrate the costs
-  a = 20;
+  a = 50;
   t = 1;
   //b = 5;
   i = 3;
