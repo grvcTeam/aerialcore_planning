@@ -8,8 +8,7 @@ Position::Position(float x, float y, float z) : id_(""), x_(x), y_(y), z_(z) {}
 Position::Position(std::string id, float x, float y, float z) : id_(id), x_(x), y_(y), z_(z) {}
 Position::Position(const Position& p) : id_(p.id_), x_(p.x_), y_(p.y_), z_(p.z_) {}
 Position::~Position(){}
-void Position::update(float x, float y, float z)
-{
+void Position::update(float x, float y, float z){
   x_ = x;
   y_ = y;
   z_ = z;
@@ -20,28 +19,23 @@ float Position::getX(){return x_;}
 float Position::getY(){return y_;}
 float Position::getZ(){return z_;}
 
-float classes::distance(Position& p1, Position& p2)
-{
+float classes::distance(Position& p1, Position& p2){
   return sqrt(pow(p1.x_ - p2.x_, 2) + pow(p1.y_ - p2.y_, 2) + pow(p1.z_ - p2.z_, 2));
 }
 
-float classes::distance(Position& p1, human_aware_collaboration_planner::Waypoint& p2)
-{
+float classes::distance(Position& p1, human_aware_collaboration_planner::Waypoint& p2){
   return sqrt(pow(p1.x_ - p2.x, 2) + pow(p1.y_ - p2.y, 2) + pow(p1.z_ - p2.z, 2));
 }
 
-float classes::distance(human_aware_collaboration_planner::Waypoint& p1, Position& p2)
-{
+float classes::distance(human_aware_collaboration_planner::Waypoint& p1, Position& p2){
   return sqrt(pow(p1.x - p2.x_, 2) + pow(p1.y - p2.y_, 2) + pow(p1.z - p2.z_, 2));
 }
 
-float classes::distance(human_aware_collaboration_planner::Waypoint& p1, human_aware_collaboration_planner::Waypoint& p2)
-{
+float classes::distance(human_aware_collaboration_planner::Waypoint& p1, human_aware_collaboration_planner::Waypoint& p2){
   return sqrt(pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2) + pow(p1.z - p2.z, 2));
 }
 
-Position classes::close_pose(Position& orig, Position& dest, float dist)
-{
+Position classes::close_pose(Position& orig, Position& dest, float dist){
   float mod = sqrt(pow(orig.x_ - dest.x_, 2) + pow(orig.y_ - dest.y_, 2) + pow(orig.z_ - dest.z_, 2));
   float x = dest.x_ + dist*(orig.x_ - dest.x_)/mod;
   float y = dest.y_ + dist*(orig.y_ - dest.y_)/mod;
@@ -50,8 +44,7 @@ Position classes::close_pose(Position& orig, Position& dest, float dist)
   return Position(x, y, z);
 }
 
-Position classes::close_pose(Position& orig, human_aware_collaboration_planner::Waypoint& dest, float dist)
-{
+Position classes::close_pose(Position& orig, human_aware_collaboration_planner::Waypoint& dest, float dist){
   float mod = sqrt(pow(orig.x_ - dest.x, 2) + pow(orig.y_ - dest.y, 2) + pow(orig.z_ - dest.z, 2));
   float x = dest.x + dist*(orig.x_ - dest.x)/mod;
   float y = dest.y + dist*(orig.y_ - dest.y)/mod;
@@ -60,8 +53,7 @@ Position classes::close_pose(Position& orig, human_aware_collaboration_planner::
   return Position(x, y, z);
 }
 
-Position classes::close_pose_2D(Position& orig, Position& dest, float dist)
-{
+Position classes::close_pose_2D(Position& orig, Position& dest, float dist){
   float mod = sqrt(pow(orig.x_ - dest.x_, 2) + pow(orig.y_ - dest.y_, 2));
   float x = dest.x_ + dist*(orig.x_ - dest.x_)/mod;
   float y = dest.y_ + dist*(orig.y_ - dest.y_)/mod;
@@ -70,8 +62,7 @@ Position classes::close_pose_2D(Position& orig, Position& dest, float dist)
   return Position(x, y, z);
 }
 
-Position classes::close_pose_2D(Position& orig, human_aware_collaboration_planner::Waypoint& dest, float dist)
-{
+Position classes::close_pose_2D(Position& orig, human_aware_collaboration_planner::Waypoint& dest, float dist){
   float mod = sqrt(pow(orig.x_ - dest.x, 2) + pow(orig.y_ - dest.y, 2));
   float x = dest.x + dist*(orig.x_ - dest.x)/mod;
   float y = dest.y + dist*(orig.y_ - dest.y)/mod;
@@ -80,8 +71,7 @@ Position classes::close_pose_2D(Position& orig, human_aware_collaboration_planne
   return Position(x, y, z);
 }
 
-human_aware_collaboration_planner::Waypoint classes::central_position(std::vector<human_aware_collaboration_planner::Waypoint>& waypoints)
-{
+human_aware_collaboration_planner::Waypoint classes::central_position(std::vector<human_aware_collaboration_planner::Waypoint>& waypoints){
   human_aware_collaboration_planner::Waypoint central_position;
 
   central_position.x = 0;
@@ -140,33 +130,35 @@ Task::~Task(){}
 //class Task Getters
 std::string Task::getID(){return id_;}
 char Task::getType(){return 'T';}
-const HumanTarget* Task::getHumanPtr(){}
-std::string Task::getHumanID(){}
-Position Task::getHumanPosition(){}
-float Task::getDistance(){}
-int Task::getNumber(){}
-std::vector<std::string> Task::getAgentList(){}
-std::vector<human_aware_collaboration_planner::Waypoint> Task::getInspectWaypoints(){}
-Tool Task::getTool(){}
-std::string Task::getToolID(){}
-const Tool* Task::getToolPtr(){}
-Position Task::getToolPosition(){}
-Position* Task::getChargingStationPtr(){}
-Position Task::getChargingStation(){}
-std::string Task::getChargingStationID(){}
-float Task::getInitialPercentage(){}
-float Task::getFinalPercentage(){}
-void Task::print(std::ostream& os) const
-{
+const HumanTarget* Task::getHumanPtr(){return nullptr;}
+std::string Task::getHumanID(){return "";}
+Position Task::getHumanPosition(){return Position();}
+float Task::getDistance(){return 0;}
+int Task::getNumber(){return 0;}
+std::vector<std::string> Task::getAgentList(){return std::vector<std::string>();}
+std::vector<human_aware_collaboration_planner::Waypoint> Task::getInspectWaypoints(){
+  return std::vector<human_aware_collaboration_planner::Waypoint>();
+}
+Tool Task::getTool(){return Tool();}
+std::string Task::getToolID(){return "";}
+const Tool* Task::getToolPtr(){return nullptr;}
+Position Task::getToolPosition(){return Position();}
+Position* Task::getChargingStationPtr(){return nullptr;}
+Position Task::getChargingStation(){return Position();}
+std::string Task::getChargingStationID(){return "";}
+float Task::getInitialPercentage(){return 0;}
+float Task::getFinalPercentage(){return 0;}
+void Task::print(std::ostream& os) const{
   os << "\t" << id_ << ": Task";
+  return;
 }
 //Class Task Setters
-void Task::setWaypoints(std::vector<human_aware_collaboration_planner::Waypoint> waypoints){}
-void Task::setAgentList(std::vector<std::string> agent_list){}
-void Task::setChargingStation(Position* charging_station){}
-void Task::setInitialPercentage(float initial_percentage){}
-void Task::setFinalPercentage(float final_percentage){}
-void Task::updateParams(classes::Task* task){}
+void Task::setWaypoints(std::vector<human_aware_collaboration_planner::Waypoint> waypoints){return;}
+void Task::setAgentList(std::vector<std::string> agent_list){return;}
+void Task::setChargingStation(Position* charging_station){return;}
+void Task::setInitialPercentage(float initial_percentage){return;}
+void Task::setFinalPercentage(float final_percentage){return;}
+void Task::updateParams(classes::Task* task){return;}
 
 //class Monitor : public Task
 Monitor::Monitor() : Task(), human_target_(nullptr), distance_(0), number_(0) {}
@@ -187,24 +179,26 @@ Position Monitor::getHumanPosition(){return const_cast <HumanTarget*> (human_tar
 float Monitor::getDistance(){return distance_;}
 int Monitor::getNumber(){return number_;}
 std::vector<std::string> Monitor::getAgentList(){return agent_list_;}
-void Monitor::print(std::ostream& os) const
-{
+void Monitor::print(std::ostream& os) const{
   os << "\t" << id_ << ": Monitor (" << distance_ << ", " << number_ << ")\n\t\tHuman Target: " << 
     human_target_->id_ << ": " << human_target_->position_.x_ << ", " << human_target_->position_.y_ << ", " << 
     human_target_->position_.z_ << "\n\t\tAgent List:";
   for(auto a = agent_list_.begin(); a != agent_list_.end(); ++a)
     os << " (" << *a << ")";
+  return;
 }
 //Class Monitor Setters
-void Monitor::setAgentList(std::vector<std::string> agent_list){agent_list_ = agent_list;}
-void Monitor::updateParams(classes::Task* task)
-{
-  if(task->getType() == 'M')
-  {
+void Monitor::setAgentList(std::vector<std::string> agent_list){
+  agent_list_ = agent_list;
+  return;
+}
+void Monitor::updateParams(classes::Task* task){
+  if(task->getType() == 'M'){
     human_target_ = task->getHumanPtr();
     distance_ = task->getDistance();
     number_ = task->getNumber();
   }
+  return;
 }
 
 //class Inspect : public Task
@@ -220,22 +214,28 @@ std::string Inspect::getID(){return id_;}
 char Inspect::getType(){return 'I';}
 std::vector<human_aware_collaboration_planner::Waypoint> Inspect::getInspectWaypoints(){return waypoints_;}
 std::vector<std::string> Inspect::getAgentList(){return agent_list_;}
-void Inspect::print(std::ostream& os) const
-{
+void Inspect::print(std::ostream& os) const{
   os << "\t" << id_ << ": Inspect\n\t\tPositions:";
   for(auto wp = waypoints_.begin(); wp != waypoints_.end(); ++wp)
     os << " (" << wp->x << ", " << wp->y << ", " << wp->z << ")";
   os << "\n\t\tAgent List:";
   for(auto a = agent_list_.begin(); a != agent_list_.end(); ++a)
     os << " (" << *a << ")";
+  return;
 }
 //Class Inspect Setters
-void Inspect::setWaypoints(std::vector<human_aware_collaboration_planner::Waypoint> waypoints){waypoints_ = waypoints;}
-void Inspect::setAgentList(std::vector<std::string> agent_list){agent_list_ = agent_list;}
-void Inspect::updateParams(classes::Task* task)
-{
+void Inspect::setWaypoints(std::vector<human_aware_collaboration_planner::Waypoint> waypoints){
+  waypoints_ = waypoints;
+  return;
+}
+void Inspect::setAgentList(std::vector<std::string> agent_list){
+  agent_list_ = agent_list;
+  return;
+}
+void Inspect::updateParams(classes::Task* task){
   if(task->getType() == 'I')
     waypoints_ = task->getInspectWaypoints();
+  return;
 }
 
 //class DeliverTool : public Task
@@ -254,21 +254,20 @@ Position DeliverTool::getToolPosition(){return const_cast <Tool*> (tool_)->getPo
 const HumanTarget* DeliverTool::getHumanPtr(){return human_target_;}
 std::string DeliverTool::getHumanID(){return const_cast <HumanTarget*> (human_target_)->getID();}
 Position DeliverTool::getHumanPosition(){return const_cast <HumanTarget*> (human_target_)->getPosition();}
-void DeliverTool::print(std::ostream& os) const
-{
+void DeliverTool::print(std::ostream& os) const{
   os << "\t" << id_ << ": Deliver\n\t\tTool: " << tool_->id_ << " (" << tool_->weight_ << "kg): " <<
     tool_->position_.x_ << ", " << tool_->position_.y_ << ", " << tool_->position_.z_ << "\n\t\tHuman Target: " << 
     human_target_->id_ << ": " << human_target_->position_.x_ << ", " << human_target_->position_.y_ << ", " << 
     human_target_->position_.z_;
+  return;
 }
 //class DeliverTool Setters
-void DeliverTool::updateParams(classes::Task* task)
-{
-  if(task->getType() == 'D')
-  {
+void DeliverTool::updateParams(classes::Task* task){
+  if(task->getType() == 'D'){
     tool_ = task->getToolPtr();
     human_target_ = task->getHumanPtr();
   }
+  return;
 }
 
 //class Recharge : public Task
@@ -289,23 +288,31 @@ Position Recharge::getChargingStation(){return (*charging_station_);}
 std::string Recharge::getChargingStationID(){return const_cast <Position*> (charging_station_)->getID();}
 float Recharge::getInitialPercentage(){return initial_percentage_;}
 float Recharge::getFinalPercentage(){return final_percentage_;}
-void Recharge::print(std::ostream& os) const
-{
+void Recharge::print(std::ostream& os) const{
   os << "\t" << id_ << ": Recharge\n\t\tCharging Station: " << charging_station_ << "\n\t\tInitial percentage: " << 
     initial_percentage_ << "\n\t\tFinal percentage: " << final_percentage_;
+  return;
 }
 //Recharge Setters
-void Recharge::setChargingStation(Position* charging_station){charging_station_ = charging_station;}
-void Recharge::setInitialPercentage(float initial_percentage){initial_percentage_ = initial_percentage;}
-void Recharge::setFinalPercentage(float final_percentage){final_percentage_ = final_percentage;}
-void Recharge::updateParams(classes::Task* task)
-{
-  if(task->getType() == 'R')
-  {
+void Recharge::setChargingStation(Position* charging_station){
+  charging_station_ = charging_station;
+  return;
+}
+void Recharge::setInitialPercentage(float initial_percentage){
+  initial_percentage_ = initial_percentage;
+  return;
+}
+void Recharge::setFinalPercentage(float final_percentage){
+  final_percentage_ = final_percentage;
+  return;
+}
+void Recharge::updateParams(classes::Task* task){
+  if(task->getType() == 'R'){
     charging_station_ = task->getChargingStationPtr();
     initial_percentage_ = task->getInitialPercentage();
     final_percentage_ = task->getFinalPercentage();
   }
+  return;
 }
 
 //class Wait : public Task
@@ -315,8 +322,8 @@ Wait::~Wait(){}
 //Wait Getters
 std::string Wait::getID(){return id_;}
 char Wait::getType(){return 'W';}
-void Wait::print(std::ostream& os) const
-{
+void Wait::print(std::ostream& os) const{
   os << "\t" << id_ << ": Wait";
+  return;
 }
 //Wait Setters
