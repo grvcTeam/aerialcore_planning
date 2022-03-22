@@ -1,124 +1,214 @@
 <launch>
-  <!-- Debuggers: gdb, valgrind, none -->
-  <arg name="number_UAV" value="5"/>
-  <arg name="planner_debugger" value="none"/>
-  <arg name="agent_debugger" value="none"/>
+    <!-- Mode: sitl, serial, custom -->
+    <!-- Worlds: empty, power_tower, burguillos -->
+    <!-- Debuggers: gdb, valgrind, none -->
+    <arg name="number_UAV" default="3"/>
+    <arg name="mode" default="sitl"/>
+    <arg name="world" default="power_tower"/>
+    <arg name="ual_backend" default="light"/>
+    <arg name="planner_debugger" default="none"/>
+    <arg name="agent_debugger" default="none"/>
 
-  <arg name="config_file" value="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
+    <arg name="config_file" default="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
 
-  <!-- Launch Gazebo simulation -->
-  <rosparam param="/use_sim_time">true</rosparam>
-  <node pkg="aerialcore_simulation" type="launch_gzworld.py" name="gazebo_world" 
-    args="-physics=none -world=$(find aerialcore_simulation)/worlds/leader_follower_inspection.world
-    -add_model_path=$(find aerialcore_simulation)/models
-    -description_package=robots_description">
-    <rosparam param="sim_origin">[38.138728, -3.173825, 0]</rosparam>  <!-- [lat,lon,alt] -->
-  </node>
+    <arg name="ns_prefix" default="uav_"/>
+    <arg name="ual_server" default="on"/>
 
-  <!-- Launch Planner Node (there's only one node of this type for the whole simulation and it's outside any ns)-->
-  <node pkg="human_aware_collaboration_planner" type="high_level_planner" name="high_level_planner" output="screen" launch-prefix="xterm -e gdb -ex 'set print thread-events off' -ex run --args" if="$(eval planner_debugger=='gdb')">
-    <param name="config_file" value="$(arg config_file)"/>
-  </node>
-  <node pkg="human_aware_collaboration_planner" type="high_level_planner" name="high_level_planner" output="screen" launch-prefix="valgrind -v --leak-check=full --show-leak-kinds=all --track-origins=yes --log-file=/home/baldman/valgrind_planner.log" if="$(eval planner_debugger=='valgrind')">
-    <param name="config_file" value="$(arg config_file)"/>
-  </node>
-  <node pkg="human_aware_collaboration_planner" type="high_level_planner" name="high_level_planner" output="screen" if="$(eval planner_debugger=='none')"> 
-    <param name="config_file" value="$(arg config_file)"/>
-  </node>
+    <arg name="ual_pub_rate" default="30.0"/>
+    <arg name="pose_frame_id" default="map"/>
+    <arg name="mavros_offboard_rate" default="30.0"/>
+    <arg name="noise_var" default="0.0"/>
+    <arg name="position_th" default="0.33"/>
+    <arg name="orientation_th" default="0.65"/>
+    <arg name="hold_pose_time" default="3.0"/>
+    <arg name="max_horizontal_velocity" default="1.6"/>
+    <arg name="max_vertical_velocity" default="1.2"/>
+    <arg name="max_yaw_rate" default="1.0"/>
+    <arg name="max_position_error" default="0.1"/>
+    <arg name="max_orientation_error" default="0.01"/>
 
-  <!-- Launch Groot to monitor the BTs -->
-  <!-- node pkg="groot" type="Groot" name="Groot"> </node-->
+    <arg name="battery_faker" default="true"/>
 
-  <!-- Launch Agent Node for robot id=uav_1. Type: PhysicalACW-->
-  <include file="$(find human_aware_collaboration_planner)/launch/agent.launch">
-    <arg name="agent_debugger" value="$(arg agent_debugger)"/>
 
-    <arg name="id" value="1"/>
-    <arg name="type" value="PhysicalACW"/>
-    <!--arg name="material" value="Indigo"/>
-    <arg name="robot_model" value="typhoon_h480"/-->
-    <arg name="material" value="Red"/>
-    <arg name="robot_model" value="mbzirc"/>
+    <!-- Launch Gazebo simulation -->
+    <include file="$(find human_aware_collaboration_planner)/launch/world.launch" if="$(eval mode=='sitl')">
+      <arg name="world" value="$(arg world)"/>
+    </include>
 
-    <arg name="x" value="-10"/>
-    <arg name="y" value="10"/>
-    <arg name="z" value="0.0"/>
-    <arg name="yaw" value="0"/>
-    <arg name="frame_id" value="map"/>
+    <!-- Launch Planner Node (there's only one node of this type for the whole simulation and it's outside any ns)-->
+    <include file="$(find human_aware_collaboration_planner)/launch/planner.launch">
+      <arg name="planner_debugger" value="$(arg planner_debugger)"/>
+      <arg name="config_file" value="$(arg config_file)"/>
+    </include>
 
-    <arg name="config_file" value="$(arg config_file)"/>
-  </include>
+    <!-- Launch UAV 1 nodes -->
+    <include file="$(find human_aware_collaboration_planner)/launch/uav.launch" if="$(eval number_UAV >= 1)">
+      <arg name="id" value="1"/>
+      <arg name="type" value="PhysicalACW"/>
+      <arg name="robot_model" value="mbzirc"/>
+      <arg name="material" value="Red"/>
+      <arg name="camera" value="false"/>
+      <arg name="x" value="-10"/>
+      <arg name="y" value="10"/>
+      <arg name="z" value="0"/>
+      <arg name="yaw" value="0"/>
 
-  <!-- Launch Agent Node for robot id=uav_2. Type: InspectionACW-->
-  <include file="$(find human_aware_collaboration_planner)/launch/agent.launch" if="$(eval number_UAV >= 2)">
-    <arg name="agent_debugger" value="$(arg agent_debugger)"/>
+      <arg name="ns_prefix" value="$(arg ns_prefix)"/>
+      <arg name="ual_server" value="$(arg ual_server)"/>
+      <arg name="ual_pub_rate" value="$(arg ual_pub_rate)"/>
+      <arg name="ual_backend" value="$(arg ual_backend)"/>
+      <arg name="mode" value="$(arg mode)"/>
+      <arg name="pose_frame_id" value="$(arg pose_frame_id)"/>
+      <arg name="mavros_offboard_rate" value="$(arg mavros_offboard_rate)"/>
+      <arg name="noise_var" value="$(arg noise_var)"/>
+      <arg name="position_th" value="$(arg position_th)"/>
+      <arg name="orientation_th" value="$(arg orientation_th)"/>
+      <arg name="hold_pose_time" value="$(arg hold_pose_time)"/>
+      <arg name="max_horizontal_velocity" value="$(arg max_horizontal_velocity)"/>
+      <arg name="max_vertical_velocity" value="$(arg max_vertical_velocity)"/>
+      <arg name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
+      <arg name="max_position_error" value="$(arg max_position_error)"/>
+      <arg name="max_orientation_error" value="$(arg max_orientation_error)"/>
+      <arg name="agent_debugger" value="$(arg agent_debugger)"/>
+      <arg name="config_file" value="$(arg config_file)"/>
 
-    <arg name="id" value="2"/>
-    <arg name="type" value="InspectionACW"/>
-    <arg name="material" value="Green"/>
-    <arg name="robot_model" value="mbzirc"/>
+      <arg name="battery_faker" value="$(arg battery_faker)"/>
+    </include>
 
-    <arg name="x" value="0"/>
-    <arg name="y" value="20"/>
-    <arg name="z" value="0.0"/>
-    <arg name="yaw" value="0"/>
-    <arg name="frame_id" value="map"/>
+    <!-- Launch UAV 2 nodes -->
+    <include file="$(find human_aware_collaboration_planner)/launch/uav.launch" if="$(eval number_UAV >= 2)">
+      <arg name="id" value="2"/>
+      <arg name="type" value="InspectionACW"/>
+      <arg name="robot_model" value="mbzirc"/>
+      <arg name="material" value="Green"/>
+      <arg name="camera" value="false"/>
+      <arg name="x" value="0"/>
+      <arg name="y" value="20"/>
+      <arg name="z" value="0"/>
+      <arg name="yaw" value="0"/>
 
-    <arg name="config_file" value="$(arg config_file)"/>
-  </include>
+      <arg name="ns_prefix" value="$(arg ns_prefix)"/>
+      <arg name="ual_server" value="$(arg ual_server)"/>
+      <arg name="ual_pub_rate" value="$(arg ual_pub_rate)"/>
+      <arg name="ual_backend" value="$(arg ual_backend)"/>
+      <arg name="mode" value="$(arg mode)"/>
+      <arg name="pose_frame_id" value="$(arg pose_frame_id)"/>
+      <arg name="mavros_offboard_rate" value="$(arg mavros_offboard_rate)"/>
+      <arg name="noise_var" value="$(arg noise_var)"/>
+      <arg name="position_th" value="$(arg position_th)"/>
+      <arg name="orientation_th" value="$(arg orientation_th)"/>
+      <arg name="hold_pose_time" value="$(arg hold_pose_time)"/>
+      <arg name="max_horizontal_velocity" value="$(arg max_horizontal_velocity)"/>
+      <arg name="max_vertical_velocity" value="$(arg max_vertical_velocity)"/>
+      <arg name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
+      <arg name="max_position_error" value="$(arg max_position_error)"/>
+      <arg name="max_orientation_error" value="$(arg max_orientation_error)"/>
+      <arg name="agent_debugger" value="$(arg agent_debugger)"/>
+      <arg name="config_file" value="$(arg config_file)"/>
 
-  <!-- Launch Agent Node for robot id=uav_3. Type: SafetyACW-->
-  <include file="$(find human_aware_collaboration_planner)/launch/agent.launch" if="$(eval number_UAV >= 3)">
-    <arg name="agent_debugger" value="$(arg agent_debugger)"/>
+      <arg name="battery_faker" value="$(arg battery_faker)"/>
+    </include>
 
-    <arg name="id" value="3"/>
-    <arg name="type" value="SafetyACW"/>
-    <arg name="material" value="Blue"/>
-    <arg name="robot_model" value="mbzirc"/>
+    <!-- Launch UAV 3 nodes -->
+    <include file="$(find human_aware_collaboration_planner)/launch/uav.launch" if="$(eval number_UAV >= 3)">
+      <arg name="id" value="3"/>
+      <arg name="type" value="SafetyACW"/>
+      <arg name="robot_model" value="mbzirc"/>
+      <arg name="material" value="Blue"/>
+      <arg name="camera" value="false"/>
+      <arg name="x" value="10"/>
+      <arg name="y" value="10"/>
+      <arg name="z" value="0"/>
+      <arg name="yaw" value="0"/>
 
-    <arg name="x" value="10"/>
-    <arg name="y" value="10"/>
-    <arg name="z" value="0"/>
-    <arg name="yaw" value="0"/>
-    <arg name="frame_id" value="map"/>
+      <arg name="ns_prefix" value="$(arg ns_prefix)"/>
+      <arg name="ual_server" value="$(arg ual_server)"/>
+      <arg name="ual_pub_rate" value="$(arg ual_pub_rate)"/>
+      <arg name="ual_backend" value="$(arg ual_backend)"/>
+      <arg name="mode" value="$(arg mode)"/>
+      <arg name="pose_frame_id" value="$(arg pose_frame_id)"/>
+      <arg name="mavros_offboard_rate" value="$(arg mavros_offboard_rate)"/>
+      <arg name="noise_var" value="$(arg noise_var)"/>
+      <arg name="position_th" value="$(arg position_th)"/>
+      <arg name="orientation_th" value="$(arg orientation_th)"/>
+      <arg name="hold_pose_time" value="$(arg hold_pose_time)"/>
+      <arg name="max_horizontal_velocity" value="$(arg max_horizontal_velocity)"/>
+      <arg name="max_vertical_velocity" value="$(arg max_vertical_velocity)"/>
+      <arg name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
+      <arg name="max_position_error" value="$(arg max_position_error)"/>
+      <arg name="max_orientation_error" value="$(arg max_orientation_error)"/>
+      <arg name="agent_debugger" value="$(arg agent_debugger)"/>
+      <arg name="config_file" value="$(arg config_file)"/>
 
-    <arg name="config_file" value="$(arg config_file)"/>
-  </include>
+      <arg name="battery_faker" value="$(arg battery_faker)"/>
+    </include>
 
-  <!-- Launch Agent Node for robot id=uav_4. Type: SafetyACW-->
-  <include file="$(find human_aware_collaboration_planner)/launch/agent.launch" if="$(eval number_UAV >= 4)">
-    <arg name="agent_debugger" value="$(arg agent_debugger)"/>
+    <!-- Launch UAV 4 nodes -->
+    <include file="$(find human_aware_collaboration_planner)/launch/uav.launch" if="$(eval number_UAV >= 4)">
+      <arg name="id" value="4"/>
+      <arg name="type" value="SafetyACW"/>
+      <arg name="robot_model" value="mbzirc"/>
+      <arg name="material" value="Blue"/>
+      <arg name="camera" value="false"/>
+      <arg name="x" value="-10"/>
+      <arg name="y" value="20"/>
+      <arg name="z" value="0"/>
+      <arg name="yaw" value="0"/>
 
-    <arg name="id" value="4"/>
-    <arg name="type" value="SafetyACW"/>
-    <arg name="material" value="Blue"/>
-    <arg name="robot_model" value="mbzirc"/>
+      <arg name="ns_prefix" value="$(arg ns_prefix)"/>
+      <arg name="ual_server" value="$(arg ual_server)"/>
+      <arg name="ual_pub_rate" value="$(arg ual_pub_rate)"/>
+      <arg name="ual_backend" value="$(arg ual_backend)"/>
+      <arg name="mode" value="$(arg mode)"/>
+      <arg name="pose_frame_id" value="$(arg pose_frame_id)"/>
+      <arg name="mavros_offboard_rate" value="$(arg mavros_offboard_rate)"/>
+      <arg name="noise_var" value="$(arg noise_var)"/>
+      <arg name="position_th" value="$(arg position_th)"/>
+      <arg name="orientation_th" value="$(arg orientation_th)"/>
+      <arg name="hold_pose_time" value="$(arg hold_pose_time)"/>
+      <arg name="max_horizontal_velocity" value="$(arg max_horizontal_velocity)"/>
+      <arg name="max_vertical_velocity" value="$(arg max_vertical_velocity)"/>
+      <arg name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
+      <arg name="max_position_error" value="$(arg max_position_error)"/>
+      <arg name="max_orientation_error" value="$(arg max_orientation_error)"/>
+      <arg name="agent_debugger" value="$(arg agent_debugger)"/>
+      <arg name="config_file" value="$(arg config_file)"/>
 
-    <arg name="x" value="-10"/>
-    <arg name="y" value="20"/>
-    <arg name="z" value="0"/>
-    <arg name="yaw" value="0"/>
-    <arg name="frame_id" value="map"/>
+      <arg name="battery_faker" value="$(arg battery_faker)"/>
+    </include>
 
-    <arg name="config_file" value="$(arg config_file)"/>
-  </include>
+    <!-- Launch UAV 5 nodes -->
+    <include file="$(find human_aware_collaboration_planner)/launch/uav.launch" if="$(eval number_UAV >= 5)">
+      <arg name="id" value="5"/>
+      <arg name="type" value="SafetyACW"/>
+      <arg name="robot_model" value="mbzirc"/>
+      <arg name="material" value="Blue"/>
+      <arg name="camera" value="false"/>
+      <arg name="x" value="10"/>
+      <arg name="y" value="20"/>
+      <arg name="z" value="0"/>
+      <arg name="yaw" value="0"/>
 
-  <!-- Launch Agent Node for robot id=uav_5. Type: SafetyACW-->
-  <include file="$(find human_aware_collaboration_planner)/launch/agent.launch" if="$(eval number_UAV >= 5)">
-    <arg name="agent_debugger" value="$(arg agent_debugger)"/>
+      <arg name="ns_prefix" value="$(arg ns_prefix)"/>
+      <arg name="ual_server" value="$(arg ual_server)"/>
+      <arg name="ual_pub_rate" value="$(arg ual_pub_rate)"/>
+      <arg name="ual_backend" value="$(arg ual_backend)"/>
+      <arg name="mode" value="$(arg mode)"/>
+      <arg name="pose_frame_id" value="$(arg pose_frame_id)"/>
+      <arg name="mavros_offboard_rate" value="$(arg mavros_offboard_rate)"/>
+      <arg name="noise_var" value="$(arg noise_var)"/>
+      <arg name="position_th" value="$(arg position_th)"/>
+      <arg name="orientation_th" value="$(arg orientation_th)"/>
+      <arg name="hold_pose_time" value="$(arg hold_pose_time)"/>
+      <arg name="max_horizontal_velocity" value="$(arg max_horizontal_velocity)"/>
+      <arg name="max_vertical_velocity" value="$(arg max_vertical_velocity)"/>
+      <arg name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
+      <arg name="max_position_error" value="$(arg max_position_error)"/>
+      <arg name="max_orientation_error" value="$(arg max_orientation_error)"/>
+      <arg name="agent_debugger" value="$(arg agent_debugger)"/>
+      <arg name="config_file" value="$(arg config_file)"/>
 
-    <arg name="id" value="5"/>
-    <arg name="type" value="SafetyACW"/>
-    <arg name="material" value="Blue"/>
-    <arg name="robot_model" value="mbzirc"/>
-
-    <arg name="x" value="10"/>
-    <arg name="y" value="20"/>
-    <arg name="z" value="0"/>
-    <arg name="yaw" value="0"/>
-    <arg name="frame_id" value="map"/>
-
-    <arg name="config_file" value="$(arg config_file)"/>
-  </include>
+      <arg name="battery_faker" value="$(arg battery_faker)"/>
+    </include>
 
 </launch>

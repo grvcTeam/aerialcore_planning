@@ -462,7 +462,7 @@ class AgentNode
     std::queue<classes::Task*> task_queue_;
     bool battery_enough_;
 		std::string tool_flag_;
-		std::string frame_id_;
+		std::string pose_frame_id_;
 
     std::string config_file_;
 

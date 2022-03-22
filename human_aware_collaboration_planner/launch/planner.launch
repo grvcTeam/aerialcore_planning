@@ -1,0 +1,20 @@
+<launch>
+    <!-- Debuggers: gdb, valgrind, none -->
+    <arg name="planner_debugger" default="none"/>
+    <arg name="config_file" default="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
+
+    <!-- Launch Planner Node (there's only one node of this type for the whole simulation and it's outside any ns)-->
+    <node pkg="human_aware_collaboration_planner" type="high_level_planner" name="high_level_planner" output="screen" 
+      launch-prefix="xterm -e gdb -ex 'set print thread-events off' -ex run --args" if="$(eval planner_debugger=='gdb')">
+      <param name="config_file" value="$(arg config_file)"/>
+    </node>
+    <node pkg="human_aware_collaboration_planner" type="high_level_planner" name="high_level_planner" output="screen" 
+      launch-prefix="valgrind -v --leak-check=full --show-leak-kinds=all --track-origins=yes --log-file=/home/baldman/valgrind_planner.log" 
+      if="$(eval planner_debugger=='valgrind')">
+      <param name="config_file" value="$(arg config_file)"/>
+    </node>
+    <node pkg="human_aware_collaboration_planner" type="high_level_planner" name="high_level_planner" output="screen" if="$(eval planner_debugger=='none')"> 
+      <param name="config_file" value="$(arg config_file)"/>
+    </node>
+
+</launch>

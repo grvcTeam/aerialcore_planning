@@ -10,10 +10,10 @@ agent_id = 1
 .PHONY: launch
 
 main:
-	@catkin build --this
+	@cd ~/grvc_planning_workspace; catkin build human_aware_collaboration_planner
 
 clean:
-	@catkin clean --this
+	@cd ~/grvc_planning_workspace; catkin clean human_aware_collaboration_planner
 	
 gesture_info:
 	@sed -n 8,21p src/gesture_recognition_faker.cpp

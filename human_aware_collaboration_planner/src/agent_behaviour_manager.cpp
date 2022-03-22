@@ -102,7 +102,7 @@ BT::NodeStatus GoNearChargingStation::tick(){
         if(isHaltRequested())
           return BT::NodeStatus::IDLE;
         ROS_INFO("[GoNearChargingStation] Moving to recharging station (%.1f,%.1f)[%s]",
-            assigned_charging_station.getX(), assigned_charging_station.getY(), agent_->frame_id_.c_str());
+            assigned_charging_station.getX(), assigned_charging_station.getY(), agent_->pose_frame_id_.c_str());
         if(agent_->go_to_waypoint(assigned_charging_station.getX(), assigned_charging_station.getY(),
               assigned_charging_station.getZ() + 0.4, false))
         {
@@ -415,7 +415,7 @@ BT::NodeStatus BackToStation::tick(){
               //agent_->known_positions_["stations"][nearest_station].getX(),
               //agent_->known_positions_["stations"][nearest_station].getY(),
               //agent_->known_positions_["stations"][nearest_station].getZ(),
-              //agent_->frame_id_.c_str());
+              //agent_->pose_frame_id_.c_str());
           //UAL goto service call
           if(!agent_->go_to_waypoint(agent_->known_positions_["stations"][nearest_station].getX(),
                 agent_->known_positions_["stations"][nearest_station].getY(),
@@ -1483,7 +1483,7 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   //Start the server to receive tasks list through actions
   ntl_as_.start();
 
-  ros::param::param<std::string>("~frame_id", frame_id_, "map");
+  ros::param::param<std::string>("~pose_frame_id", pose_frame_id_, "map");
 
   //Load of config file
   std::string path = ros::package::getPath("human_aware_collaboration_planner");
@@ -1545,7 +1545,7 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   std::stringstream ss;
   ss << "bt_trace_" << beacon.id << ".fbl";
   BT::FileLogger logger_file(tree, ss.str().c_str());
-  BT::printTreeRecursively(tree.rootNode());
+  //BT::printTreeRecursively(tree.rootNode());
   unsigned aux;
   sscanf(beacon.id.c_str(), "uav_%u", &aux);
   BT::PublisherZMQ publisher_zmq(tree, 25, 1666+aux*2, 1667+aux*2);
@@ -1869,12 +1869,12 @@ bool AgentNode::go_to_waypoint(float x, float y, float z, bool blocking){
   //TODO: Comment the following two lines when lower level controller for travelling are integrated
   unsigned offset;
   sscanf(beacon_.id.c_str(), "uav_%u", &offset);
-  //ROS_INFO("[go_to_waypoint] Moving to (%.1f,%.1f,%.1f)[%s]", x, y, z + offset, frame_id_.c_str());
+  //ROS_INFO("[go_to_waypoint] Moving to (%.1f,%.1f,%.1f)[%s]", x, y, z + offset, pose_frame_id_.c_str());
 
   ros::ServiceClient go_to_wp_client = nh_.serviceClient<uav_abstraction_layer::GoToWaypoint>("/" + beacon_.id +
       "/ual/go_to_waypoint");
   uav_abstraction_layer::GoToWaypoint go_to_wp_srv;
-  go_to_wp_srv.request.waypoint.header.frame_id = frame_id_;
+  go_to_wp_srv.request.waypoint.header.frame_id = pose_frame_id_;
   go_to_wp_srv.request.waypoint.pose.position.x = x;
   go_to_wp_srv.request.waypoint.pose.position.y = y;
   if(z < 1)
@@ -1897,7 +1897,7 @@ bool AgentNode::stop(bool blocking){
     ros::ServiceClient stop_client = nh_.serviceClient<uav_abstraction_layer::GoToWaypoint>("/" + beacon_.id +
         "/ual/go_to_waypoint");
     uav_abstraction_layer::GoToWaypoint stop_srv;
-    stop_srv.request.waypoint.header.frame_id = frame_id_;
+    stop_srv.request.waypoint.header.frame_id = pose_frame_id_;
     stop_srv.request.waypoint.pose.position.x = position_.getX();
     stop_srv.request.waypoint.pose.position.y = position_.getY();
     if(position_.getZ() < 1)
@@ -1907,7 +1907,7 @@ bool AgentNode::stop(bool blocking){
     //stop_srv.request.waypoint.pose.position.z = position_.getZ();
     stop_srv.request.blocking = blocking;
     //ROS_INFO("[stop] Moving to (%.1f,%.1f,%.1f)[%s]", stop_srv.request.waypoint.pose.position.x,
-    //    stop_srv.request.waypoint.pose.position.y, stop_srv.request.waypoint.pose.position.z, frame_id_.c_str());
+    //    stop_srv.request.waypoint.pose.position.y, stop_srv.request.waypoint.pose.position.z, pose_frame_id_.c_str());
     if(!stop_client.call(stop_srv))
       return false;
   }

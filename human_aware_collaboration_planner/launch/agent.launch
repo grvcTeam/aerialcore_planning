@@ -1,71 +1,37 @@
 <launch>
 
-  <!-- Launch Agent Node for robot id = "uav_i" (ns = $(id))-->
+  <!-- Launch Agent Node -->
   <arg name="agent_debugger" default="none"/>
   <arg name="id" default="0"/>
   <arg name="type" default="ACW"/>
-  <arg name="robot_model" default="typhoon_h480"/>
-  <arg name="material" default="Indigo"/>
-  <arg name="ual_backend" default="light"/>
-  <arg name="x" default="0"/>
-  <arg name="y" default="0"/>
-  <arg name="z" default="0"/>
-  <arg name="yaw" default="0"/>
-  <arg name="frame_id" default="map"/>
+  <arg name="pose_frame_id" default="map"/>
   <arg name="config_file" default="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
 
-  <node pkg="human_aware_collaboration_planner" type="agent_behaviour_manager" name="agent_behaviour_manager" output="screen" ns="uav_$(arg id)" launch-prefix="xterm -e gdb -ex 'set print thread-events off' -ex run --args" if="$(eval agent_debugger=='gdb')">
+  <node pkg="human_aware_collaboration_planner" type="agent_behaviour_manager" name="agent_behaviour_manager" 
+    output="screen" ns="uav_$(arg id)" launch-prefix="xterm -e gdb -ex 'set print thread-events off' -ex run --args" 
+    if="$(eval agent_debugger=='gdb')">
     <param name="id" value="uav_$(arg id)"/>
     <param name="type" value="$(arg type)"/>
-    <param name="frame_id" value="$(arg frame_id)"/>
+    <param name="pose_frame_id" value="$(arg pose_frame_id)"/>
     <param name="config_file" value="$(arg config_file)"/>
   </node>
-  <node pkg="human_aware_collaboration_planner" type="agent_behaviour_manager" name="agent_behaviour_manager" output="screen" ns="uav_$(arg id)" launch-prefix="valgrind -v --leak-check=full --show-leak-kinds=all --track-origins=yes --log-file=/home/baldman/valgrind_agent_$(arg id).log" if="$(eval agent_debugger=='valgrind')">
+
+  <node pkg="human_aware_collaboration_planner" type="agent_behaviour_manager" name="agent_behaviour_manager" 
+    output="screen" ns="uav_$(arg id)" 
+    launch-prefix="valgrind -v --leak-check=full --show-leak-kinds=all --track-origins=yes --log-file=/home/baldman/valgrind_agent_$(arg id).log" 
+    if="$(eval agent_debugger=='valgrind')">
     <param name="id" value="uav_$(arg id)"/>
     <param name="type" value="$(arg type)"/>
-    <param name="frame_id" value="$(arg frame_id)"/>
+    <param name="pose_frame_id" value="$(arg pose_frame_id)"/>
     <param name="config_file" value="$(arg config_file)"/>
   </node>
-  <node pkg="human_aware_collaboration_planner" type="agent_behaviour_manager" name="agent_behaviour_manager" output="screen" ns="uav_$(arg id)" if="$(eval agent_debugger=='none')">
+
+  <node pkg="human_aware_collaboration_planner" type="agent_behaviour_manager" name="agent_behaviour_manager" 
+    output="screen" ns="uav_$(arg id)" if="$(eval agent_debugger=='none')">
     <param name="id" value="uav_$(arg id)"/>
     <param name="type" value="$(arg type)"/>
-    <param name="frame_id" value="$(arg frame_id)"/>
+    <param name="pose_frame_id" value="$(arg pose_frame_id)"/>
     <param name="config_file" value="$(arg config_file)"/>
   </node>
-
-  <!-- Launch Battery Faker Node for robot id = "uav_i" (ns = $(id))-->
-  <node pkg="human_aware_collaboration_planner" type="battery_faker" name="battery_faker" ns="uav_$(arg id)">
-    <param name="id" value="uav_$(arg id)"/>
-    <param name="config_file" value="$(arg config_file)"/>
-  </node>
-
-  <!-- Launch robot id = "i" -->
-  <!--node pkg="px4_bringup" type="spawn_gzmodel.py" name="spawn_gzmodel_1" output="screen"
-    args="-model=$(arg robot_model) -id=$(arg id) -material=$(arg material) -ual_backend=$(arg ual_backend) -x $(arg x) -y $(arg y) -z $(arg z) -Y $(arg yaw)"/-->
-
-  <include file="$(find px4_bringup)/launch/spawn_robot.launch" ns="uav_$(arg id)">
-    <arg name="id" value="$(arg id)"/>
-    <arg name="robot_model" value="$(arg robot_model)"/>
-    <arg name="material" value="$(arg material)"/>
-    <arg name="x" value="$(arg x)"/>
-    <arg name="y" value="$(arg y)"/>
-    <arg name="z" value="$(arg z)"/>
-    <arg name="yaw" value="$(arg yaw)"/>
-    <!--arg name="use_mavros" value="false"/-->
-  </include> 
-
-  <!-- Launch UAL server for robot id = "i" -->
-  <arg name="home_pose" value="[$(arg x), $(arg y), $(arg z)]"/>
-  <node pkg="ual_backend_mavros" type="ual_backend_mavros_server" name="ual" ns="uav_$(arg id)">
-  <!--node pkg="ual_backend_gazebo_light" type="ual_backend_gazebo_light_server" name="ual" ns="uav_$(arg id)"-->
-    <param name="uav_id" value="$(arg id)"/>
-    <param name="pose_frame_id" value="$(arg frame_id)"/>
-    <param name="model_name" value="$(arg robot_model)_$(arg id)"/>
-    <!-- Lo de $(arg x), $(arg y) y $(arg z) de aqui abajo no se si se puede hacer o dara error -->
-    <rosparam param="home_pose" subst_value="True">$(arg home_pose)</rosparam>
-  </node> 
-
-  <!-- Launch camera for drone id = "i"  -->
-  <!--node name="rqt_image_view_uav_$(arg id)" pkg="rqt_image_view" type="rqt_image_view" args="/uav_$(arg id)/cgo3_camera/image_raw"/-->
 
 </launch>

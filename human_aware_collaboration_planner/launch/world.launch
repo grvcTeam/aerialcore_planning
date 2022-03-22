@@ -1,0 +1,27 @@
+<launch>
+  <!-- Worlds: empty, power_tower, burguillos -->
+  <arg name="world" default="power_tower"/>
+
+  <!-- Launch Gazebo simulation -->
+  <rosparam param="/use_sim_time">true</rosparam>
+
+  <node pkg="px4_bringup" type="launch_gzworld.py" name="gazebo_world" output="screen" if="$(eval world=='empty')"
+    args="-physics=ode -world=$(find px4_bringup)/config/empty_light.world">
+    <rosparam param="sim_origin">[37.558542, -5.931074, 7.89]</rosparam>
+  </node>
+
+  <node pkg="aerialcore_simulation" type="launch_gzworld.py" name="gazebo_world" output="screen" if="$(eval world=='power_tower')"
+    args="-physics=none -world=$(find aerialcore_simulation)/worlds/leader_follower_inspection.world
+    -add_model_path=$(find aerialcore_simulation)/models
+    -description_package=robots_description">
+    <rosparam param="sim_origin">[38.138728, -3.173825, 0]</rosparam>
+  </node>
+
+  <node pkg="px4_bringup" type="launch_gzworld.py" name="gazebo_world" output="screen" if="$(eval world=='burguillos')"
+    args="-physics=ode -world=$(find grvc_gazebo_worlds)/worlds/burguillos_power_lines.world
+    -add_model_path=$(find grvc_gazebo_worlds)/models
+    -description_package=robots_description">
+    <rosparam param="sim_origin">[37.564003804467, -6.003676484441573, 65.36515808105469]</rosparam>
+  </node>
+
+</launch>

@@ -1,0 +1,14 @@
+<launch>
+
+  <arg name="id" default="0"/>
+  <arg name="config_file" default="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
+
+  <arg name="battery_faker" default="false"/>
+
+  <!-- Launch Battery Faker Node for robot -->
+  <include file="$(find human_aware_collaboration_planner)/launch/battery_faker.launch" if="$(arg battery_faker)">
+    <arg name="id" value="$(arg id)"/>
+    <arg name="config_file" value="$(arg config_file)"/>
+  </include>
+
+</launch>
