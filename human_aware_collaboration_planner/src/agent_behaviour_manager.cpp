@@ -27,7 +27,7 @@ BT::NodeStatus GoNearChargingStation::tick(){
   float distance = -1;
   float tmp_distance;
 
-  /******************************************* TO BE IMPROVED *******************************************************/
+  /***************************************** TODO: TO BE IMPROVED ***************************************************/
   //Find closest station (sustituido por estacion fija hasta que se una con los lower-level controllers)
   /*distance = -1;
   for(auto& charging_station : agent_->known_positions_["charging_stations"])

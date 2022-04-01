@@ -3,32 +3,33 @@
   <!-- Launch Agent Node -->
   <arg name="agent_debugger" default="none"/>
   <arg name="id" default="0"/>
+  <arg name="ns_prefix" default="uav_"/>
   <arg name="type" default="ACW"/>
   <arg name="pose_frame_id" default="map"/>
   <arg name="config_file" default="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
 
   <node pkg="human_aware_collaboration_planner" type="agent_behaviour_manager" name="agent_behaviour_manager" 
-    output="screen" ns="uav_$(arg id)" launch-prefix="xterm -e gdb -ex 'set print thread-events off' -ex run --args" 
+    output="screen" ns="$(arg ns_prefix)$(arg id)" launch-prefix="xterm -e gdb -ex 'set print thread-events off' -ex run --args" 
     if="$(eval agent_debugger=='gdb')">
-    <param name="id" value="uav_$(arg id)"/>
+    <param name="id" value="$(arg ns_prefix)$(arg id)"/>
     <param name="type" value="$(arg type)"/>
     <param name="pose_frame_id" value="$(arg pose_frame_id)"/>
     <param name="config_file" value="$(arg config_file)"/>
   </node>
 
   <node pkg="human_aware_collaboration_planner" type="agent_behaviour_manager" name="agent_behaviour_manager" 
-    output="screen" ns="uav_$(arg id)" 
+    output="screen" ns="$(arg ns_prefix)$(arg id)" 
     launch-prefix="valgrind -v --leak-check=full --show-leak-kinds=all --track-origins=yes --log-file=/home/baldman/valgrind_agent_$(arg id).log" 
     if="$(eval agent_debugger=='valgrind')">
-    <param name="id" value="uav_$(arg id)"/>
+    <param name="id" value="$(arg ns_prefix)$(arg id)"/>
     <param name="type" value="$(arg type)"/>
     <param name="pose_frame_id" value="$(arg pose_frame_id)"/>
     <param name="config_file" value="$(arg config_file)"/>
   </node>
 
   <node pkg="human_aware_collaboration_planner" type="agent_behaviour_manager" name="agent_behaviour_manager" 
-    output="screen" ns="uav_$(arg id)" if="$(eval agent_debugger=='none')">
-    <param name="id" value="uav_$(arg id)"/>
+    output="screen" ns="$(arg ns_prefix)$(arg id)" if="$(eval agent_debugger=='none')">
+    <param name="id" value="$(arg ns_prefix)$(arg id)"/>
     <param name="type" value="$(arg type)"/>
     <param name="pose_frame_id" value="$(arg pose_frame_id)"/>
     <param name="config_file" value="$(arg config_file)"/>

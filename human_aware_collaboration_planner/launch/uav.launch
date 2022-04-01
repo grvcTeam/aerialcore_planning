@@ -69,6 +69,7 @@
     <include file="$(find human_aware_collaboration_planner)/launch/agent.launch">
       <arg name="agent_debugger" value="$(arg agent_debugger)"/>
       <arg name="id" value="$(arg id)"/>
+      <arg name="ns_prefix" value="$(arg ns_prefix)"/>
       <arg name="type" value="$(arg type)"/>
       <arg name="pose_frame_id" value="$(arg pose_frame_id)"/>
       <arg name="config_file" value="$(arg config_file)"/>
@@ -77,6 +78,7 @@
     <!-- Launch fakers -->
     <include file="$(find human_aware_collaboration_planner)/launch/fakers.launch">
       <arg name="id" value="$(arg id)"/>
+      <arg name="ns_prefix" value="$(arg ns_prefix)"/>
       <arg name="config_file" value="$(arg config_file)"/>
       <arg name="battery_faker" value="$(arg battery_faker)"/>
     </include>

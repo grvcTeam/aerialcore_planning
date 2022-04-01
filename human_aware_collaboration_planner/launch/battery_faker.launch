@@ -1,11 +1,12 @@
 <launch>
 
   <arg name="id" default="0"/>
+  <arg name="ns_prefix" default="uav_"/>
   <arg name="config_file" default="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
 
   <!-- Launch Battery Faker Node for robot id = "uav_i" (ns = $(id))-->
-  <node pkg="human_aware_collaboration_planner" type="battery_faker" name="battery_faker" ns="uav_$(arg id)">
-    <param name="id" value="uav_$(arg id)"/>
+  <node pkg="human_aware_collaboration_planner" type="battery_faker" name="battery_faker" ns="$(arg ns_prefix)$(arg id)">
+    <param name="id" value="$(arg ns_prefix)$(arg id)"/>
     <param name="config_file" value="$(arg config_file)"/>
   </node>
 
