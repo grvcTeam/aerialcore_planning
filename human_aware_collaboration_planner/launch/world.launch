@@ -1,5 +1,5 @@
 <launch>
-  <!-- Worlds: empty, power_tower, burguillos -->
+  <!-- Worlds: empty, power_tower, 2towers, burguillos -->
   <arg name="world" default="power_tower"/>
 
   <!-- Launch Gazebo simulation -->
@@ -12,6 +12,13 @@
 
   <node pkg="aerialcore_simulation" type="launch_gzworld.py" name="gazebo_world" output="screen" if="$(eval world=='power_tower')"
     args="-physics=none -world=$(find aerialcore_simulation)/worlds/leader_follower_inspection.world
+    -add_model_path=$(find aerialcore_simulation)/models
+    -description_package=robots_description">
+    <rosparam param="sim_origin">[38.138728, -3.173825, 0]</rosparam>
+  </node>
+
+  <node pkg="aerialcore_simulation" type="launch_gzworld.py" name="gazebo_world" output="screen" if="$(eval world=='2towers')"
+    args="-physics=none -world=$(find aerialcore_simulation)/worlds/power_towers_danube_wires_rescaled_autospawn.world
     -add_model_path=$(find aerialcore_simulation)/models
     -description_package=robots_description">
     <rosparam param="sim_origin">[38.138728, -3.173825, 0]</rosparam>
