@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib
   behaviortree_cpp_v3
   uav_abstraction_layer
+  #mrs_actionlib_interface
   #YAML_CPP
 )
 
@@ -68,6 +69,7 @@ catkin_package(
   LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS behaviortree_cpp_v3
   CATKIN_DEPENDS message_runtime
+  #CATKIN_DEPENDS mrs_actionlib_interface
 )
 
 include_directories(

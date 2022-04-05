@@ -2,6 +2,7 @@
     <!-- Mode: sitl, serial, custom -->
     <!-- Worlds: empty, power_tower, burguillos -->
     <!-- Debuggers: gdb, valgrind, none -->
+    <!-- Low Level Interface: UAL, MRS -->
     <arg name="number_UAV" default="3"/>
     <arg name="mode" default="sitl"/>
     <arg name="world" default="power_tower"/>
@@ -13,6 +14,7 @@
 
     <arg name="ns_prefix" default="uav_"/>
     <arg name="ual_server" default="on"/>
+    <arg name="low_level_interface" default="UAL"/>
 
     <arg name="ual_pub_rate" default="30.0"/>
     <arg name="pose_frame_id" default="map"/>
@@ -39,6 +41,8 @@
     <include file="$(find human_aware_collaboration_planner)/launch/planner.launch">
       <arg name="planner_debugger" value="$(arg planner_debugger)"/>
       <arg name="config_file" value="$(arg config_file)"/>
+      <arg name="low_level_interface" value="$(arg low_level_interface)"/>
+      <arg name="battery_faker" value="$(arg battery_faker)"/>
     </include>
 
     <!-- Launch UAV 1 nodes -->
@@ -54,6 +58,7 @@
       <arg name="yaw" value="0"/>
 
       <arg name="ns_prefix" value="$(arg ns_prefix)"/>
+      <arg name="low_level_interface" value="$(arg low_level_interface)"/>
       <arg name="ual_server" value="$(arg ual_server)"/>
       <arg name="ual_pub_rate" value="$(arg ual_pub_rate)"/>
       <arg name="ual_backend" value="$(arg ual_backend)"/>
@@ -88,6 +93,7 @@
       <arg name="yaw" value="0"/>
 
       <arg name="ns_prefix" value="$(arg ns_prefix)"/>
+      <arg name="low_level_interface" value="$(arg low_level_interface)"/>
       <arg name="ual_server" value="$(arg ual_server)"/>
       <arg name="ual_pub_rate" value="$(arg ual_pub_rate)"/>
       <arg name="ual_backend" value="$(arg ual_backend)"/>
@@ -122,6 +128,7 @@
       <arg name="yaw" value="0"/>
 
       <arg name="ns_prefix" value="$(arg ns_prefix)"/>
+      <arg name="low_level_interface" value="$(arg low_level_interface)"/>
       <arg name="ual_server" value="$(arg ual_server)"/>
       <arg name="ual_pub_rate" value="$(arg ual_pub_rate)"/>
       <arg name="ual_backend" value="$(arg ual_backend)"/>
@@ -156,6 +163,7 @@
       <arg name="yaw" value="0"/>
 
       <arg name="ns_prefix" value="$(arg ns_prefix)"/>
+      <arg name="low_level_interface" value="$(arg low_level_interface)"/>
       <arg name="ual_server" value="$(arg ual_server)"/>
       <arg name="ual_pub_rate" value="$(arg ual_pub_rate)"/>
       <arg name="ual_backend" value="$(arg ual_backend)"/>
@@ -190,6 +198,7 @@
       <arg name="yaw" value="0"/>
 
       <arg name="ns_prefix" value="$(arg ns_prefix)"/>
+      <arg name="low_level_interface" value="$(arg low_level_interface)"/>
       <arg name="ual_server" value="$(arg ual_server)"/>
       <arg name="ual_pub_rate" value="$(arg ual_pub_rate)"/>
       <arg name="ual_backend" value="$(arg ual_backend)"/>

@@ -14,8 +14,11 @@ Agent::Agent(Planner* planner, std::string id, std::string type, ros::Time first
   task_result_as_(nh_, "/" + id + "/task_result", boost::bind(&Agent::taskResultCB, this, _1), false),
   ntl_ac_("/" + id + "/task_list", true), last_beacon_time_(first_beacon_time), last_beacon_(first_beacon)
 {
-  position_sub_ = nh_.subscribe("/" + id + "/ual/pose", 1, &Agent::positionCallback, this);
-  battery_sub_ = nh_.subscribe("/" + id + "/mavros/battery_fake", 1, &Agent::batteryCallback, this);
+  ros::param::param<std::string>("~pose_topic", pose_topic_, "/ual/pose");
+  ros::param::param<std::string>("~battery_topic", battery_topic_, "/battery_fake");
+
+  position_sub_ = nh_.subscribe("/" + id + pose_topic_, 1, &Agent::positionCallback, this);
+  battery_sub_ = nh_.subscribe("/" + id + battery_topic_, 1, &Agent::batteryCallback, this);
   battery_as_.start();
   task_result_as_.start();
 }
@@ -26,8 +29,9 @@ Agent::Agent(const Agent& a) : id_(a.id_), type_(a.type_), position_(a.position_
   task_result_as_(nh_, "/" + a.id_ + "/task_result", boost::bind(&Agent::taskResultCB, this, _1), false),
   ntl_ac_("/" + a.id_ + "/task_list", true), last_beacon_time_(a.last_beacon_time_)
 {
-  position_sub_ = nh_.subscribe("/" + a.id_ + "/ual/pose", 1, &Agent::positionCallback, this);
-  battery_sub_ = nh_.subscribe("/" + a.id_ + "/mavros/battery_fake", 1, &Agent::batteryCallback, this);
+  position_sub_ = nh_.subscribe("/" + a.id_ + a.pose_topic_, 1, &Agent::positionCallback, this);
+  battery_sub_ = nh_.subscribe("/" + a.id_ + a.battery_topic_, 1, &Agent::batteryCallback, this);
+
   battery_as_.start();
   task_result_as_.start();
 }

@@ -1,12 +1,29 @@
 <launch>
 
   <!-- Launch Agent Node -->
+  <!-- Low Level Interface: UAL, MRS -->
   <arg name="agent_debugger" default="none"/>
   <arg name="id" default="0"/>
   <arg name="ns_prefix" default="uav_"/>
+  <arg name="low_level_interface" default="UAL"/>
   <arg name="type" default="ACW"/>
   <arg name="pose_frame_id" default="map"/>
   <arg name="config_file" default="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
+  <arg name="battery_faker" default="true"/>
+
+  <group if="$(eval low_level_interface == 'UAL')">
+    <param name="pose_topic" value="/$(arg ns_prefix)$(arg id)/ual/pose"/>
+    <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/ual/state"/>
+    <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/mavros/battery" if="$(eval battery_faker == 'false')"/>
+    <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/battery_fake" if="$(eval battery_faker == 'true')"/>
+  </group>
+
+  <group if="$(eval low_level_interface == 'MRS')">
+    <param name="pose_topic" value="/$(arg ns_prefix)$(arg id)/mrs/pose"/>
+    <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/mrs/state"/>
+    <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/mavros/battery" if="$(eval battery_faker == 'false')"/>
+    <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/battery_fake" if="$(eval battery_faker == 'true')"/>
+  </group>
 
   <node pkg="human_aware_collaboration_planner" type="agent_behaviour_manager" name="agent_behaviour_manager" 
     output="screen" ns="$(arg ns_prefix)$(arg id)" launch-prefix="xterm -e gdb -ex 'set print thread-events off' -ex run --args" 

@@ -24,6 +24,8 @@ class BatteryFaker
 
     classes::Position position_;
 
+		std::string pose_topic_;
+		std::string state_topic_;
     std::string config_file;
     std::map <std::string, std::map <std::string, classes::Position>> known_positions_;
 
@@ -46,6 +48,8 @@ class BatteryFaker
     BatteryFaker() : loop_rate_(0.2), mode_(2), battery_increase_(0.01), battery_decrease_(0.01)
     {
       ros::param::param<std::string>("~id", id_, "i");
+      ros::param::param<std::string>("~pose_topic", pose_topic_, "/" + id_ + "/ual/pose");
+      ros::param::param<std::string>("~state_topic", state_topic_, "/" + id_ + "/ual/state");
 
       //load of known position and human targets known positions
       std::string path = ros::package::getPath("human_aware_collaboration_planner");
@@ -53,11 +57,11 @@ class BatteryFaker
 
       readConfigFile(config_file);
 
-      battery_pub_ = nh_.advertise<sensor_msgs::BatteryState>("/" + id_ + "/mavros/battery_fake", 1);
+      battery_pub_ = nh_.advertise<sensor_msgs::BatteryState>("/" + id_ + "/battery_fake", 1);
 
-      control_sub_ = nh_.subscribe("/" + id_ + "/mavros/battery_fake/control", 1, &BatteryFaker::controlCallback, this);
-      position_sub_ = nh_.subscribe("/" + id_ + "/ual/pose", 1, &BatteryFaker::positionCallback, this);
-      state_sub_ = nh_.subscribe("/" + id_ + "/ual/state", 1, &BatteryFaker::stateCallback, this);
+      control_sub_ = nh_.subscribe("/" + id_ + "/battery_fake/control", 1, &BatteryFaker::controlCallback, this);
+      position_sub_ = nh_.subscribe(pose_topic_, 1, &BatteryFaker::positionCallback, this);
+      state_sub_ = nh_.subscribe(state_topic_, 1, &BatteryFaker::stateCallback, this);
 
       battery_.percentage = 0.9;
       loop_rate_.reset();

@@ -51,6 +51,8 @@ class Agent
     //Subscribers
 		ros::Subscriber position_sub_;
 		ros::Subscriber battery_sub_;
+		std::string pose_topic_;
+		std::string battery_topic_;
 		classes::Position position_;
     float battery_; //percentage
 

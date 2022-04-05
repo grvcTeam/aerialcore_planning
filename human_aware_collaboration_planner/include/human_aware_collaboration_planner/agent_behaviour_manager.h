@@ -463,6 +463,9 @@ class AgentNode
     bool battery_enough_;
 		std::string tool_flag_;
 		std::string pose_frame_id_;
+		std::string pose_topic_;
+		std::string state_topic_;
+		std::string battery_topic_;
 
     std::string config_file_;
 

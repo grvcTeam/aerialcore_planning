@@ -1,7 +1,9 @@
 <launch>
 
+  <!-- Low Level Interface: UAL, MRS -->
   <arg name="id" default="0"/>
   <arg name="ns_prefix" default="uav_"/>
+  <arg name="low_level_interface" default="UAL"/>
   <arg name="config_file" default="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
 
   <arg name="battery_faker" default="false"/>

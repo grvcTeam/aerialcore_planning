@@ -1484,6 +1484,9 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   ntl_as_.start();
 
   ros::param::param<std::string>("~pose_frame_id", pose_frame_id_, "map");
+  ros::param::param<std::string>("~pose_topic", pose_topic_, "/" + beacon_.id + "/ual/pose");
+  ros::param::param<std::string>("~state_topic", state_topic_, "/" + beacon_.id + "/ual/state");
+  ros::param::param<std::string>("~battery_topic", battery_topic_, "/" + beacon_.id + "/battery_fake");
 
   //Load of config file
   std::string path = ros::package::getPath("human_aware_collaboration_planner");
@@ -1491,9 +1494,9 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   readConfigFile(config_file_);
 
   beacon_pub_ = nh_.advertise<human_aware_collaboration_planner::AgentBeacon>("/agent_beacon", 1);
-  position_sub_ = nh_.subscribe("/" + beacon_.id + "/ual/pose", 1, &AgentNode::positionCallback, this);
-  battery_sub_ = nh_.subscribe("/" + beacon_.id + "/mavros/battery_fake", 1, &AgentNode::batteryCallback, this);
-  state_sub_ = nh_.subscribe("/" + beacon_.id + "/ual/state", 1, &AgentNode::stateCallback, this);
+  position_sub_ = nh_.subscribe(pose_topic_, 1, &AgentNode::positionCallback, this);
+  state_sub_ = nh_.subscribe(state_topic_, 1, &AgentNode::stateCallback, this);
+  battery_sub_ = nh_.subscribe(battery_topic_, 1, &AgentNode::batteryCallback, this);
   mission_over_sub_ = nh_.subscribe("/mission_over", 1, &AgentNode::missionOverCallback, this);
   planner_beacon_sub_ = nh_.subscribe("/planner_beacon", 100, &AgentNode::beaconCallback, this);
 

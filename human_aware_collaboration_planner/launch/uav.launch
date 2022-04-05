@@ -1,6 +1,7 @@
 <launch>
     <!-- Mode: sitl, serial, custom -->
     <!-- Debuggers: gdb, valgrind, none -->
+    <!-- Low Level Interface: UAL, MRS -->
     <arg name="mode" default="sitl"/>
     <arg name="agent_debugger" default="none"/>
 
@@ -17,6 +18,7 @@
     <arg name="yaw" default="0"/>
 
     <arg name="ns_prefix" default="uav_"/>
+    <arg name="low_level_interface" default="UAL"/>
     <arg name="ual_server" default="on"/>
 
     <arg name="ual_pub_rate" default="30.0"/>
@@ -37,7 +39,7 @@
 
 
     <!-- Launch UAL -->
-    <include file="$(find human_aware_collaboration_planner)/launch/ual.launch">
+    <include file="$(find human_aware_collaboration_planner)/launch/ual.launch" if="$(eval low_level_interface=='UAL')">
       <arg name="id" value="$(arg id)"/>
       <arg name="robot_model" value="$(arg robot_model)"/>
       <arg name="material" value="$(arg material)"/>
@@ -65,20 +67,52 @@
       <arg name="max_orientation_error" value="$(arg max_orientation_error)"/>
     </include>
 
+    <!-- Launch MRS -->
+    <include file="$(find human_aware_collaboration_planner)/launch/mrs.launch" if="$(eval low_level_interface=='MRS')">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="robot_model" value="$(arg robot_model)"/>
+      <arg name="material" value="$(arg material)"/>
+      <arg name="camera" value="$(arg camera)"/>
+      <arg name="x" value="$(arg x)"/>
+      <arg name="y" value="$(arg y)"/>
+      <arg name="z" value="$(arg z)"/>
+      <arg name="yaw" value="$(arg yaw)"/>
+
+      <arg name="ns_prefix" value="$(arg ns_prefix)"/>
+      <arg name="mrs_server" value="$(arg ual_server)"/>
+      <arg name="mrs_pub_rate" value="$(arg ual_pub_rate)"/>
+      <arg name="mrs_backend" value="$(arg ual_backend)"/>
+      <arg name="mode" value="$(arg mode)"/>
+      <arg name="pose_frame_id" value="$(arg pose_frame_id)"/>
+      <arg name="mavros_offboard_rate" value="$(arg mavros_offboard_rate)"/>
+      <arg name="noise_var" value="$(arg noise_var)"/>
+      <arg name="position_th" value="$(arg position_th)"/>
+      <arg name="orientation_th" value="$(arg orientation_th)"/>
+      <arg name="hold_pose_time" value="$(arg hold_pose_time)"/>
+      <arg name="max_horizontal_velocity" value="$(arg max_horizontal_velocity)"/>
+      <arg name="max_vertical_velocity" value="$(arg max_vertical_velocity)"/>
+      <arg name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
+      <arg name="max_position_error" value="$(arg max_position_error)"/>
+      <arg name="max_orientation_error" value="$(arg max_orientation_error)"/>
+    </include>
+
     <!-- Launch agent_behavior_manager -->
     <include file="$(find human_aware_collaboration_planner)/launch/agent.launch">
       <arg name="agent_debugger" value="$(arg agent_debugger)"/>
       <arg name="id" value="$(arg id)"/>
       <arg name="ns_prefix" value="$(arg ns_prefix)"/>
+      <arg name="low_level_interface" value="$(arg low_level_interface)"/>
       <arg name="type" value="$(arg type)"/>
       <arg name="pose_frame_id" value="$(arg pose_frame_id)"/>
       <arg name="config_file" value="$(arg config_file)"/>
+      <arg name="battery_faker" value="$(arg battery_faker)"/>
     </include>
 
     <!-- Launch fakers -->
     <include file="$(find human_aware_collaboration_planner)/launch/fakers.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="ns_prefix" value="$(arg ns_prefix)"/>
+      <arg name="low_level_interface" value="$(arg low_level_interface)"/>
       <arg name="config_file" value="$(arg config_file)"/>
       <arg name="battery_faker" value="$(arg battery_faker)"/>
     </include>
