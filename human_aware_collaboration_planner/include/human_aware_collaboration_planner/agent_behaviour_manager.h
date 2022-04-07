@@ -32,6 +32,7 @@
 #include "uav_abstraction_layer/State.h"
 
 #include "geometry_msgs/PoseStamped.h"
+#include "mrs_msgs/UavStatus.h"
 #include "sensor_msgs/BatteryState.h"
 
 #include "behaviortree_cpp_v3/behavior_tree.h"
@@ -433,6 +434,9 @@ class AgentNode
     //Node Handlers
     ros::NodeHandle nh_;
 
+		std::string id_;
+		std::string ns_prefix_;
+
     //Action Server to receive TaskList
     actionlib::SimpleActionServer<human_aware_collaboration_planner::NewTaskListAction> ntl_as_;
     human_aware_collaboration_planner::NewTaskListFeedback ntl_feedback_;
@@ -490,8 +494,10 @@ class AgentNode
     //New Task List Action callback
     void newTaskList(const human_aware_collaboration_planner::NewTaskListGoalConstPtr& goal);
     void positionCallback(const geometry_msgs::PoseStamped& pose);
+    void positionCallback(const mrs_msgs::UavStatus& pose);
     void batteryCallback(const sensor_msgs::BatteryState& battery);
 		void stateCallback(const uav_abstraction_layer::State& state);
+		void stateCallback(const mrs_msgs::UavStatus& state);
 		void missionOverCallback(const human_aware_collaboration_planner::MissionOver& value);
 		void beaconCallback(const human_aware_collaboration_planner::PlannerBeacon& beacon);
 		bool checkBeaconTimeout(ros::Time now);

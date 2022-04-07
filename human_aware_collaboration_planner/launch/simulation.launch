@@ -3,7 +3,7 @@
     <!-- Worlds: empty, power_tower, burguillos -->
     <!-- Debuggers: gdb, valgrind, none -->
     <!-- Low Level Interface: UAL, MRS -->
-    <arg name="number_UAV" default="3"/>
+    <arg name="number_UAV" default="1"/>
     <arg name="mode" default="sitl"/>
     <arg name="world" default="power_tower"/>
     <arg name="ual_backend" default="light"/>
@@ -12,7 +12,7 @@
 
     <arg name="config_file" default="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
 
-    <arg name="ns_prefix" default="uav_"/>
+    <arg name="ns_prefix" default="uav"/>
     <arg name="ual_server" default="on"/>
     <arg name="low_level_interface" default="UAL"/>
 

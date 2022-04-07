@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   genmsg
   geometry_msgs
   actionlib_msgs
+  mrs_msgs
   actionlib
   behaviortree_cpp_v3
   uav_abstraction_layer
@@ -61,6 +62,7 @@ generate_messages(
   std_msgs
   geometry_msgs
   actionlib_msgs
+  mrs_msgs
 )
 
 # 7. Specify package build info export (catkin_package())

@@ -138,8 +138,8 @@ make battery_ok  agent_id=1
 ...
 make mission_over
 ...
-rosnode kill /uav_1/agent_behaviour_manager
-rosrun human_aware_collaboration_planner agent_behaviour_manager __ns:uav_1
+rosnode kill /uav1/agent_behaviour_manager
+rosrun human_aware_collaboration_planner agent_behaviour_manager __ns:uav1
 ...
 rosnode kill /high_level_planner
 ```

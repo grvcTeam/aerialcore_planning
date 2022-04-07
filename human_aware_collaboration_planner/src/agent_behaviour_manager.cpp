@@ -41,9 +41,7 @@ BT::NodeStatus GoNearChargingStation::tick(){
   }*/
 
   //While programig a shared resource with the charging stations, this will be where the Agent goes to recharge
-  unsigned id;
-  sscanf(agent_->beacon_.id.c_str(), "uav_%u", &id);
-  nearest_station = "charging_station_" + std::to_string(id);
+  nearest_station = "charging_station_" + agent_->id_;
 
   //Emergency Recharging
   if(agent_->task_queue_.empty())
@@ -318,9 +316,7 @@ BT::NodeStatus BackToStation::tick(){
   float tmp_distance;
 
   //TODO: BackToStation. search instead for the closest free station
-  unsigned id;
-  sscanf(agent_->beacon_.id.c_str(), "uav_%u", &id);
-  nearest_station = "station_" + std::to_string(id);
+  nearest_station = "station_" + agent_->id_;
 
   while(!isHaltRequested())
   {
@@ -1483,6 +1479,8 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   //Start the server to receive tasks list through actions
   ntl_as_.start();
 
+  ros::param::param<std::string>("~id", id_, "0");
+  ros::param::param<std::string>("~ns_prefix", ns_prefix_, "uav");
   ros::param::param<std::string>("~pose_frame_id", pose_frame_id_, "map");
   ros::param::param<std::string>("~pose_topic", pose_topic_, "/" + beacon_.id + "/ual/pose");
   ros::param::param<std::string>("~state_topic", state_topic_, "/" + beacon_.id + "/ual/state");
@@ -1498,7 +1496,7 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   state_sub_ = nh_.subscribe(state_topic_, 1, &AgentNode::stateCallback, this);
   battery_sub_ = nh_.subscribe(battery_topic_, 1, &AgentNode::batteryCallback, this);
   mission_over_sub_ = nh_.subscribe("/mission_over", 1, &AgentNode::missionOverCallback, this);
-  planner_beacon_sub_ = nh_.subscribe("/planner_beacon", 100, &AgentNode::beaconCallback, this);
+  planner_beacon_sub_ = nh_.subscribe("/planner_beacon", 1, &AgentNode::beaconCallback, this);
 
   //Behavior Tree declaration
   BT::NodeStatus status = BT::NodeStatus::RUNNING;
@@ -1549,9 +1547,7 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   ss << "bt_trace_" << beacon.id << ".fbl";
   BT::FileLogger logger_file(tree, ss.str().c_str());
   //BT::printTreeRecursively(tree.rootNode());
-  unsigned aux;
-  sscanf(beacon.id.c_str(), "uav_%u", &aux);
-  BT::PublisherZMQ publisher_zmq(tree, 25, 1666+aux*2, 1667+aux*2);
+  BT::PublisherZMQ publisher_zmq(tree, 25, 1666+std::stoi(id_)*2, 1667+std::stoi(id_)*2);
 
   //Waiting for the Agent to initialize
   loop_rate_.reset();
@@ -1814,17 +1810,25 @@ void AgentNode::newTaskList(const human_aware_collaboration_planner::NewTaskList
 }
 void AgentNode::positionCallback(const geometry_msgs::PoseStamped& pose){
   //TODO: Comment the following when lower level controller for travelling are integrated
-  unsigned offset;
-  sscanf(beacon_.id.c_str(), "uav_%u", &offset);
   //This correction is needed becouse of the UAL/Land service
-  if(pose.pose.position.z - offset < 0.5)
+  if(pose.pose.position.z - std::stoi(id_) < 0.5)
     position_.update(pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);
   else
-    position_.update(pose.pose.position.x, pose.pose.position.y, pose.pose.position.z - offset);
+    position_.update(pose.pose.position.x, pose.pose.position.y, pose.pose.position.z - std::stoi(id_));
   //position_.update(pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);
+}
+void AgentNode::positionCallback(const mrs_msgs::UavStatus& pose){
+  //TODO: Comment the following when lower level controller for travelling are integrated
+  //This correction is needed becouse of the UAL/Land service
+  if(pose.odom_z - std::stoi(id_) < 0.5)
+    position_.update(pose.odom_x, pose.odom_y, pose.odom_z);
+  else
+    position_.update(pose.odom_x, pose.odom_y, pose.odom_z - std::stoi(id_));
+  //position_.update(pose.odom_x, pose.odom_y, pose.odom_z);
 }
 void AgentNode::batteryCallback(const sensor_msgs::BatteryState& battery){battery_ = battery.percentage;}
 void AgentNode::stateCallback(const uav_abstraction_layer::State& state){state_ = state.state;}
+void AgentNode::stateCallback(const mrs_msgs::UavStatus& state){state_ = state.fly_state;}
 void AgentNode::missionOverCallback(const human_aware_collaboration_planner::MissionOver& value){
   mission_over_ = value.value;
 }
@@ -1855,13 +1859,10 @@ bool AgentNode::land(bool blocking){
 }
 bool AgentNode::take_off(float height, bool blocking){
   //TODO: Comment the following two lines when lower level controller for travelling are integrated
-  unsigned offset;
-  sscanf(beacon_.id.c_str(), "uav_%u", &offset);
-
   ros::ServiceClient take_off_client = nh_.serviceClient<uav_abstraction_layer::TakeOff>("/" + beacon_.id +
       "/ual/take_off");
   uav_abstraction_layer::TakeOff take_off_srv;
-  take_off_srv.request.height = height + offset;
+  take_off_srv.request.height = height + std::stoi(id_);
   //take_off_srv.request.height = height;
   take_off_srv.request.blocking = blocking;
   if(take_off_client.call(take_off_srv))
@@ -1870,9 +1871,7 @@ bool AgentNode::take_off(float height, bool blocking){
 }
 bool AgentNode::go_to_waypoint(float x, float y, float z, bool blocking){
   //TODO: Comment the following two lines when lower level controller for travelling are integrated
-  unsigned offset;
-  sscanf(beacon_.id.c_str(), "uav_%u", &offset);
-  //ROS_INFO("[go_to_waypoint] Moving to (%.1f,%.1f,%.1f)[%s]", x, y, z + offset, pose_frame_id_.c_str());
+  //ROS_INFO("[go_to_waypoint] Moving to (%.1f,%.1f,%.1f)[%s]", x, y, z + std::stoi(id_), pose_frame_id_.c_str());
 
   ros::ServiceClient go_to_wp_client = nh_.serviceClient<uav_abstraction_layer::GoToWaypoint>("/" + beacon_.id +
       "/ual/go_to_waypoint");
@@ -1883,7 +1882,7 @@ bool AgentNode::go_to_waypoint(float x, float y, float z, bool blocking){
   if(z < 1)
     go_to_wp_srv.request.waypoint.pose.position.z = z;
   else
-    go_to_wp_srv.request.waypoint.pose.position.z = z + offset;
+    go_to_wp_srv.request.waypoint.pose.position.z = z + std::stoi(id_);
   //go_to_wp_srv.request.waypoint.pose.position.z = z;
   go_to_wp_srv.request.blocking = blocking;
   if(go_to_wp_client.call(go_to_wp_srv))
@@ -1894,8 +1893,6 @@ bool AgentNode::stop(bool blocking){
   if(state_ == 4)
   {
     //TODO: Comment the following two lines when lower level controller for travelling are integrated
-    unsigned offset;
-    sscanf(beacon_.id.c_str(), "uav_%u", &offset);
 
     ros::ServiceClient stop_client = nh_.serviceClient<uav_abstraction_layer::GoToWaypoint>("/" + beacon_.id +
         "/ual/go_to_waypoint");
@@ -1906,7 +1903,7 @@ bool AgentNode::stop(bool blocking){
     if(position_.getZ() < 1)
       stop_srv.request.waypoint.pose.position.z = position_.getZ();
     else
-      stop_srv.request.waypoint.pose.position.z = position_.getZ() + offset;
+      stop_srv.request.waypoint.pose.position.z = position_.getZ() + std::stoi(id_);
     //stop_srv.request.waypoint.pose.position.z = position_.getZ();
     stop_srv.request.blocking = blocking;
     //ROS_INFO("[stop] Moving to (%.1f,%.1f,%.1f)[%s]", stop_srv.request.waypoint.pose.position.x,
@@ -1926,11 +1923,15 @@ bool AgentNode::checkIfUALGoToServiceSucceeded(float x, float y, float z){
 int main(int argc, char **argv){
   ros::init(argc, argv, "agent_behaviour_manager");
 
+  std::string id;
+  std::string ns_prefix;
   human_aware_collaboration_planner::AgentBeacon beacon;
 
   //Read AgentBeacon parameters and send AgentBeacon to planner
-  ros::param::param<std::string>("~id", beacon.id, "i");
+  ros::param::param<std::string>("~id", id, "0");
+  ros::param::param<std::string>("~ns_prefix", ns_prefix, "uav");
   ros::param::param<std::string>("~type", beacon.type, "ACW");
+  beacon.id = ns_prefix + id;
 
   AgentNode agent(beacon);
 

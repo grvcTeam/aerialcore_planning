@@ -10,10 +10,10 @@
 
 #include "uav_abstraction_layer/State.h"
 #include "geometry_msgs/PoseStamped.h"
+#include "mrs_msgs/UavStatus.h"
 #include "sensor_msgs/BatteryState.h"
 
-class BatteryFaker
-{
+class BatteryFaker{
   private:
     std::string id_;
 
@@ -45,8 +45,7 @@ class BatteryFaker
     //Service Server
 
   public:
-    BatteryFaker() : loop_rate_(0.2), mode_(2), battery_increase_(0.01), battery_decrease_(0.01)
-    {
+    BatteryFaker() : loop_rate_(0.2), mode_(2), battery_increase_(0.01), battery_decrease_(0.01){
       ros::param::param<std::string>("~id", id_, "i");
       ros::param::param<std::string>("~pose_topic", pose_topic_, "/" + id_ + "/ual/pose");
       ros::param::param<std::string>("~state_topic", state_topic_, "/" + id_ + "/ual/state");
@@ -73,8 +72,7 @@ class BatteryFaker
       }
     }
     ~BatteryFaker(){}
-    void update_battery()
-    {
+    void update_battery(){
       int flag;
       switch(mode_)
       {
@@ -152,8 +150,7 @@ class BatteryFaker
       }
       battery_pub_.publish(battery_);
     }
-    void readConfigFile(std::string config_file)
-    {
+    void readConfigFile(std::string config_file){
       YAML::Node yaml_config = YAML::LoadFile(config_file);
       if(yaml_config["positions"])
       {
@@ -169,8 +166,7 @@ class BatteryFaker
       }
     }
     //Callbacks
-    void controlCallback(const human_aware_collaboration_planner::BatteryControl& control)
-    {
+    void controlCallback(const human_aware_collaboration_planner::BatteryControl& control){
       if(control.percentage != -1)
         battery_.percentage = control.percentage;
       mode_ = control.mode;
@@ -179,15 +175,17 @@ class BatteryFaker
       if(control.battery_decrease >= 0)
         battery_decrease_= control.battery_decrease;
     }
-    void positionCallback(const geometry_msgs::PoseStamped& pose)
-    {
+    void positionCallback(const geometry_msgs::PoseStamped& pose){
       position_.update(pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);
     }
+    void positionCallback(const mrs_msgs::UavStatus& pose){
+      position_.update(pose.odom_x, pose.odom_y, pose.odom_z);
+    }
     void stateCallback(const uav_abstraction_layer::State& state){state_ = state.state;}
+    void stateCallback(const mrs_msgs::UavStatus& state){state_ = state.fly_state;}
 };
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv){
   ros::init(argc, argv, "talker");
 
   BatteryFaker battery_faker;

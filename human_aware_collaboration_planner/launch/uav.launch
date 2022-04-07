@@ -17,7 +17,7 @@
     <arg name="z" default="0"/>
     <arg name="yaw" default="0"/>
 
-    <arg name="ns_prefix" default="uav_"/>
+    <arg name="ns_prefix" default="uav"/>
     <arg name="low_level_interface" default="UAL"/>
     <arg name="ual_server" default="on"/>
 

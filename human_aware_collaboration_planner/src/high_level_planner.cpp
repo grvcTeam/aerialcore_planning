@@ -3,9 +3,9 @@
 //class Agent
 //class Agent Constructors
 Agent::Agent() : id_(), type_(), position_(), battery_(), task_queue_(), position_sub_(), battery_sub_(),
-  battery_as_(nh_, "/uav_i/battery_enough", boost::bind(&Agent::batteryEnoughCB, this, _1), false),
-  task_result_as_(nh_, "/uav_i/task_result", boost::bind(&Agent::taskResultCB, this, _1), false),
-  ntl_ac_("/uav_i/task_list", true), battery_enough_(true), planner_(nullptr), last_beacon_time_(), last_beacon_() {}
+  battery_as_(nh_, "/uav0/battery_enough", boost::bind(&Agent::batteryEnoughCB, this, _1), false),
+  task_result_as_(nh_, "/uav0/task_result", boost::bind(&Agent::taskResultCB, this, _1), false),
+  ntl_ac_("/uav0/task_list", true), battery_enough_(true), planner_(nullptr), last_beacon_time_(), last_beacon_() {}
 
 Agent::Agent(Planner* planner, std::string id, std::string type, ros::Time first_beacon_time,
     human_aware_collaboration_planner::AgentBeacon first_beacon) :
@@ -539,6 +539,9 @@ void Agent::setLastBeacon(human_aware_collaboration_planner::AgentBeacon last_be
 //class Agent Callbacks
 void Agent::positionCallback(const geometry_msgs::PoseStamped& pose){
   position_.update(pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);
+}
+void Agent::positionCallback(const mrs_msgs::UavStatus& pose){
+  position_.update(pose.odom_x, pose.odom_y, pose.odom_z);
 }
 void Agent::batteryCallback(const sensor_msgs::BatteryState& battery){battery_ = battery.percentage;}
 void Agent::batteryEnoughCB(const human_aware_collaboration_planner::BatteryEnoughGoalConstPtr& goal){
