@@ -14,10 +14,14 @@ Agent::Agent(Planner* planner, std::string id, std::string type, ros::Time first
   task_result_as_(nh_, "/" + id + "/task_result", boost::bind(&Agent::taskResultCB, this, _1), false),
   ntl_ac_("/" + id + "/task_list", true), last_beacon_time_(first_beacon_time), last_beacon_(first_beacon)
 {
+  ros::param::param<std::string>("~low_level_interface", low_level_interface_, "UAL");
   ros::param::param<std::string>("~pose_topic", pose_topic_, "/ual/pose");
   ros::param::param<std::string>("~battery_topic", battery_topic_, "/battery_fake");
 
-  position_sub_ = nh_.subscribe("/" + id + pose_topic_, 1, &Agent::positionCallback, this);
+  if(low_level_interface_ == "UAL")
+    position_sub_ = nh_.subscribe("/" + id + pose_topic_, 1, &Agent::positionCallbackMRS, this);
+  else if(low_level_interface_ == "MRS")
+    position_sub_ = nh_.subscribe("/" + id + pose_topic_, 1, &Agent::positionCallbackMRS, this);
   battery_sub_ = nh_.subscribe("/" + id + battery_topic_, 1, &Agent::batteryCallback, this);
   battery_as_.start();
   task_result_as_.start();
@@ -29,7 +33,10 @@ Agent::Agent(const Agent& a) : id_(a.id_), type_(a.type_), position_(a.position_
   task_result_as_(nh_, "/" + a.id_ + "/task_result", boost::bind(&Agent::taskResultCB, this, _1), false),
   ntl_ac_("/" + a.id_ + "/task_list", true), last_beacon_time_(a.last_beacon_time_)
 {
-  position_sub_ = nh_.subscribe("/" + a.id_ + a.pose_topic_, 1, &Agent::positionCallback, this);
+  if(low_level_interface_ == "UAL")
+    position_sub_ = nh_.subscribe("/" + a.id_ + a.pose_topic_, 1, &Agent::positionCallbackUAL, this);
+  else if(low_level_interface_ == "MRS")
+    position_sub_ = nh_.subscribe("/" + a.id_ + a.pose_topic_, 1, &Agent::positionCallbackMRS, this);
   battery_sub_ = nh_.subscribe("/" + a.id_ + a.battery_topic_, 1, &Agent::batteryCallback, this);
 
   battery_as_.start();
@@ -537,10 +544,10 @@ void Agent::setLastBeaconTime(ros::Time last_beacon_time){last_beacon_time_ = la
 void Agent::setLastBeacon(human_aware_collaboration_planner::AgentBeacon last_beacon){last_beacon_ = last_beacon;}
 
 //class Agent Callbacks
-void Agent::positionCallback(const geometry_msgs::PoseStamped& pose){
+void Agent::positionCallbackUAL(const geometry_msgs::PoseStamped& pose){
   position_.update(pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);
 }
-void Agent::positionCallback(const mrs_msgs::UavStatus& pose){
+void Agent::positionCallbackMRS(const mrs_msgs::UavStatus& pose){
   position_.update(pose.odom_x, pose.odom_y, pose.odom_z);
 }
 void Agent::batteryCallback(const sensor_msgs::BatteryState& battery){battery_ = battery.percentage;}

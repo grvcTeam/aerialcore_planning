@@ -52,6 +52,7 @@ class Agent
     //Subscribers
 		ros::Subscriber position_sub_;
 		ros::Subscriber battery_sub_;
+		std::string low_level_interface_;
 		std::string pose_topic_;
 		std::string battery_topic_;
 		classes::Position position_;
@@ -100,8 +101,8 @@ class Agent
 		void setLastBeaconTime(ros::Time last_beacon_time);
 		void setLastBeacon(human_aware_collaboration_planner::AgentBeacon last_beacon);
 		//Callbacks
-    void positionCallback(const geometry_msgs::PoseStamped& pose);
-    void positionCallback(const mrs_msgs::UavStatus& pose);
+    void positionCallbackUAL(const geometry_msgs::PoseStamped& pose);
+    void positionCallbackMRS(const mrs_msgs::UavStatus& pose);
     void batteryCallback(const sensor_msgs::BatteryState& battery);
 		void batteryEnoughCB(const human_aware_collaboration_planner::BatteryEnoughGoalConstPtr& goal);
 		void taskResultCB(const human_aware_collaboration_planner::TaskResultGoalConstPtr& goal);

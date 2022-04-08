@@ -467,6 +467,7 @@ class AgentNode
     bool battery_enough_;
 		std::string tool_flag_;
 		std::string pose_frame_id_;
+		std::string low_level_interface_;
 		std::string pose_topic_;
 		std::string state_topic_;
 		std::string battery_topic_;
@@ -496,8 +497,8 @@ class AgentNode
     void positionCallback(const geometry_msgs::PoseStamped& pose);
     void positionCallback(const mrs_msgs::UavStatus& pose);
     void batteryCallback(const sensor_msgs::BatteryState& battery);
-		void stateCallback(const uav_abstraction_layer::State& state);
-		void stateCallback(const mrs_msgs::UavStatus& state);
+		void stateCallbackUAL(const uav_abstraction_layer::State& state);
+		void stateCallbackMRS(const mrs_msgs::UavStatus& state);
 		void missionOverCallback(const human_aware_collaboration_planner::MissionOver& value);
 		void beaconCallback(const human_aware_collaboration_planner::PlannerBeacon& beacon);
 		bool checkBeaconTimeout(ros::Time now);

@@ -24,6 +24,7 @@ class BatteryFaker{
 
     classes::Position position_;
 
+		std::string low_level_interface_;
 		std::string pose_topic_;
 		std::string state_topic_;
     std::string config_file;
@@ -47,6 +48,7 @@ class BatteryFaker{
   public:
     BatteryFaker() : loop_rate_(0.2), mode_(2), battery_increase_(0.01), battery_decrease_(0.01){
       ros::param::param<std::string>("~id", id_, "i");
+      ros::param::param<std::string>("~low_level_interface", low_level_interface_, "UAL");
       ros::param::param<std::string>("~pose_topic", pose_topic_, "/" + id_ + "/ual/pose");
       ros::param::param<std::string>("~state_topic", state_topic_, "/" + id_ + "/ual/state");
 
@@ -59,8 +61,16 @@ class BatteryFaker{
       battery_pub_ = nh_.advertise<sensor_msgs::BatteryState>("/" + id_ + "/battery_fake", 1);
 
       control_sub_ = nh_.subscribe("/" + id_ + "/battery_fake/control", 1, &BatteryFaker::controlCallback, this);
-      position_sub_ = nh_.subscribe(pose_topic_, 1, &BatteryFaker::positionCallback, this);
-      state_sub_ = nh_.subscribe(state_topic_, 1, &BatteryFaker::stateCallback, this);
+      if(low_level_interface_ == "UAL")
+      {
+        position_sub_ = nh_.subscribe(pose_topic_, 1, &BatteryFaker::positionCallbackUAL, this);
+        state_sub_ = nh_.subscribe(state_topic_, 1, &BatteryFaker::stateCallbackUAL, this);
+      }
+      else if(low_level_interface_ == "MRS")
+      {
+        position_sub_ = nh_.subscribe(pose_topic_, 1, &BatteryFaker::positionCallbackMRS, this);
+        state_sub_ = nh_.subscribe(state_topic_, 1, &BatteryFaker::stateCallbackMRS, this);
+      }
 
       battery_.percentage = 0.9;
       loop_rate_.reset();
@@ -181,8 +191,8 @@ class BatteryFaker{
     void positionCallback(const mrs_msgs::UavStatus& pose){
       position_.update(pose.odom_x, pose.odom_y, pose.odom_z);
     }
-    void stateCallback(const uav_abstraction_layer::State& state){state_ = state.state;}
-    void stateCallback(const mrs_msgs::UavStatus& state){state_ = state.fly_state;}
+    void stateCallbackUAL(const uav_abstraction_layer::State& state){state_ = state.state;}
+    void stateCallbackMRS(const mrs_msgs::UavStatus& state){state_ = state.fly_state;}
 };
 
 int main(int argc, char **argv){

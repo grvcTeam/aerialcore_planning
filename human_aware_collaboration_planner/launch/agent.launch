@@ -11,6 +11,8 @@
   <arg name="config_file" default="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
   <arg name="battery_faker" default="true"/>
 
+  <param name="low_level_interface" value="$(arg low_level_interface)"/>
+
   <group if="$(eval low_level_interface == 'UAL')">
     <param name="pose_topic" value="/$(arg ns_prefix)$(arg id)/ual/pose"/>
     <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/ual/state"/>

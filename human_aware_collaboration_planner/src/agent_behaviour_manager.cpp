@@ -1482,6 +1482,7 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   ros::param::param<std::string>("~id", id_, "0");
   ros::param::param<std::string>("~ns_prefix", ns_prefix_, "uav");
   ros::param::param<std::string>("~pose_frame_id", pose_frame_id_, "map");
+  ros::param::param<std::string>("~low_level_interface", low_level_interface_, "UAL");
   ros::param::param<std::string>("~pose_topic", pose_topic_, "/" + beacon_.id + "/ual/pose");
   ros::param::param<std::string>("~state_topic", state_topic_, "/" + beacon_.id + "/ual/state");
   ros::param::param<std::string>("~battery_topic", battery_topic_, "/" + beacon_.id + "/battery_fake");
@@ -1492,11 +1493,20 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   readConfigFile(config_file_);
 
   beacon_pub_ = nh_.advertise<human_aware_collaboration_planner::AgentBeacon>("/agent_beacon", 1);
-  position_sub_ = nh_.subscribe(pose_topic_, 1, &AgentNode::positionCallback, this);
-  state_sub_ = nh_.subscribe(state_topic_, 1, &AgentNode::stateCallback, this);
   battery_sub_ = nh_.subscribe(battery_topic_, 1, &AgentNode::batteryCallback, this);
   mission_over_sub_ = nh_.subscribe("/mission_over", 1, &AgentNode::missionOverCallback, this);
   planner_beacon_sub_ = nh_.subscribe("/planner_beacon", 1, &AgentNode::beaconCallback, this);
+
+  if(low_level_interface_ == "UAL")
+  {
+    position_sub_ = nh_.subscribe(pose_topic_, 1, &AgentNode::positionCallbackUAL, this);
+    state_sub_ = nh_.subscribe(state_topic_, 1, &AgentNode::stateCallbackUAL, this);
+  }
+  else if(low_level_interface_ == "MRS")
+  {
+    position_sub_ = nh_.subscribe(pose_topic_, 1, &AgentNode::positionCallbackMRS, this);
+    state_sub_ = nh_.subscribe(state_topic_, 1, &AgentNode::stateCallbackMRS, this);
+  }
 
   //Behavior Tree declaration
   BT::NodeStatus status = BT::NodeStatus::RUNNING;
@@ -1808,7 +1818,7 @@ void AgentNode::newTaskList(const human_aware_collaboration_planner::NewTaskList
     infoQueue();
   }
 }
-void AgentNode::positionCallback(const geometry_msgs::PoseStamped& pose){
+void AgentNode::positionCallbackUAL(const geometry_msgs::PoseStamped& pose){
   //TODO: Comment the following when lower level controller for travelling are integrated
   //This correction is needed becouse of the UAL/Land service
   if(pose.pose.position.z - std::stoi(id_) < 0.5)
@@ -1817,7 +1827,7 @@ void AgentNode::positionCallback(const geometry_msgs::PoseStamped& pose){
     position_.update(pose.pose.position.x, pose.pose.position.y, pose.pose.position.z - std::stoi(id_));
   //position_.update(pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);
 }
-void AgentNode::positionCallback(const mrs_msgs::UavStatus& pose){
+void AgentNode::positionCallbackMRS(const mrs_msgs::UavStatus& pose){
   //TODO: Comment the following when lower level controller for travelling are integrated
   //This correction is needed becouse of the UAL/Land service
   if(pose.odom_z - std::stoi(id_) < 0.5)
@@ -1827,8 +1837,8 @@ void AgentNode::positionCallback(const mrs_msgs::UavStatus& pose){
   //position_.update(pose.odom_x, pose.odom_y, pose.odom_z);
 }
 void AgentNode::batteryCallback(const sensor_msgs::BatteryState& battery){battery_ = battery.percentage;}
-void AgentNode::stateCallback(const uav_abstraction_layer::State& state){state_ = state.state;}
-void AgentNode::stateCallback(const mrs_msgs::UavStatus& state){state_ = state.fly_state;}
+void AgentNode::stateCallbackUAL(const uav_abstraction_layer::State& state){state_ = state.state;}
+void AgentNode::stateCallbackMRS(const mrs_msgs::UavStatus& state){state_ = state.fly_state;}
 void AgentNode::missionOverCallback(const human_aware_collaboration_planner::MissionOver& value){
   mission_over_ = value.value;
 }
