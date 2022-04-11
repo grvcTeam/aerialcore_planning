@@ -185,10 +185,10 @@ class BatteryFaker{
       if(control.battery_decrease >= 0)
         battery_decrease_= control.battery_decrease;
     }
-    void positionCallback(const geometry_msgs::PoseStamped& pose){
+    void positionCallbackUAL(const geometry_msgs::PoseStamped& pose){
       position_.update(pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);
     }
-    void positionCallback(const mrs_msgs::UavStatus& pose){
+    void positionCallbackMRS(const mrs_msgs::UavStatus& pose){
       position_.update(pose.odom_x, pose.odom_y, pose.odom_z);
     }
     void stateCallbackUAL(const uav_abstraction_layer::State& state){state_ = state.state;}

@@ -5,7 +5,8 @@
 Agent::Agent() : id_(), type_(), position_(), battery_(), task_queue_(), position_sub_(), battery_sub_(),
   battery_as_(nh_, "/uav0/battery_enough", boost::bind(&Agent::batteryEnoughCB, this, _1), false),
   task_result_as_(nh_, "/uav0/task_result", boost::bind(&Agent::taskResultCB, this, _1), false),
-  ntl_ac_("/uav0/task_list", true), battery_enough_(true), planner_(nullptr), last_beacon_time_(), last_beacon_() {}
+  ntl_ac_("/uav0/task_list", true), battery_enough_(true), planner_(nullptr), last_beacon_time_(), last_beacon_(),
+  low_level_interface_(), pose_topic_(), battery_topic_() {}
 
 Agent::Agent(Planner* planner, std::string id, std::string type, ros::Time first_beacon_time,
     human_aware_collaboration_planner::AgentBeacon first_beacon) :
@@ -31,7 +32,8 @@ Agent::Agent(const Agent& a) : id_(a.id_), type_(a.type_), position_(a.position_
   task_queue_(a.task_queue_), battery_enough_(a.battery_enough_), planner_(a.planner_), last_beacon_(a.last_beacon_),
   battery_as_(nh_, "/" + a.id_ + "/battery_enough", boost::bind(&Agent::batteryEnoughCB, this, _1), false), 
   task_result_as_(nh_, "/" + a.id_ + "/task_result", boost::bind(&Agent::taskResultCB, this, _1), false),
-  ntl_ac_("/" + a.id_ + "/task_list", true), last_beacon_time_(a.last_beacon_time_)
+  ntl_ac_("/" + a.id_ + "/task_list", true), last_beacon_time_(a.last_beacon_time_),
+  low_level_interface_(a.low_level_interface_), pose_topic_(a.pose_topic_), battery_topic_(a.battery_topic_)
 {
   if(low_level_interface_ == "UAL")
     position_sub_ = nh_.subscribe("/" + a.id_ + a.pose_topic_, 1, &Agent::positionCallbackUAL, this);

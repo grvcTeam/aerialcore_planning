@@ -494,8 +494,8 @@ class AgentNode
 		void taskQueueManager();
     //New Task List Action callback
     void newTaskList(const human_aware_collaboration_planner::NewTaskListGoalConstPtr& goal);
-    void positionCallback(const geometry_msgs::PoseStamped& pose);
-    void positionCallback(const mrs_msgs::UavStatus& pose);
+    void positionCallbackUAL(const geometry_msgs::PoseStamped& pose);
+    void positionCallbackMRS(const mrs_msgs::UavStatus& pose);
     void batteryCallback(const sensor_msgs::BatteryState& battery);
 		void stateCallbackUAL(const uav_abstraction_layer::State& state);
 		void stateCallbackMRS(const mrs_msgs::UavStatus& state);
