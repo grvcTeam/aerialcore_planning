@@ -33,6 +33,7 @@
 
 #include "geometry_msgs/PoseStamped.h"
 #include "mrs_msgs/UavStatus.h"
+#include "mrs_actionlib_interface/commandAction.h"
 #include "sensor_msgs/BatteryState.h"
 
 #include "behaviortree_cpp_v3/behavior_tree.h"
@@ -438,6 +439,7 @@ class AgentNode
 		std::string ns_prefix_;
 
     //Action Server to receive TaskList
+		actionlib::SimpleActionClient<mrs_actionlib_interface::commandAction> mrs_ac_;
     actionlib::SimpleActionServer<human_aware_collaboration_planner::NewTaskListAction> ntl_as_;
     human_aware_collaboration_planner::NewTaskListFeedback ntl_feedback_;
     human_aware_collaboration_planner::NewTaskListResult ntl_result_;
@@ -498,7 +500,7 @@ class AgentNode
     void positionCallbackMRS(const mrs_msgs::UavStatus& pose);
     void batteryCallback(const sensor_msgs::BatteryState& battery);
 		void stateCallbackUAL(const uav_abstraction_layer::State& state);
-		void stateCallbackMRS(const mrs_msgs::UavStatus& state);
+		void stateCallbackMRS(const mrs_actionlib_interface::commandFeedback feedback);
 		void missionOverCallback(const human_aware_collaboration_planner::MissionOver& value);
 		void beaconCallback(const human_aware_collaboration_planner::PlannerBeacon& beacon);
 		bool checkBeaconTimeout(ros::Time now);
@@ -507,7 +509,7 @@ class AgentNode
 		bool take_off(float height, bool blocking);
 		bool go_to_waypoint(float x, float y, float z, bool blocking);
 		bool stop(bool blocking);
-		bool checkIfUALGoToServiceSucceeded(float x, float y, float z);
+		bool checkIfGoToServiceSucceeded(float x, float y, float z);
 };
 
 #endif

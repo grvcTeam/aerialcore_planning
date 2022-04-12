@@ -22,7 +22,7 @@
 
   <group if="$(eval low_level_interface == 'MRS')">
     <param name="pose_topic" value="/$(arg ns_prefix)$(arg id)/mrs_uav_status/uav_status"/>
-    <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/mrs_uav_status/uav_status"/>
+    <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/mrs_actionlib_interface/feedback"/>
     <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/mavros/battery" if="$(eval battery_faker == 'false')"/>
     <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/battery_fake" if="$(eval battery_faker == 'true')"/>
   </group>

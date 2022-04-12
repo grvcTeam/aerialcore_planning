@@ -104,7 +104,7 @@ BT::NodeStatus GoNearChargingStation::tick(){
         if(agent_->go_to_waypoint(assigned_charging_station.getX(), assigned_charging_station.getY(),
               assigned_charging_station.getZ() + 0.4, false))
         {
-          while(!agent_->checkIfUALGoToServiceSucceeded(assigned_charging_station.getX(),
+          while(!agent_->checkIfGoToServiceSucceeded(assigned_charging_station.getX(),
                 assigned_charging_station.getY(), assigned_charging_station.getZ() + 0.4))
           {
             if(isHaltRequested())
@@ -425,7 +425,7 @@ BT::NodeStatus BackToStation::tick(){
           //UAL goto service result waiting loop
           else
           {
-            while(!agent_->checkIfUALGoToServiceSucceeded(agent_->known_positions_["stations"][nearest_station].getX(),
+            while(!agent_->checkIfGoToServiceSucceeded(agent_->known_positions_["stations"][nearest_station].getX(),
                   agent_->known_positions_["stations"][nearest_station].getY(),
                   agent_->known_positions_["stations"][nearest_station].getZ() + 0.4))
             {
@@ -546,7 +546,7 @@ BT::NodeStatus GoNearHumanTarget::tick(){
         ROS_INFO("[GoNearHumanTarget] Moving near HT...");
         if(agent_->go_to_waypoint(near_human_pose.getX(), near_human_pose.getY(), near_human_pose.getZ(), false))
         {
-          while(!agent_->checkIfUALGoToServiceSucceeded(near_human_pose.getX(), near_human_pose.getY(),
+          while(!agent_->checkIfGoToServiceSucceeded(near_human_pose.getX(), near_human_pose.getY(),
                 near_human_pose.getZ()))
           {
             if(isHaltRequested())
@@ -716,7 +716,7 @@ BT::NodeStatus GoNearWP::tick(){
         ROS_INFO("[GoNearWP] Moving near WP...");
         if(agent_->go_to_waypoint(near_waypoint.getX(), near_waypoint.getY(), near_waypoint.getZ(), false))
         {
-          while(!agent_->checkIfUALGoToServiceSucceeded(near_waypoint.getX(), near_waypoint.getY(),
+          while(!agent_->checkIfGoToServiceSucceeded(near_waypoint.getX(), near_waypoint.getY(),
                 near_waypoint.getZ()))
           {
             if(isHaltRequested())
@@ -885,7 +885,7 @@ BT::NodeStatus GoNearStation::tick(){
         ROS_INFO("[GoNearStation] Moving near Tool...");
         if(agent_->go_to_waypoint(near_tool_pose.getX(), near_tool_pose.getY(), near_tool_pose.getZ(), false))
         {
-          while(!agent_->checkIfUALGoToServiceSucceeded(near_tool_pose.getX(), near_tool_pose.getY(),
+          while(!agent_->checkIfGoToServiceSucceeded(near_tool_pose.getX(), near_tool_pose.getY(),
                 near_tool_pose.getZ()))
           {
             if(isHaltRequested())
@@ -1474,7 +1474,8 @@ inline void RegisterNodes(BT::BehaviorTreeFactory& factory){
 //AgentNode definition **********************************************************************************************
 AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : battery_enough_(true), loop_rate_(1),
   ntl_as_(nh_, "task_list", boost::bind(&AgentNode::newTaskList, this, _1), false), tool_flag_("none"), timeout_(false),
-  battery_ac_("/" + beacon.id + "/battery_enough", true), beacon_(beacon), mission_over_(false), state_(0), battery_(0) 
+  battery_ac_("/" + beacon.id + "/battery_enough", true), beacon_(beacon), mission_over_(false), state_(0), battery_(0),
+  mrs_ac_("/" + beacon.id + "/mrs_actionlib_interface/goal", true)
 {
   //Start the server to receive tasks list through actions
   ntl_as_.start();
@@ -1838,7 +1839,28 @@ void AgentNode::positionCallbackMRS(const mrs_msgs::UavStatus& pose){
 }
 void AgentNode::batteryCallback(const sensor_msgs::BatteryState& battery){battery_ = battery.percentage;}
 void AgentNode::stateCallbackUAL(const uav_abstraction_layer::State& state){state_ = state.state;}
-void AgentNode::stateCallbackMRS(const mrs_msgs::UavStatus& state){state_ = state.fly_state;}
+void AgentNode::stateCallbackMRS(const mrs_actionlib_interface::commandFeedback feedback){
+  /* UAL States
+   *********************
+   * UNINITIALIZED   = 0
+   * LANDED_DISARMED = 1
+   * LANDED_ARMED    = 2
+   * TAKING_OFF      = 3
+   * FLYING_AUTO     = 4
+   * FLYING_MANUAL   = 5
+   * LANDING         = 6
+   *********************/
+
+  if(feedback.message == "Current state: UNKNOWN")
+    state_ = 0;//state_ = 5:;
+  if(feedback.message == "Current state: LANDED")
+    state_ = 2;//state_ = 1;
+  if(feedback.message == "Current state: IDLE_FLYING" || feedback.message == "Current state: GOTO")
+    state_ = 4;
+  if(feedback.message == "Current state: TAKEOFF_LANDING")
+    state_ = 6;//state_ = 3;
+  return;
+}
 void AgentNode::missionOverCallback(const human_aware_collaboration_planner::MissionOver& value){
   mission_over_ = value.value;
 }
@@ -1868,62 +1890,109 @@ bool AgentNode::land(bool blocking){
   return false;
 }
 bool AgentNode::take_off(float height, bool blocking){
-  //TODO: Comment the following two lines when lower level controller for travelling are integrated
-  ros::ServiceClient take_off_client = nh_.serviceClient<uav_abstraction_layer::TakeOff>("/" + beacon_.id +
-      "/ual/take_off");
-  uav_abstraction_layer::TakeOff take_off_srv;
-  take_off_srv.request.height = height + std::stoi(id_);
-  //take_off_srv.request.height = height;
-  take_off_srv.request.blocking = blocking;
-  if(take_off_client.call(take_off_srv))
+  //TODO
+  if(low_level_interface_ == "UAL")
+  {
+    ros::ServiceClient take_off_client = nh_.serviceClient<uav_abstraction_layer::TakeOff>("/" + beacon_.id +
+        "/ual/take_off");
+    uav_abstraction_layer::TakeOff take_off_srv;
+    //TODO: Change the following two lines when lower level controller for travelling are integrated
+    take_off_srv.request.height = height + std::stoi(id_);
+    //take_off_srv.request.height = height;
+    take_off_srv.request.blocking = blocking;
+    if(take_off_client.call(take_off_srv))
+      return true;
+    return false;
+  }
+  if(low_level_interface_ == "MRS")
+  {
+    mrs_ac_.waitForServer(ros::Duration(1.0));
+    mrs_actionlib_interface::commandGoal goal;
+    goal.command = 0;
+    mrs_ac_.sendGoal(goal);
     return true;
-  return false;
+  }
 }
 bool AgentNode::go_to_waypoint(float x, float y, float z, bool blocking){
-  //TODO: Comment the following two lines when lower level controller for travelling are integrated
-  //ROS_INFO("[go_to_waypoint] Moving to (%.1f,%.1f,%.1f)[%s]", x, y, z + std::stoi(id_), pose_frame_id_.c_str());
-
-  ros::ServiceClient go_to_wp_client = nh_.serviceClient<uav_abstraction_layer::GoToWaypoint>("/" + beacon_.id +
-      "/ual/go_to_waypoint");
-  uav_abstraction_layer::GoToWaypoint go_to_wp_srv;
-  go_to_wp_srv.request.waypoint.header.frame_id = pose_frame_id_;
-  go_to_wp_srv.request.waypoint.pose.position.x = x;
-  go_to_wp_srv.request.waypoint.pose.position.y = y;
-  if(z < 1)
-    go_to_wp_srv.request.waypoint.pose.position.z = z;
-  else
-    go_to_wp_srv.request.waypoint.pose.position.z = z + std::stoi(id_);
-  //go_to_wp_srv.request.waypoint.pose.position.z = z;
-  go_to_wp_srv.request.blocking = blocking;
-  if(go_to_wp_client.call(go_to_wp_srv))
+  //TODO
+  if(low_level_interface_ == "UAL")
+  {
+    ros::ServiceClient go_to_wp_client = nh_.serviceClient<uav_abstraction_layer::GoToWaypoint>("/" + beacon_.id +
+        "/ual/go_to_waypoint");
+    uav_abstraction_layer::GoToWaypoint go_to_wp_srv;
+    go_to_wp_srv.request.waypoint.header.frame_id = pose_frame_id_;
+    go_to_wp_srv.request.waypoint.pose.position.x = x;
+    go_to_wp_srv.request.waypoint.pose.position.y = y;
+    //TODO: Change the following four lines when lower level controller for travelling are integrated
+    if(z < 1)
+      go_to_wp_srv.request.waypoint.pose.position.z = z;
+    else
+      go_to_wp_srv.request.waypoint.pose.position.z = z + std::stoi(id_);
+    go_to_wp_srv.request.blocking = blocking;
+    if(go_to_wp_client.call(go_to_wp_srv))
+      return true;
+    return false;
+  }
+  if(low_level_interface_ == "MRS")
+  {
+    mrs_ac_.waitForServer(ros::Duration(1.0));
+    mrs_actionlib_interface::commandGoal goal;
+    goal.command = 2;
+    goal.goto_x = x;
+    goal.goto_y = y;
+    //TODO: Change the following four lines when lower level controller for travelling are integrated
+    if(z < 1)
+      goal.goto_z = z;
+    else
+      goal.goto_z = z + std::stoi(id_);
+    goal.goto_hdg = 0;
+    mrs_ac_.sendGoal(goal);
     return true;
-  return false;
+  }
 }
 bool AgentNode::stop(bool blocking){
   if(state_ == 4)
   {
-    //TODO: Comment the following two lines when lower level controller for travelling are integrated
-
-    ros::ServiceClient stop_client = nh_.serviceClient<uav_abstraction_layer::GoToWaypoint>("/" + beacon_.id +
-        "/ual/go_to_waypoint");
-    uav_abstraction_layer::GoToWaypoint stop_srv;
-    stop_srv.request.waypoint.header.frame_id = pose_frame_id_;
-    stop_srv.request.waypoint.pose.position.x = position_.getX();
-    stop_srv.request.waypoint.pose.position.y = position_.getY();
-    if(position_.getZ() < 1)
-      stop_srv.request.waypoint.pose.position.z = position_.getZ();
-    else
-      stop_srv.request.waypoint.pose.position.z = position_.getZ() + std::stoi(id_);
-    //stop_srv.request.waypoint.pose.position.z = position_.getZ();
-    stop_srv.request.blocking = blocking;
-    //ROS_INFO("[stop] Moving to (%.1f,%.1f,%.1f)[%s]", stop_srv.request.waypoint.pose.position.x,
-    //    stop_srv.request.waypoint.pose.position.y, stop_srv.request.waypoint.pose.position.z, pose_frame_id_.c_str());
-    if(!stop_client.call(stop_srv))
-      return false;
+    //TODO
+    if(low_level_interface_ == "UAL")
+    {
+      ros::ServiceClient stop_client = nh_.serviceClient<uav_abstraction_layer::GoToWaypoint>("/" + beacon_.id +
+          "/ual/go_to_waypoint");
+      uav_abstraction_layer::GoToWaypoint stop_srv;
+      stop_srv.request.waypoint.header.frame_id = pose_frame_id_;
+      stop_srv.request.waypoint.pose.position.x = position_.getX();
+      stop_srv.request.waypoint.pose.position.y = position_.getY();
+      if(position_.getZ() < 1)
+        stop_srv.request.waypoint.pose.position.z = position_.getZ();
+      else
+        stop_srv.request.waypoint.pose.position.z = position_.getZ() + std::stoi(id_);
+      //stop_srv.request.waypoint.pose.position.z = position_.getZ();
+      stop_srv.request.blocking = blocking;
+      //ROS_INFO("[stop] Moving to (%.1f,%.1f,%.1f)[%s]", stop_srv.request.waypoint.pose.position.x,
+      //    stop_srv.request.waypoint.pose.position.y, stop_srv.request.waypoint.pose.position.z, pose_frame_id_.c_str());
+      if(!stop_client.call(stop_srv))
+        return false;
+    }
+    if(low_level_interface_ == "MRS")
+    {
+      mrs_ac_.waitForServer(ros::Duration(1.0));
+      mrs_actionlib_interface::commandGoal goal;
+      goal.command = 2;
+      goal.goto_x = position_.getX();
+      goal.goto_y = position_.getY();
+      //TODO: Change the following four lines when lower level controller for travelling are integrated
+      if(position_.getZ() < 1)
+        goal.goto_z = position_.getZ();
+      else
+        goal.goto_z = position_.getZ() + std::stoi(id_);
+      goal.goto_hdg = 0;
+      mrs_ac_.sendGoal(goal);
+      return true;
+    }
   }
   return true;
 }
-bool AgentNode::checkIfUALGoToServiceSucceeded(float x, float y, float z){
+bool AgentNode::checkIfGoToServiceSucceeded(float x, float y, float z){
   classes::Position position(x, y, z);
   if(classes::distance(position, position_) < 0.1)
     return true;

@@ -14,7 +14,7 @@
 
   <group if="$(eval low_level_interface == 'MRS')">
     <param name="pose_topic" value="/$(arg ns_prefix)$(arg id)/mrs_uav_status/uav_status"/>
-    <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/mrs_uav_status/uav_status"/>
+    <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/mrs_actionlib_interface/feedback"/>
   </group>
 
   <node pkg="human_aware_collaboration_planner" type="battery_faker" name="battery_faker" ns="$(arg ns_prefix)$(arg id)">
