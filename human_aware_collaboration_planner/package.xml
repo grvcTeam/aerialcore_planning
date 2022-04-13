@@ -15,16 +15,21 @@
   <build_depend>behaviortree_cpp_v3</build_depend>
   <build_depend>uav_abstraction_layer</build_depend>
   <!--build_depend>mrs_actionlib_interface</build_depend!-->
+  <!--build_depend>MrsActionlibInterface</build_depend!-->
   <build_export_depend>behaviortree_cpp_v3</build_export_depend>
+  <build_export_depend>message_runtime</build_export_depend>
   <exec_depend>message_runtime</exec_depend>
   <exec_depend>actionlib</exec_depend>
   <exec_depend>actionlib_msgs</exec_depend>
   <exec_depend>behaviortree_cpp_v3</exec_depend>
   <exec_depend>uav_abstraction_layer</exec_depend>
   <!--exec_depend>mrs_actionlib_interface</exec_depend!-->
+  <!--exec_depend>MrsActionlibInterface</exec_depend!-->
 
 
+  <depend>std_msgs</depend>
   <depend>yaml-cpp</depend>
+  <depend>mrs_actionlib_interface</depend>
 
   <export>
     <!-- Other tools can request additional information be placed here -->
