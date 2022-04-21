@@ -1564,6 +1564,7 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   loop_rate_.reset();
   while(!state_)
   {
+    land(false);
     ros::spinOnce();
     loop_rate_.sleep();
   }
@@ -1880,17 +1881,28 @@ bool AgentNode::checkBeaconTimeout(ros::Time now){
   }
   return timeout_;
 }
-//UAL Service calls
+// UAL/MRS Service calls
 bool AgentNode::land(bool blocking){
-  ros::ServiceClient land_client = nh_.serviceClient<uav_abstraction_layer::Land>("/" + beacon_.id + "/ual/land");
-  uav_abstraction_layer::Land land_srv;
-  land_srv.request.blocking = blocking;
-  if(land_client.call(land_srv))
+  if(low_level_interface_ == "UAL")
+  {
+    ros::ServiceClient land_client = nh_.serviceClient<uav_abstraction_layer::Land>("/" + beacon_.id + "/ual/land");
+    uav_abstraction_layer::Land land_srv;
+    land_srv.request.blocking = blocking;
+    if(land_client.call(land_srv))
+      return true;
+    return false;
+  }
+  if(low_level_interface_ == "MRS")
+  {
+    mrs_ac_.waitForServer(ros::Duration(1.0));
+    mrs_actionlib_interface::commandGoal goal;
+    goal.command = 1;
+    mrs_ac_.sendGoal(goal);
     return true;
+  }
   return false;
 }
 bool AgentNode::take_off(float height, bool blocking){
-  //TODO
   if(low_level_interface_ == "UAL")
   {
     ros::ServiceClient take_off_client = nh_.serviceClient<uav_abstraction_layer::TakeOff>("/" + beacon_.id +
@@ -1910,11 +1922,22 @@ bool AgentNode::take_off(float height, bool blocking){
     mrs_actionlib_interface::commandGoal goal;
     goal.command = 0;
     mrs_ac_.sendGoal(goal);
+    //TODO: Delete the following ten lines when lower level controller for travelling are integrated
+    if(mrs_ac_.waitForResult(ros::Duration(10.0)))
+    {
+      goal.command = 2;
+      goal.goto_x = position_.getX();
+      goal.goto_y = position_.getY();
+      goal.goto_z = height + std::stoi(id_);
+      goal.goto_hdg = 0;
+      mrs_ac_.sendGoal(goal);
+      return true;
+    }
     return true;
   }
+  return false;
 }
 bool AgentNode::go_to_waypoint(float x, float y, float z, bool blocking){
-  //TODO
   if(low_level_interface_ == "UAL")
   {
     ros::ServiceClient go_to_wp_client = nh_.serviceClient<uav_abstraction_layer::GoToWaypoint>("/" + beacon_.id +
@@ -1949,6 +1972,7 @@ bool AgentNode::go_to_waypoint(float x, float y, float z, bool blocking){
     mrs_ac_.sendGoal(goal);
     return true;
   }
+  return false;
 }
 bool AgentNode::stop(bool blocking){
   if(state_ == 4)

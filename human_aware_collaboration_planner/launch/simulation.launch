@@ -1,6 +1,6 @@
 <launch>
     <!-- Mode: sitl, serial, custom -->
-    <!-- Worlds: empty, power_tower, 2towers, burguillos -->
+    <!-- Worlds: none, empty, power_tower, 2towers, burguillos -->
     <!-- Debuggers: gdb, valgrind, none -->
     <!-- Low Level Interface: UAL, MRS -->
     <arg name="number_UAV" default="1"/>

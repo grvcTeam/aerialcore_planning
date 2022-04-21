@@ -1,5 +1,5 @@
 <launch>
-  <!-- Worlds: empty, power_tower, 2towers, burguillos -->
+  <!-- Worlds: none, empty, power_tower, 2towers, burguillos -->
   <arg name="world" default="power_tower"/>
 
   <!-- Launch Gazebo simulation -->

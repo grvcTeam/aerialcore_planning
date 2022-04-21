@@ -30,9 +30,9 @@
   <depend>std_msgs</depend>
   <depend>yaml-cpp</depend>
   <depend>mrs_actionlib_interface</depend>
-  <depend>roscpp</depend>
-  <depend>mrs_lib</depend>
-  <depend>mrs_msgs</depend>
+  <!--depend>roscpp</depend!-->
+  <!--depend>mrs_lib</depend!-->
+  <!--depend>mrs_msgs</depend!-->
 
   <export>
     <!-- Other tools can request additional information be placed here -->

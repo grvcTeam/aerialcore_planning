@@ -1,0 +1,102 @@
+<launch>
+
+    <arg name="ns_prefix" default="uav"/>
+    <arg name="id" default="0"/>
+
+    <arg name="ual_server" default="on"/>
+    <arg name="ual_pub_rate" default="30.0"/>
+    <arg name="ual_backend" default="light"/>
+
+    <arg name="mode" default="sitl"/>
+    <arg name="robot_model" default="mbzirc"/>
+    <arg name="material" default="Orange"/>
+
+    <arg name="camera" default="false"/>
+
+    <arg name="x" default="0"/>
+    <arg name="y" default="0"/>
+    <arg name="z" default="0"/>
+    <arg name="yaw" default="0"/>
+    <arg name="pose_frame_id" default="map"/>
+
+    <arg name="mavros_offboard_rate" default="30.0"/>
+    <arg name="noise_var" default="0.0"/>
+    <arg name="position_th" default="0.33"/>
+    <arg name="orientation_th" default="0.65"/>
+    <arg name="hold_pose_time" default="3.0"/>
+    <arg name="max_horizontal_velocity" default="1.6"/>
+    <arg name="max_vertical_velocity" default="1.2"/>
+    <arg name="max_yaw_rate" default="1.0"/>
+    <arg name="max_position_error" default="0.1"/>
+    <arg name="max_orientation_error" default="0.01"/>
+
+
+    <arg name="home_pose" value="[$(arg x), $(arg y), $(arg z)]"/>
+    <arg name="use_mavros" value="true" if="$(eval ual_backend == 'mavros')"/>
+    <arg name="use_mavros" value="false" if="$(eval ual_backend == 'light')"/>
+
+    <!-- Launch robots. Argument mode can be:
+        - sitl: for software in the loop simulation
+        - serial: for serial connection to px4
+        - custom: to fully customize fcu and gcs urls
+    -->
+
+    <group if="$(eval ual_backend == 'light')">
+      <!-- Launch robot -->
+      <node pkg="px4_bringup" type="spawn_gzmodel.py" name="spawn_gzmodel_$(arg id)" output="screen"
+        args="-model=$(arg robot_model) -id=$(arg id) -material=$(arg material) -ual_backend=$(arg ual_backend) 
+        -x $(arg x) -y $(arg y) -z $(arg z) -Y $(arg yaw)"/>
+
+      <!-- Launch UAL gazebo light server -->
+      <node pkg="ual_backend_gazebo_light" type="ual_backend_gazebo_light_server" name="ual" ns="$(arg ns_prefix)$(arg id)" output="screen">
+        <param name="uav_id" value="$(arg id)"/>
+        <param name="model_name" value="$(arg robot_model)_$(arg id)"/>
+        <param name="ual_server" value="$(arg ual_server)"/>
+        <param name="ual_pub_rate" value="$(arg ual_pub_rate)"/>
+        <param name="pose_frame_id" value="$(arg pose_frame_id)"/>
+        <param name="max_horizontal_velocity" value="$(arg max_horizontal_velocity)"/>
+        <param name="max_vertical_velocity" value="$(arg max_vertical_velocity)"/>
+        <param name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
+        <param name="max_position_error" value="$(arg max_position_error)"/>
+        <param name="max_orientation_error" value="$(arg max_orientation_error)"/>
+        <param name="noise_var" value="$(arg noise_var)"/>
+        <param name="position_th" value="$(arg position_th)"/>
+        <param name="orientation_th" value="$(arg orientation_th)"/>
+        <rosparam param="home_pose" subst_value="True">$(arg home_pose)</rosparam>
+      </node>
+    </group>
+
+    <group if="$(eval ual_backend == 'mavros')">
+      <!-- Launch robot -->
+      <include file="$(find px4_bringup)/launch/spawn_robot.launch" ns="$(arg ns_prefix)$(arg id)">
+        <arg name="id" value="$(arg id)"/>
+        <arg name="robot_model" value="$(arg robot_model)"/>
+        <arg name="material" value="$(arg material)"/>
+        <arg name="mode" value="$(arg mode)"/>
+        <arg name="x" value="$(arg x)"/>
+        <arg name="y" value="$(arg y)"/>
+        <arg name="z" value="$(arg z)"/>
+        <arg name="yaw" value="$(arg yaw)"/>
+        <arg name="use_mavros" value="$(arg use_mavros)"/>
+      </include>
+
+      <!-- Launch UAL mavros server -->
+      <node pkg="ual_backend_mavros" type="ual_backend_mavros_server" name="ual" ns="$(arg ns_prefix)$(arg id)" output="screen">
+        <param name="uav_id" value="$(arg id)"/>
+        <param name="model_name" value="$(arg robot_model)_$(arg id)"/>
+        <param name="ual_server" value="$(arg ual_server)"/>
+        <param name="ual_pub_rate" value="$(arg ual_pub_rate)"/>
+        <param name="mavros_offboard_rate" value="$(arg mavros_offboard_rate)"/>
+        <param name="position_th" value="$(arg position_th)"/>
+        <param name="orientation_th" value="$(arg orientation_th)"/>
+        <param name="hold_pose_time" value="$(arg hold_pose_time)"/>
+        <param name="pose_frame_id" value="$(arg pose_frame_id)"/>
+        <param name="home_pose_parent_frame" value="map"/>
+        <rosparam param="home_pose" subst_value="True">$(arg home_pose)</rosparam>
+      </node>
+    </group>
+
+    <!-- Launch camera -->
+    <node name="rqt_image_view_uav_$(arg id)" pkg="rqt_image_view" type="rqt_image_view" args="/$(arg ns_prefix)$(arg id)/cgo3_camera/image_raw" if="$(arg camera)"/>
+
+</launch>
