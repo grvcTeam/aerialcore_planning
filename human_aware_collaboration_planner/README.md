@@ -14,6 +14,7 @@ This software is currently being developed on Ubuntu 20.04 with ROS Noetic.
 
 
 A more detailed description of the system can be found [here](https://www.researchgate.net/publication/360514763_Mission_Planning_and_Execution_in_Heterogeneous_Teams_of_Aerial_Robots_supporting_Power_Line_Inspection_Operations).
+
 If you are using this software layer or you found this approach inspiring for your own research, please cite:
 ```bibtex
 @INPROCEEDINGS{CalvoICUAS22,  
