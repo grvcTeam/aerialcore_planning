@@ -4,14 +4,25 @@ This repository is about a cognitive task planner in charge of planning missions
 
 The system is designed to ensure the safety of both airborne equipment and human workers at all times.
 
-This system implements a software layer for a multi-layer system in such a way that the planner receives high-level commands requesting a task to be performed, and it is the planner who coordinates all the aircrews and calls the appropriate lower-level controllers at any given time.
+This system implements a software layer for a multi-layer software architecture that is further divided into two, a High-Level Planner centralised on the ground and an Agent Behavior Manager distributed on board each UAV. In this way, the High-Level Planner receives task requests as inputs, and its work is to coordinate all the UAVs, asigning to each of them a mission plan to follow. The Agent Behavior Manager is the one in charge of executing and supervising those plans, calling the appropriate lower-level controllers at any given time.
 
-This system does not implement the controllers who carry out the tasks.
+The controllers for each specific action inside each of the tasks are not included in this software layer, but simple
+version of those controllers can be found in this repository in order to be able to test the software layer propoerly in
+simulation. Real controllers will be inplemented in the next layer of the multi-layer software architecture.
 
-This software is being developed on Ubuntu 18.04 with ROS Melodic and has not been tested on other versions.
+This software is currently being developed on Ubuntu 20.04 with ROS Noetic.
 
-
-The software layer of the planner is further divided into two, a high-level planner centralised on the ground and a uav behaviour manager distributed on board each UAV.
+If you are using this software layer or you found this approach inspiring for your own research, please cite:
+```bibtex
+@INPROCEEDINGS{CalvoICUAS22,  
+  author        = {Calvo, Alvaro and Silano, Giuseppe and Capitan, Jesus},  
+  booktitle     = {2022 International Conference on Unmanned Aircraft Systems (ICUAS)},   
+  title         = {Mission Planning and Execution in Heterogeneous Teams of Aerial Robots supporting Power Line Inspection Operations},
+  year          = {2022},  
+  pages         = {}, 
+  doi           = {}
+}
+```
 
 ## Installation
 To install the repositories correctly, you have to follow the next steps:
