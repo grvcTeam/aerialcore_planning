@@ -136,3 +136,6 @@ phase_2_unforeseen_event_8:
 phase_2_unforeseen_event_9:
 	@echo "Unforseen event: mission over"
 	@rostopic pub /mission_over human_aware_collaboration_planner/MissionOver "value: true"
+
+mrs_drone_spawn:
+	@rosservice call /mrs_drone_spawner/spawn "1 --f550 --enable-rangefinder --pos 3.5 9 0.3 0"

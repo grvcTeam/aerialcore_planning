@@ -1,0 +1,173 @@
+name: simulation
+root: ./
+startup_window: drone_manager
+pre_window: export UAV_NAME=uav1; export RUN_TYPE=simulation; export UAV_TYPE=t650; export WORLD_FILE=./custom_configs/world.yaml; export SENSORS="garmin_down"; export ODOMETRY_TYPE="rtk"
+windows:
+  - roscore:
+      layout: tiled
+      panes:
+        - roscore
+  - gazebo:
+      layout: tiled
+      panes:
+        - waitForRos; roslaunch mrs_simulation simulation.launch world_file:='$(find aerialcore_simulation)/worlds/power_towers_danube_wires_rescaled_jeff_autospawn.world' gui:=true
+        - waitForOdometry; gz camera -c gzclient_camera -f uav1; history -s gz camera -c gzclient_camera -f uav1
+         # #{ To connect the camera frame to the inertial frame -- static_transform_publisher x y z qx qy qz qw # #}
+        - 'export UAV_NAME=uav1; waitForOdometry; rosrun tf2_ros static_transform_publisher 0.85 0 0 0.5 -0.5 0.5 -0.5 ${UAV_NAME}/fcu ${UAV_NAME}/rgbd/color_optical'
+        - 'export UAV_NAME=uav2; waitForOdometry; rosrun tf2_ros static_transform_publisher 0.85 0 0 0.5 -0.5 0.5 -0.5 ${UAV_NAME}/fcu ${UAV_NAME}/rgbd/color_optical'
+        - 'export UAV_NAME=uav3; waitForOdometry; rosrun tf2_ros static_transform_publisher 0.85 0 0 0.5 -0.5 0.5 -0.5 ${UAV_NAME}/fcu ${UAV_NAME}/rgbd/color_optical'       
+        - 'export UAV_NAME=uav4; waitForOdometry; rosrun tf2_ros static_transform_publisher 0.85 0 0 0.5 -0.5 0.5 -0.5 ${UAV_NAME}/fcu ${UAV_NAME}/rgbd/color_optical'
+        - 'export UAV_NAME=uav5; waitForOdometry; rosrun tf2_ros static_transform_publisher 0.85 0 0 0.5 -0.5 0.5 -0.5 ${UAV_NAME}/fcu ${UAV_NAME}/rgbd/color_optical'
+  - spawn:
+      layout: tiled
+      panes:
+        - waitForSimulation; rosservice call /mrs_drone_spawner/spawn "1 2 3 4 5 $UAV_TYPE --enable-rangefinder --enable-ground-truth --enable-realsense-front --pos_file `pwd`/pos.csv"
+  - status:
+      layout: tiled
+      panes:
+        - export UAV_NAME=uav1; waitForSimulation; roslaunch mrs_uav_status status.launch
+        - export UAV_NAME=uav2; waitForSimulation; roslaunch mrs_uav_status status.launch
+        - export UAV_NAME=uav3; waitForSimulation; roslaunch mrs_uav_status status.launch   
+        - export UAV_NAME=uav4; waitForSimulation; roslaunch mrs_uav_status status.launch
+        - export UAV_NAME=uav5; waitForSimulation; roslaunch mrs_uav_status status.launch
+  - control:
+      layout: tiled
+      panes:
+        - export UAV_NAME=uav1; waitForOdometry; roslaunch mrs_uav_general core.launch config_uav_manager:=./custom_configs/uav_manager.yaml config_constraint_manager:=./custom_configs/constraint_manager.yaml config_mpc_tracker:=./custom_configs/mpc_tracker.yaml config_odometry:=./custom_configs/odometry.yaml
+        - export UAV_NAME=uav2; waitForOdometry; roslaunch mrs_uav_general core.launch config_uav_manager:=./custom_configs/uav_manager.yaml config_constraint_manager:=./custom_configs/constraint_manager.yaml config_mpc_tracker:=./custom_configs/mpc_tracker.yaml config_odometry:=./custom_configs/odometry.yaml
+        - export UAV_NAME=uav3; waitForOdometry; roslaunch mrs_uav_general core.launch config_uav_manager:=./custom_configs/uav_manager.yaml config_constraint_manager:=./custom_configs/constraint_manager.yaml config_mpc_tracker:=./custom_configs/mpc_tracker.yaml config_odometry:=./custom_configs/odometry.yaml
+        - export UAV_NAME=uav4; waitForOdometry; roslaunch mrs_uav_general core.launch config_uav_manager:=./custom_configs/uav_manager.yaml config_constraint_manager:=./custom_configs/constraint_manager.yaml config_mpc_tracker:=./custom_configs/mpc_tracker.yaml config_odometry:=./custom_configs/odometry.yaml
+        - export UAV_NAME=uav5; waitForOdometry; roslaunch mrs_uav_general core.launch config_uav_manager:=./custom_configs/uav_manager.yaml config_constraint_manager:=./custom_configs/constraint_manager.yaml config_mpc_tracker:=./custom_configs/mpc_tracker.yaml config_odometry:=./custom_configs/odometry.yaml
+  - automatic_start:
+      layout: tiled
+      panes:
+        - export UAV_NAME=uav1; waitForSimulation; roslaunch mrs_uav_general automatic_start.launch
+        - export UAV_NAME=uav2; waitForSimulation; roslaunch mrs_uav_general automatic_start.launch
+        - export UAV_NAME=uav3; waitForSimulation; roslaunch mrs_uav_general automatic_start.launch
+        - export UAV_NAME=uav4; waitForSimulation; roslaunch mrs_uav_general automatic_start.launch
+        - export UAV_NAME=uav5; waitForSimulation; roslaunch mrs_uav_general automatic_start.launch
+  - takeoff:
+      layout: tiled
+      panes: # #{ uav1
+        - 'export UAV_NAME=uav1;
+          waitForControl;
+          rosservice call /${UAV_NAME}/mavros/cmd/arming 1;
+          sleep 2;
+          rosservice call /${UAV_NAME}/mavros/set_mode 0 offboard' ## Gives the control to the MRS system
+        # #}
+        # #{ uav2
+        - 'export UAV_NAME=uav2;
+          waitForControl;
+          rosservice call /${UAV_NAME}/mavros/cmd/arming 1;
+          sleep 2;
+          rosservice call /${UAV_NAME}/mavros/set_mode 0 offboard' ## Gives the control to the MRS system
+        # #}
+        # #{ uav3 
+        - 'export UAV_NAME=uav3;
+          waitForControl;
+          rosservice call /${UAV_NAME}/mavros/cmd/arming 1;
+          sleep 2;
+          rosservice call /${UAV_NAME}/mavros/set_mode 0 offboard' ## Gives the control to the MRS system 
+        # #}
+        # #{ uav4
+        - 'export UAV_NAME=uav4;
+          waitForControl;
+          rosservice call /${UAV_NAME}/mavros/cmd/arming 1;
+          sleep 2;
+          rosservice call /${UAV_NAME}/mavros/set_mode 0 offboard' ## Gives the control to the MRS system
+        # #}
+        # #{ uav5 
+        - 'export UAV_NAME=uav5;
+          waitForControl;
+          rosservice call /${UAV_NAME}/mavros/cmd/arming 1;
+          sleep 2;
+          rosservice call /${UAV_NAME}/mavros/set_mode 0 offboard' ## Gives the control to the MRS system
+        # #}
+  - rosbag:
+      layout: tiled
+      panes:
+        - 'history -s ./record.sh'
+  - virtual_mesh_visualizer:
+      layout: tiled
+      panes:
+        # #{ uav1
+        - 'export UAV_NAME=uav1; export NODE_NAME=uav1_tw; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_tower.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav1; export NODE_NAME=uav1_rs1; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs1.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav1; export NODE_NAME=uav1_rs2; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs2.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav1; export NODE_NAME=uav1_rs3; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs3.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav1; export NODE_NAME=uav1_rs4; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs4.yaml frame_origin:=rtk_origin'  
+        - 'export UAV_NAME=uav1; export NODE_NAME=uav1_rs5; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs5.yaml frame_origin:=rtk_origin'   
+        - 'export UAV_NAME=uav1; export NODE_NAME=uav1_jeff_p; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_human_pick frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav1; export NODE_NAME=uav1_jeff_d; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_human_deli frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav1; export NODE_NAME=uav1_jeff_m; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_human_mon frame_origin:=rtk_origin'
+        # #}
+        # #{ uav2
+        - 'export UAV_NAME=uav2; export NODE_NAME=uav2_tw; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_tower.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav2; export NODE_NAME=uav2_rs1; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs1.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav2; export NODE_NAME=uav2_rs2; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs2.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav2; export NODE_NAME=uav2_rs3; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs3.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav2; export NODE_NAME=uav2_rs4; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs4.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav2; export NODE_NAME=uav2_rs5; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs5.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav2; export NODE_NAME=uav2_jeff_p; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_human_pick frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav2; export NODE_NAME=uav2_jeff_d; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_human_deli frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav2; export NODE_NAME=uav2_jeff_m; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_human_mon frame_origin:=rtk_origin'
+        # #}
+        # #{ uav3
+        - 'export UAV_NAME=uav3; export NODE_NAME=uav3_tw; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_tower.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav3; export NODE_NAME=uav3_rs1; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs1.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav3; export NODE_NAME=uav3_rs2; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs2.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav3; export NODE_NAME=uav3_rs3; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs3.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav3; export NODE_NAME=uav3_rs4; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs4.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav3; export NODE_NAME=uav3_rs5; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs5.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav3; export NODE_NAME=uav3_jeff_p; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_human_pick frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav3; export NODE_NAME=uav3_jeff_d; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_human_deli frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav3; export NODE_NAME=uav3_jeff_m; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_human_mon frame_origin:=rtk_origin'
+        # #}
+        # #{ uav4
+        - 'export UAV_NAME=uav4; export NODE_NAME=uav4_tw; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_tower.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav4; export NODE_NAME=uav4_rs1; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs1.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav4; export NODE_NAME=uav4_rs2; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs2.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav4; export NODE_NAME=uav4_rs3; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs3.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav4; export NODE_NAME=uav4_rs4; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs4.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav4; export NODE_NAME=uav4_rs5; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs5.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav4; export NODE_NAME=uav4_jeff_p; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_human_pick frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav4; export NODE_NAME=uav4_jeff_d; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_human_deli frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav4; export NODE_NAME=uav4_jeff_m; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_human_mon frame_origin:=rtk_origin'
+        # #}
+        # #{ uav5
+        - 'export UAV_NAME=uav5; export NODE_NAME=uav5_tw; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_tower.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav5; export NODE_NAME=uav5_rs1; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs1.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav5; export NODE_NAME=uav5_rs2; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs2.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav5; export NODE_NAME=uav5_rs3; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs3.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav5; export NODE_NAME=uav5_rs4; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs4.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav5; export NODE_NAME=uav5_rs5; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_rs5.yaml frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav5; export NODE_NAME=uav5_jeff_p; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_human_pick frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav5; export NODE_NAME=uav5_jeff_d; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_human_deli frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav5; export NODE_NAME=uav5_jeff_m; waitForSimulation; roslaunch virtual_obstacles_visualizer virtual_obstacles_visualizer.launch config:=./custom_configs/virtual_object_visualizer_human_mon frame_origin:=rtk_origin'
+        # #}
+  - drone_manager:
+      layout: tiled
+      panes:
+        # Empty trajectory was added to maintain equal the initialization part of the Python script
+        - 'export UAV_NAME=uav1; waitForOdometry; waitForControl; roslaunch drone_manager drone_manager_bt_uav1.launch config_drone_manager:=./custom_configs/drone_manager_uav1.yaml config_trajectory_file_1:=`pwd`/trajectories/trajectory_rotated_uav1.csv config_trajectory_file_2:=`pwd`/trajectories/trajectory_rotated_empty.csv frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav2; waitForOdometry; waitForControl; roslaunch drone_manager drone_manager_bt_uav2.launch config_drone_manager:=./custom_configs/drone_manager_uav2.yaml config_trajectory_file_1:=`pwd`/trajectories/trajectory_rotated_uav2_1.csv config_trajectory_file_2:=`pwd`/trajectories/trajectory_rotated_uav2_2.csv frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav3; waitForOdometry; waitForControl; roslaunch drone_manager drone_manager_bt_uav3.launch config_drone_manager:=./custom_configs/drone_manager_uav3.yaml config_trajectory_file_1:=`pwd`/trajectories/trajectory_rotated_uav3.csv config_trajectory_file_2:=`pwd`/trajectories/trajectory_rotated_empty.csv frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav4; waitForOdometry; waitForControl; roslaunch drone_manager drone_manager_bt_uav4.launch config_drone_manager:=./custom_configs/drone_manager_uav4.yaml config_trajectory_file_1:=`pwd`/trajectories/trajectory_rotated_uav4.csv config_trajectory_file_2:=`pwd`/trajectories/trajectory_rotated_uav4_home.csv frame_origin:=rtk_origin'
+        - 'export UAV_NAME=uav5; waitForOdometry; waitForControl; roslaunch drone_manager drone_manager_bt_uav5.launch config_drone_manager:=./custom_configs/drone_manager_uav5.yaml config_trajectory_file_1:=`pwd`/trajectories/trajectory_rotated_uav5.csv config_trajectory_file_2:=`pwd`/trajectories/trajectory_rotated_uav5_home.csv frame_origin:=rtk_origin'
+  - drone_start:
+      layout: tiled
+      panes:        
+        - 'history -s "waitForOffboard; rosservice call /uav1/drone_manager/start; rosservice call /uav2/drone_manager/start; rosservice call /uav3/drone_manager/start; rosservice call /uav4/drone_manager/start; rosservice call /uav5/drone_manager/start"' 
+  - tf_connector:
+      layout: tiled
+      panes:
+        - waitForRos; roslaunch mrs_uav_odometry tf_connector.launch custom_config:=./custom_configs/tf_connector.yaml
+  - rviz:
+      layout: tiled
+      panes:
+        - waitForControl; rosrun rviz rviz -d rviz.rviz
+        - waitForControl; export UAV_NAME=uav1; roslaunch mrs_rviz_plugins load_robot.launch
+        - waitForControl; export UAV_NAME=uav2; roslaunch mrs_rviz_plugins load_robot.launch
+        - waitForControl; export UAV_NAME=uav3; roslaunch mrs_rviz_plugins load_robot.launch 
+        - waitForControl; export UAV_NAME=uav4; roslaunch mrs_rviz_plugins load_robot.launch
+        - waitForControl; export UAV_NAME=uav5; roslaunch mrs_rviz_plugins load_robot.launch

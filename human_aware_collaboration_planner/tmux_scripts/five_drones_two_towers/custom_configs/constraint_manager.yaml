@@ -1,0 +1,52 @@
+constraints: [
+  "slow",
+  "medium",
+  "fast",
+  "giuseppe",
+]
+
+constraint_management:
+
+  # list of allowed gains per odometry mode
+  allowed_constraints:
+    GPS: ["slow"]
+
+  # those gains will be used automatically when a localization mode switches
+  # and the current gains are not in the allowed list (next paragraphs)
+  fallback_constraints:
+    GPS: "slow"
+
+giuseppe:
+
+  horizontal:
+    speed: 6.0
+    acceleration: 3.0
+    jerk: 20.0
+    snap: 20.0
+
+  vertical:
+
+    ascending:
+      speed: 4.0
+      acceleration: 3.0
+      jerk: 10.0
+      snap: 10.0
+
+    descending:
+      speed: 4.0
+      acceleration: 3.0
+      jerk: 10.0
+      snap: 10.0
+
+  heading:
+    speed: 0.5
+    acceleration: 0.5
+    jerk: 10.0
+    snap: 10.0
+
+  angular_speed:
+    roll: 60.0
+    pitch: 60.0
+    yaw: 10.0
+
+  tilt: deg(60)

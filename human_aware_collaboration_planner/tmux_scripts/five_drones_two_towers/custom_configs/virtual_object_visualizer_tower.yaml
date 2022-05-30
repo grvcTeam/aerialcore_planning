@@ -1,0 +1,10 @@
+model_path: "file:///home/baldman/grvc_planning_workspace/src/grvc_planning_core/ros_packages/aerialcore_simulation/models/power_tower_danube_2towers_wires/meshes/power_tower_danube_2tower_and_wires.dae"
+
+model_position_xyz: [40, 30, 0] # [m]
+
+model_orientation_rpy: [0, 0, 2.618] # [radians]
+
+model_scale_xyz: [1, 1, 0.5]
+
+try_loading_colors_from_model: false
+color_rgba: [0.3, 0.9, 0.5, 1.0] # range <0,1>

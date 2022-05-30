@@ -18,7 +18,7 @@
   </node>
 
   <node pkg="aerialcore_simulation" type="launch_gzworld.py" name="gazebo_world" output="screen" if="$(eval world=='2towers')"
-    args="-physics=none -world=$(find aerialcore_simulation)/worlds/power_towers_danube_wires_rescaled_autospawn.world
+    args="-physics=none -world=$(find aerialcore_simulation)/worlds/power_towers_danube_wires_rescaled_jeff_autospawn.world
     -add_model_path=$(find aerialcore_simulation)/models
     -description_package=robots_description">
     <rosparam param="sim_origin">[38.138728, -3.173825, 0]</rosparam>
@@ -30,5 +30,10 @@
     -description_package=robots_description">
     <rosparam param="sim_origin">[37.564003804467, -6.003676484441573, 65.36515808105469]</rosparam>
   </node>
+
+  <include file="$(find mrs_simulation)/launch/simulation.launch" if="$(eval world=='mrs')">
+    <arg name="world_file" value="$(find aerialcore_simulation)/worlds/power_towers_danube_wires_rescaled_jeff_autospawn.world"/>
+    <arg name="verbose" value="false"/>
+  </include>
 
 </launch>

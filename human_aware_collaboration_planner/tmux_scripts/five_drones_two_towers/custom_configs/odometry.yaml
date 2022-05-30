@@ -1,0 +1,18 @@
+# rates of publishers# #{
+publish_rate:
+  max_altitude: 10 # [Hz] maximum allowed altitude
+# # #}
+
+# Altitude state estimator:
+# HEIGHT - rangefinder, PLANE - height above plane estimated from realsense, BRICK - height above BRICK
+altitude_estimator: "RTK"
+
+# altitude estimation parameters# #{
+ 
+altitude:
+
+  # Altitude limits
+  max_default: 15.0 # Used only when safety area is not used
+  
+  # Use RTK altitude
+  use_rtk_altitude: true # has to be true for correct TF when using RTK altitude

@@ -1,0 +1,4518 @@
+Panels:
+  - Class: rviz/Displays
+    Help Height: 0
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Global Options1
+        - /TF1/Frames1
+        - /TF1/Tree1
+        - /uav11/Camera Overlay - UAV11
+        - /uav11/Camera Raw1/Status1
+        - /uav11/Camera Raw1/Visibility1
+        - /uav21/Odometry1/position_cmd1/Covariance1
+        - /uav31/MpcTracker1/PostprocessedTrajectory1/Poses1
+      Splitter Ratio: 0.458984375
+    Tree Height: 797
+  - Class: rviz/Selection
+    Name: Selection
+  - Class: rviz/Tool Properties
+    Expanded:
+      - /2D Pose Estimate1
+      - /2D Nav Goal1
+      - /Publish Point1
+    Name: Tool Properties
+    Splitter Ratio: 0.5886790156364441
+  - Class: rviz/Views
+    Expanded:
+      - /Current View1
+    Name: Views
+    Splitter Ratio: 0.5
+  - Class: rviz/Time
+    Experimental: false
+    Name: Time
+    SyncMode: 0
+    SyncSource: Camera Overlay - UAV1
+Preferences:
+  PromptSaveOnExit: true
+Toolbars:
+  toolButtonStyle: 2
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.20000000298023224
+      Cell Size: 1
+      Class: rviz/Grid
+      Color: 160; 160; 164
+      Enabled: true
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 100
+      Reference Frame: <Fixed Frame>
+      Value: true
+    - Alpha: 0.5
+      Cell Size: 5
+      Class: rviz/Grid
+      Color: 160; 160; 164
+      Enabled: true
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 100
+      Reference Frame: <Fixed Frame>
+      Value: true
+    - Class: rviz/TF
+      Enabled: false
+      Frame Timeout: 15
+      Frames:
+        All Enabled: false
+      Marker Alpha: 1
+      Marker Scale: 1
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        {}
+      Update Interval: 0
+      Value: false
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/Group
+          Displays:
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav1/trajectory_generation/markers/final
+              Name: final
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav1/trajectory_generation/markers/original
+              Name: original
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+          Enabled: true
+          Name: TrajectoryGeneration
+        - Class: rviz/Group
+          Displays:
+            - Alpha: 1
+              Arrow Length: 0.30000001192092896
+              Axes Length: 0.30000001192092896
+              Axes Radius: 0.009999999776482582
+              Class: rviz/PoseArray
+              Color: 0; 0; 255
+              Enabled: true
+              Head Length: 0.07000000029802322
+              Head Radius: 0.029999999329447746
+              Name: MpcPredictionTrajectory
+              Queue Size: 10
+              Shaft Length: 0.23000000417232513
+              Shaft Radius: 0.009999999776482582
+              Shape: Arrow (Flat)
+              Topic: /uav1/control_manager/mpc_tracker/predicted_trajectory_debugging
+              Unreliable: true
+              Value: true
+            - Angle Tolerance: 0.0010000000474974513
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: true
+              Enabled: false
+              Keep: 1
+              Name: MpcTrackerReference
+              Position Tolerance: 0.0010000000474974513
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 255; 25; 0
+                Head Length: 0.30000001192092896
+                Head Radius: 0.10000000149011612
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Axes
+              Topic: /uav1/control_manager/mpc_tracker/setpoint_odom
+              Unreliable: false
+              Value: false
+            - Alpha: 1
+              Arrow Length: 0.30000001192092896
+              Axes Length: 0.10000000149011612
+              Axes Radius: 0.05000000074505806
+              Class: rviz/PoseArray
+              Color: 255; 25; 0
+              Enabled: true
+              Head Length: 0.07000000029802322
+              Head Radius: 0.029999999329447746
+              Name: MpcInnerReference
+              Queue Size: 10
+              Shaft Length: 0.23000000417232513
+              Shaft Radius: 0.009999999776482582
+              Shape: Axes
+              Topic: /uav1/control_manager/mpc_tracker/mpc_reference_debugging
+              Unreliable: false
+              Value: true
+            - Class: rviz/Group
+              Displays:
+                - Alpha: 1
+                  Arrow Length: 0.30000001192092896
+                  Axes Length: 0.30000001192092896
+                  Axes Radius: 0.009999999776482582
+                  Class: rviz/PoseArray
+                  Color: 255; 25; 0
+                  Enabled: true
+                  Head Length: 0.07000000029802322
+                  Head Radius: 0.029999999329447746
+                  Name: Poses
+                  Queue Size: 10
+                  Shaft Length: 0.23000000417232513
+                  Shaft Radius: 0.009999999776482582
+                  Shape: Arrow (Flat)
+                  Topic: /uav1/control_manager/mpc_tracker/trajectory_processed/poses
+                  Unreliable: false
+                  Value: true
+                - Class: rviz/MarkerArray
+                  Enabled: true
+                  Marker Topic: /uav1/control_manager/mpc_tracker/trajectory_processed/markers
+                  Name: Markers
+                  Namespaces:
+                    {}
+                  Queue Size: 100
+                  Value: true
+              Enabled: true
+              Name: PostprocessedTrajectory
+          Enabled: true
+          Name: MpcTracker
+        - Class: rviz/Group
+          Displays:
+            - Angle Tolerance: 0.009999999776482582
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: true
+              Enabled: false
+              Keep: 1
+              Name: position_cmd
+              Position Tolerance: 0.009999999776482582
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 255; 0; 0
+                Head Length: 0.30000001192092896
+                Head Radius: 0.10000000149011612
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Arrow
+              Topic: /uav1/control_manager/cmd_odom
+              Unreliable: true
+              Value: false
+            - Angle Tolerance: 0.009999999776482582
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: false
+              Enabled: true
+              Keep: 1
+              Name: odom_main
+              Position Tolerance: 0.009999999776482582
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 0; 25; 255
+                Head Length: 1
+                Head Radius: 0.30000001192092896
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Arrow
+              Topic: /uav1/odometry/odom_main
+              Unreliable: true
+              Value: true
+          Enabled: true
+          Name: Odometry
+        - Class: rviz/Group
+          Displays:
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav1/control_manager/safety_area_markers
+              Name: SafetyhArea
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav1/control_manager/disturbances_markers
+              Name: Disturbances
+              Namespaces:
+                control_manager: true
+              Queue Size: 100
+              Value: true
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav1/control_manager/safety_area_coordinates_markers
+              Name: SafetyAreaCoordinates
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Angle Tolerance: 0.009999999776482582
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: true
+              Enabled: true
+              Keep: 1
+              Name: cmd_odom
+              Position Tolerance: 0.009999999776482582
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 255; 25; 0
+                Head Length: 0.30000001192092896
+                Head Radius: 0.10000000149011612
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Axes
+              Topic: /uav1/control_manager/cmd_odom
+              Unreliable: false
+              Value: true
+            - Class: rviz/Group
+              Displays:
+                - Alpha: 1
+                  Arrow Length: 0.30000001192092896
+                  Axes Length: 0.30000001192092896
+                  Axes Radius: 0.009999999776482582
+                  Class: rviz/PoseArray
+                  Color: 0; 170; 0
+                  Enabled: true
+                  Head Length: 0.07000000029802322
+                  Head Radius: 0.029999999329447746
+                  Name: Poses
+                  Queue Size: 10
+                  Shaft Length: 0.23000000417232513
+                  Shaft Radius: 0.009999999776482582
+                  Shape: Arrow (Flat)
+                  Topic: /uav1/control_manager/trajectory_original/poses
+                  Unreliable: false
+                  Value: true
+                - Class: rviz/MarkerArray
+                  Enabled: true
+                  Marker Topic: /uav1/control_manager/trajectory_original/markers
+                  Name: Markers
+                  Namespaces:
+                    {}
+                  Queue Size: 100
+                  Value: true
+              Enabled: true
+              Name: OriginalTrajectory
+            - Alpha: 0.10000000149011612
+              Class: mrs_rviz_plugins/Bumper
+              Collision alpha: 0.5
+              Collision color: 255; 0; 0
+              Color: 204; 51; 204
+              Colorize collisions: true
+              Display mode: sensor types
+              Enabled: true
+              History Length: 1
+              Horizontal collision threshold: 1
+              Name: Bumper
+              Queue Size: 10
+              Show sectors with no data: false
+              Show undetected obstacles: true
+              Topic: /uav1/bumper/obstacle_sectors
+              Unreliable: false
+              Value: true
+              Vertical collision threshold: 1
+          Enabled: true
+          Name: ControlManager
+        - Class: rviz/Group
+          Displays:
+            - Alpha: 1
+              Autocompute Intensity Bounds: true
+              Autocompute Value Bounds:
+                Max Value: 22.416576385498047
+                Min Value: -0.5015535950660706
+                Value: true
+              Axis: Z
+              Channel Name: intensity
+              Class: rviz/PointCloud2
+              Color: 255; 255; 255
+              Color Transformer: AxisColor
+              Decay Time: 60
+              Enabled: true
+              Invert Rainbow: false
+              Max Color: 255; 255; 255
+              Min Color: 0; 0; 0
+              Name: os1
+              Position Transformer: XYZ
+              Queue Size: 10
+              Selectable: true
+              Size (Pixels): 3
+              Size (m): 0.10000000149011612
+              Style: Flat Squares
+              Topic: /uav1/os1_cloud_node/points
+              Unreliable: true
+              Use Fixed Frame: true
+              Use rainbow: true
+              Value: true
+            - Alpha: 1
+              Autocompute Intensity Bounds: true
+              Autocompute Value Bounds:
+                Max Value: 10
+                Min Value: -10
+                Value: true
+              Axis: Z
+              Channel Name: intensity
+              Class: rviz/LaserScan
+              Color: 0; 0; 0
+              Color Transformer: FlatColor
+              Decay Time: 0
+              Enabled: true
+              Invert Rainbow: false
+              Max Color: 255; 255; 255
+              Min Color: 0; 0; 0
+              Name: rplidar
+              Position Transformer: XYZ
+              Queue Size: 10
+              Selectable: true
+              Size (Pixels): 3
+              Size (m): 0.10000000149011612
+              Style: Flat Squares
+              Topic: /uav1/rplidar/scan
+              Unreliable: false
+              Use Fixed Frame: true
+              Use rainbow: true
+              Value: true
+          Enabled: true
+          Name: Sensors
+        - Class: rviz/Camera
+          Enabled: true
+          Image Rendering: background and overlay
+          Image Topic: /uav1/rgbd/color/image_raw
+          Name: Camera Overlay - UAV1
+          Overlay Alpha: 0.5
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: true
+          Visibility:
+            Grid: true
+            TF: true
+            Value: true
+            uav1:
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV1: true
+              Jeff_Mon - UAV1: true
+              Jeff_Pick - UAV1: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV1: true
+              RS1 - UAV1: true
+              RS2 - UAV1: true
+              RS3 - UAV1: true
+              RS4 - UAV1: true
+              RS5 - UAV1: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav2:
+              Camera Overlay - UAV2: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV2: true
+              Jeff_Mon - UAV2: true
+              Jeff_Pick - UAV2: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV2: true
+              RS1 - UAV2: true
+              RS2 - UAV2: true
+              RS3 - UAV2: true
+              RS4 - UAV2: true
+              RS5 - UAV2: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav3:
+              Camera Overlay - UAV3: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV3: true
+              Jeff_Mon - UAV3: true
+              Jeff_Pick - UAV3: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV3: true
+              RS1 - UAV3: true
+              RS2 - UAV3: true
+              RS3 - UAV3: true
+              RS4 - UAV3: true
+              RS5 - UAV3: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav4:
+              Camera Overlay - UAV4: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV4: true
+              Jeff_Mon - UAV4: true
+              Jeff_Pick - UAV4: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV4: true
+              RS1 - UAV4: true
+              RS2 - UAV4: true
+              RS3 - UAV4: true
+              RS4 - UAV4: true
+              RS5 - UAV4: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav5:
+              Camera Overlay - UAV5: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV5: true
+              Jeff_Mon - UAV5: true
+              Jeff_Pick - UAV5: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV5: true
+              RS1 - UAV5: true
+              RS2 - UAV5: true
+              RS3 - UAV5: true
+              RS4 - UAV5: true
+              RS5 - UAV5: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+          Zoom Factor: 1
+        - Class: rviz/Camera
+          Enabled: false
+          Image Rendering: background
+          Image Topic: /uav1/mobius_front/image_raw
+          Name: Camera Raw
+          Overlay Alpha: 0.5
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: false
+          Visibility:
+            Grid: false
+            TF: true
+            Value: true
+            uav1:
+              Camera Overlay - UAV1: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV1: true
+              Jeff_Mon - UAV1: true
+              Jeff_Pick - UAV1: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV1: true
+              RS1 - UAV1: true
+              RS2 - UAV1: true
+              RS3 - UAV1: true
+              RS4 - UAV1: true
+              RS5 - UAV1: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav2:
+              Camera Overlay - UAV2: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV2: true
+              Jeff_Mon - UAV2: true
+              Jeff_Pick - UAV2: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV2: true
+              RS1 - UAV2: true
+              RS2 - UAV2: true
+              RS3 - UAV2: true
+              RS4 - UAV2: true
+              RS5 - UAV2: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav3:
+              Camera Overlay - UAV3: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV3: true
+              Jeff_Mon - UAV3: true
+              Jeff_Pick - UAV3: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV3: true
+              RS1 - UAV3: true
+              RS2 - UAV3: true
+              RS3 - UAV3: true
+              RS4 - UAV3: true
+              RS5 - UAV3: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav4:
+              Camera Overlay - UAV4: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV4: true
+              Jeff_Mon - UAV4: true
+              Jeff_Pick - UAV4: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV4: true
+              RS1 - UAV4: true
+              RS2 - UAV4: true
+              RS3 - UAV4: true
+              RS4 - UAV4: true
+              RS5 - UAV4: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav5:
+              Camera Overlay - UAV5: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV5: true
+              Jeff_Mon - UAV5: true
+              Jeff_Pick - UAV5: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV5: true
+              RS1 - UAV5: true
+              RS2 - UAV5: true
+              RS3 - UAV5: true
+              RS4 - UAV5: true
+              RS5 - UAV5: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+          Zoom Factor: 1
+        - Alpha: 1
+          Class: rviz/RobotModel
+          Collision Enabled: false
+          Enabled: true
+          Links:
+            All Links Enabled: true
+            Expand Joint Details: false
+            Expand Link Details: false
+            Expand Tree: false
+            Link Tree Style: Links in Alphabetic Order
+            uav1/fcu:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            uav1/fcu/arms:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            uav1/fcu/props:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            uav1/fcu/uav_marker:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+          Name: UAVModel
+          Robot Description: /uav1/robot_model
+          TF Prefix: ""
+          Update Interval: 0
+          Value: true
+          Visual Enabled: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /uav1/uav1_tw/markers
+          Name: Power Tower - UAV1
+          Namespaces:
+            virtual_obstacles: true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /uav1/uav1_rs1/markers
+          Name: RS1 - UAV1
+          Namespaces:
+            virtual_obstacles: true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /uav1/uav1_rs2/markers
+          Name: RS2 - UAV1
+          Namespaces:
+            virtual_obstacles: true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /uav1/uav1_rs3/markers
+          Name: RS3 - UAV1
+          Namespaces:
+            virtual_obstacles: true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /uav1/uav1_rs4/markers
+          Name: RS4 - UAV1
+          Namespaces:
+            virtual_obstacles: true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /uav1/uav1_rs5/markers
+          Name: RS5 - UAV1
+          Namespaces:
+            virtual_obstacles: true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /uav1/uav1_jeff_p/markers
+          Name: Jeff_Pick - UAV1
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /uav1/uav1_jeff_d/markers
+          Name: Jeff_Del - UAV1
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /uav1/uav1_jeff_m/markers
+          Name: Jeff_Mon - UAV1
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+      Enabled: true
+      Name: uav1
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/Group
+          Displays:
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav2/trajectory_generation/markers/final
+              Name: final
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav2/trajectory_generation/markers/original
+              Name: original
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+          Enabled: true
+          Name: TrajectoryGeneration
+        - Class: rviz/Group
+          Displays:
+            - Alpha: 1
+              Arrow Length: 0.30000001192092896
+              Axes Length: 0.30000001192092896
+              Axes Radius: 0.009999999776482582
+              Class: rviz/PoseArray
+              Color: 0; 0; 255
+              Enabled: true
+              Head Length: 0.07000000029802322
+              Head Radius: 0.029999999329447746
+              Name: MpcPredictionTrajectory
+              Queue Size: 10
+              Shaft Length: 0.23000000417232513
+              Shaft Radius: 0.009999999776482582
+              Shape: Arrow (Flat)
+              Topic: /uav2/control_manager/mpc_tracker/predicted_trajectory_debugging
+              Unreliable: true
+              Value: true
+            - Angle Tolerance: 0.0010000000474974513
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: true
+              Enabled: true
+              Keep: 1
+              Name: MpcTrackerReference
+              Position Tolerance: 0.0010000000474974513
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 255; 25; 0
+                Head Length: 0.30000001192092896
+                Head Radius: 0.10000000149011612
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Axes
+              Topic: /uav2/control_manager/mpc_tracker/setpoint_odom
+              Unreliable: false
+              Value: true
+            - Alpha: 1
+              Arrow Length: 0.30000001192092896
+              Axes Length: 0.10000000149011612
+              Axes Radius: 0.05000000074505806
+              Class: rviz/PoseArray
+              Color: 255; 25; 0
+              Enabled: true
+              Head Length: 0.07000000029802322
+              Head Radius: 0.029999999329447746
+              Name: MpcInnerReference
+              Queue Size: 10
+              Shaft Length: 0.23000000417232513
+              Shaft Radius: 0.009999999776482582
+              Shape: Axes
+              Topic: /uav2/control_manager/mpc_tracker/mpc_reference_debugging
+              Unreliable: false
+              Value: true
+            - Class: rviz/Group
+              Displays:
+                - Alpha: 1
+                  Arrow Length: 0.30000001192092896
+                  Axes Length: 0.30000001192092896
+                  Axes Radius: 0.009999999776482582
+                  Class: rviz/PoseArray
+                  Color: 255; 25; 0
+                  Enabled: true
+                  Head Length: 0.07000000029802322
+                  Head Radius: 0.029999999329447746
+                  Name: Poses
+                  Queue Size: 10
+                  Shaft Length: 0.23000000417232513
+                  Shaft Radius: 0.009999999776482582
+                  Shape: Arrow (Flat)
+                  Topic: /uav2/control_manager/mpc_tracker/trajectory_processed/poses
+                  Unreliable: false
+                  Value: true
+                - Class: rviz/MarkerArray
+                  Enabled: true
+                  Marker Topic: /uav2/control_manager/mpc_tracker/trajectory_processed/markers
+                  Name: Markers
+                  Namespaces:
+                    {}
+                  Queue Size: 100
+                  Value: true
+              Enabled: true
+              Name: PostprocessedTrajectory
+          Enabled: true
+          Name: MpcTracker
+        - Class: rviz/Group
+          Displays:
+            - Angle Tolerance: 0.009999999776482582
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: true
+              Enabled: true
+              Keep: 1
+              Name: position_cmd
+              Position Tolerance: 0.009999999776482582
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 255; 0; 0
+                Head Length: 0.30000001192092896
+                Head Radius: 0.10000000149011612
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Arrow
+              Topic: /uav2/control_manager/cmd_odom
+              Unreliable: true
+              Value: true
+            - Angle Tolerance: 0.009999999776482582
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: false
+              Enabled: true
+              Keep: 1
+              Name: odom_main
+              Position Tolerance: 0.009999999776482582
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 0; 25; 255
+                Head Length: 1
+                Head Radius: 0.30000001192092896
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Arrow
+              Topic: /uav2/odometry/odom_main
+              Unreliable: true
+              Value: true
+          Enabled: true
+          Name: Odometry
+        - Class: rviz/Group
+          Displays:
+            - Class: rviz/MarkerArray
+              Enabled: false
+              Marker Topic: /uav2/control_manager/safety_area_markers
+              Name: SafetyhArea
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: false
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav2/control_manager/disturbances_markers
+              Name: Disturbances
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav2/control_manager/safety_area_coordinates_markers
+              Name: SafetyAreaCoordinates
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Angle Tolerance: 0.009999999776482582
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: true
+              Enabled: true
+              Keep: 1
+              Name: cmd_odom
+              Position Tolerance: 0.009999999776482582
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 255; 25; 0
+                Head Length: 0.30000001192092896
+                Head Radius: 0.10000000149011612
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Axes
+              Topic: /uav2/control_manager/cmd_odom
+              Unreliable: false
+              Value: true
+            - Class: rviz/Group
+              Displays:
+                - Alpha: 1
+                  Arrow Length: 0.30000001192092896
+                  Axes Length: 0.30000001192092896
+                  Axes Radius: 0.009999999776482582
+                  Class: rviz/PoseArray
+                  Color: 0; 170; 0
+                  Enabled: true
+                  Head Length: 0.07000000029802322
+                  Head Radius: 0.029999999329447746
+                  Name: Poses
+                  Queue Size: 10
+                  Shaft Length: 0.23000000417232513
+                  Shaft Radius: 0.009999999776482582
+                  Shape: Arrow (Flat)
+                  Topic: /uav2/control_manager/trajectory_original/poses
+                  Unreliable: false
+                  Value: true
+                - Class: rviz/MarkerArray
+                  Enabled: true
+                  Marker Topic: /uav2/control_manager/trajectory_original/markers
+                  Name: Markers
+                  Namespaces:
+                    {}
+                  Queue Size: 100
+                  Value: true
+              Enabled: true
+              Name: OriginalTrajectory
+            - Alpha: 0.10000000149011612
+              Class: mrs_rviz_plugins/Bumper
+              Collision alpha: 0.5
+              Collision color: 255; 0; 0
+              Color: 204; 51; 204
+              Colorize collisions: true
+              Display mode: sensor types
+              Enabled: true
+              History Length: 1
+              Horizontal collision threshold: 1
+              Name: Bumper
+              Queue Size: 10
+              Show sectors with no data: false
+              Show undetected obstacles: true
+              Topic: /uav2/bumper/obstacle_sectors
+              Unreliable: false
+              Value: true
+              Vertical collision threshold: 1
+          Enabled: true
+          Name: ControlManager
+        - Class: rviz/Group
+          Displays:
+            - Alpha: 1
+              Autocompute Intensity Bounds: true
+              Autocompute Value Bounds:
+                Max Value: 22.416576385498047
+                Min Value: -0.5015535950660706
+                Value: true
+              Axis: Z
+              Channel Name: intensity
+              Class: rviz/PointCloud2
+              Color: 255; 255; 255
+              Color Transformer: AxisColor
+              Decay Time: 60
+              Enabled: true
+              Invert Rainbow: false
+              Max Color: 255; 255; 255
+              Min Color: 0; 0; 0
+              Name: os1
+              Position Transformer: XYZ
+              Queue Size: 10
+              Selectable: true
+              Size (Pixels): 3
+              Size (m): 0.10000000149011612
+              Style: Flat Squares
+              Topic: /uav2/os1_cloud_node/points
+              Unreliable: true
+              Use Fixed Frame: true
+              Use rainbow: true
+              Value: true
+            - Alpha: 1
+              Autocompute Intensity Bounds: true
+              Autocompute Value Bounds:
+                Max Value: 10
+                Min Value: -10
+                Value: true
+              Axis: Z
+              Channel Name: intensity
+              Class: rviz/LaserScan
+              Color: 0; 0; 0
+              Color Transformer: FlatColor
+              Decay Time: 0
+              Enabled: true
+              Invert Rainbow: false
+              Max Color: 255; 255; 255
+              Min Color: 0; 0; 0
+              Name: rplidar
+              Position Transformer: XYZ
+              Queue Size: 10
+              Selectable: true
+              Size (Pixels): 3
+              Size (m): 0.10000000149011612
+              Style: Flat Squares
+              Topic: /uav2/rplidar/scan
+              Unreliable: false
+              Use Fixed Frame: true
+              Use rainbow: true
+              Value: true
+          Enabled: true
+          Name: Sensors
+        - Class: rviz/Camera
+          Enabled: true
+          Image Rendering: background and overlay
+          Image Topic: /uav2/rgbd/color/image_raw
+          Name: Camera Overlay - UAV2
+          Overlay Alpha: 0.5
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: true
+          Visibility:
+            Grid: true
+            TF: true
+            Value: true
+            uav1:
+              Camera Overlay - UAV1: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV1: true
+              Jeff_Mon - UAV1: true
+              Jeff_Pick - UAV1: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV1: true
+              RS1 - UAV1: true
+              RS2 - UAV1: true
+              RS3 - UAV1: true
+              RS4 - UAV1: true
+              RS5 - UAV1: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav2:
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV2: true
+              Jeff_Mon - UAV2: true
+              Jeff_Pick - UAV2: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV2: true
+              RS1 - UAV2: true
+              RS2 - UAV2: true
+              RS3 - UAV2: true
+              RS4 - UAV2: true
+              RS5 - UAV2: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav3:
+              Camera Overlay - UAV3: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV3: true
+              Jeff_Mon - UAV3: true
+              Jeff_Pick - UAV3: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV3: true
+              RS1 - UAV3: true
+              RS2 - UAV3: true
+              RS3 - UAV3: true
+              RS4 - UAV3: true
+              RS5 - UAV3: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav4:
+              Camera Overlay - UAV4: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV4: true
+              Jeff_Mon - UAV4: true
+              Jeff_Pick - UAV4: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV4: true
+              RS1 - UAV4: true
+              RS2 - UAV4: true
+              RS3 - UAV4: true
+              RS4 - UAV4: true
+              RS5 - UAV4: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav5:
+              Camera Overlay - UAV5: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV5: true
+              Jeff_Mon - UAV5: true
+              Jeff_Pick - UAV5: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV5: true
+              RS1 - UAV5: true
+              RS2 - UAV5: true
+              RS3 - UAV5: true
+              RS4 - UAV5: true
+              RS5 - UAV5: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+          Zoom Factor: 1
+        - Class: rviz/Camera
+          Enabled: false
+          Image Rendering: background
+          Image Topic: /uav2/rgbd/color/image_raw
+          Name: Camera Raw
+          Overlay Alpha: 0.5
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: false
+          Visibility:
+            Grid: false
+            TF: true
+            Value: true
+            uav1:
+              "": true
+              Value: true
+            uav2:
+              Camera Overlay - UAV2: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: false
+                cmd_odom: true
+              Jeff_Del - UAV2: true
+              Jeff_Mon - UAV2: true
+              Jeff_Pick - UAV2: true
+              MpcTracker:
+                "":
+                  "": true
+                  Value: true
+                Value: false
+              Odometry:
+                Value: false
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV2: true
+              RS1 - UAV2: true
+              RS2 - UAV2: true
+              RS3 - UAV2: true
+              RS4 - UAV2: true
+              RS5 - UAV2: true
+              Sensors:
+                Value: false
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                "": true
+                Value: false
+              UAVModel: true
+              Value: true
+            uav3:
+              "": true
+              Value: true
+            uav4:
+              Camera Overlay - UAV4: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV4: true
+              Jeff_Mon - UAV4: true
+              Jeff_Pick - UAV4: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV4: true
+              RS1 - UAV4: true
+              RS2 - UAV4: true
+              RS3 - UAV4: true
+              RS4 - UAV4: true
+              RS5 - UAV4: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav5:
+              "": true
+              Value: true
+          Zoom Factor: 1
+        - Alpha: 1
+          Class: rviz/RobotModel
+          Collision Enabled: false
+          Enabled: true
+          Links:
+            All Links Enabled: true
+            Expand Joint Details: false
+            Expand Link Details: false
+            Expand Tree: false
+            Link Tree Style: Links in Alphabetic Order
+          Name: UAVModel
+          Robot Description: /uav2/robot_model
+          TF Prefix: ""
+          Update Interval: 0
+          Value: true
+          Visual Enabled: true
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav2/uav2_tw/markers
+          Name: Power Tower - UAV2
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav2/uav2_rs1/markers
+          Name: RS1 - UAV2
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav2/uav2_rs2/markers
+          Name: RS2 - UAV2
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav2/uav2_rs3/markers
+          Name: RS3 - UAV2
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav2/uav2_rs4/markers
+          Name: RS4 - UAV2
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav2/uav2_rs5/markers
+          Name: RS5 - UAV2
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav2/uav2_jeff_p/markers
+          Name: Jeff_Pick - UAV2
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav2/uav2_jeff_d/markers
+          Name: Jeff_Del - UAV2
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav2/uav2_jeff_m/markers
+          Name: Jeff_Mon - UAV2
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+      Enabled: true
+      Name: uav2
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/Group
+          Displays:
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav3/trajectory_generation/markers/final
+              Name: final
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav3/trajectory_generation/markers/original
+              Name: original
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+          Enabled: true
+          Name: TrajectoryGeneration
+        - Class: rviz/Group
+          Displays:
+            - Alpha: 1
+              Arrow Length: 0.30000001192092896
+              Axes Length: 0.30000001192092896
+              Axes Radius: 0.009999999776482582
+              Class: rviz/PoseArray
+              Color: 0; 0; 255
+              Enabled: true
+              Head Length: 0.07000000029802322
+              Head Radius: 0.029999999329447746
+              Name: MpcPredictionTrajectory
+              Queue Size: 10
+              Shaft Length: 0.23000000417232513
+              Shaft Radius: 0.009999999776482582
+              Shape: Arrow (Flat)
+              Topic: /uav3/control_manager/mpc_tracker/predicted_trajectory_debugging
+              Unreliable: true
+              Value: true
+            - Angle Tolerance: 0.0010000000474974513
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: true
+              Enabled: true
+              Keep: 1
+              Name: MpcTrackerReference
+              Position Tolerance: 0.0010000000474974513
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 255; 25; 0
+                Head Length: 0.30000001192092896
+                Head Radius: 0.10000000149011612
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Axes
+              Topic: /uav3/control_manager/mpc_tracker/setpoint_odom
+              Unreliable: false
+              Value: true
+            - Alpha: 1
+              Arrow Length: 0.30000001192092896
+              Axes Length: 0.10000000149011612
+              Axes Radius: 0.05000000074505806
+              Class: rviz/PoseArray
+              Color: 255; 25; 0
+              Enabled: true
+              Head Length: 0.07000000029802322
+              Head Radius: 0.029999999329447746
+              Name: MpcInnerReference
+              Queue Size: 10
+              Shaft Length: 0.23000000417232513
+              Shaft Radius: 0.009999999776482582
+              Shape: Axes
+              Topic: /uav3/control_manager/mpc_tracker/mpc_reference_debugging
+              Unreliable: false
+              Value: true
+            - Class: rviz/Group
+              Displays:
+                - Alpha: 1
+                  Arrow Length: 0.30000001192092896
+                  Axes Length: 0.30000001192092896
+                  Axes Radius: 0.009999999776482582
+                  Class: rviz/PoseArray
+                  Color: 255; 25; 0
+                  Enabled: true
+                  Head Length: 0.07000000029802322
+                  Head Radius: 0.029999999329447746
+                  Name: Poses
+                  Queue Size: 10
+                  Shaft Length: 0.23000000417232513
+                  Shaft Radius: 0.009999999776482582
+                  Shape: Arrow (Flat)
+                  Topic: /uav3/control_manager/mpc_tracker/trajectory_processed/poses
+                  Unreliable: false
+                  Value: true
+                - Class: rviz/MarkerArray
+                  Enabled: true
+                  Marker Topic: /uav3/control_manager/mpc_tracker/trajectory_processed/markers
+                  Name: Markers
+                  Namespaces:
+                    {}
+                  Queue Size: 100
+                  Value: true
+              Enabled: true
+              Name: PostprocessedTrajectory
+          Enabled: true
+          Name: MpcTracker
+        - Class: rviz/Group
+          Displays:
+            - Angle Tolerance: 0.009999999776482582
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: true
+              Enabled: true
+              Keep: 1
+              Name: position_cmd
+              Position Tolerance: 0.009999999776482582
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 255; 0; 0
+                Head Length: 0.30000001192092896
+                Head Radius: 0.10000000149011612
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Arrow
+              Topic: /uav3/control_manager/cmd_odom
+              Unreliable: true
+              Value: true
+            - Angle Tolerance: 0.009999999776482582
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: false
+              Enabled: true
+              Keep: 1
+              Name: odom_main
+              Position Tolerance: 0.009999999776482582
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 0; 25; 255
+                Head Length: 1
+                Head Radius: 0.30000001192092896
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Arrow
+              Topic: /uav3/odometry/odom_main
+              Unreliable: true
+              Value: true
+          Enabled: true
+          Name: Odometry
+        - Class: rviz/Group
+          Displays:
+            - Class: rviz/MarkerArray
+              Enabled: false
+              Marker Topic: /uav3/control_manager/safety_area_markers
+              Name: SafetyhArea
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: false
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav3/control_manager/disturbances_markers
+              Name: Disturbances
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav3/control_manager/safety_area_coordinates_markers
+              Name: SafetyAreaCoordinates
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Angle Tolerance: 0.009999999776482582
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: true
+              Enabled: true
+              Keep: 1
+              Name: cmd_odom
+              Position Tolerance: 0.009999999776482582
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 255; 25; 0
+                Head Length: 0.30000001192092896
+                Head Radius: 0.10000000149011612
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Axes
+              Topic: /uav3/control_manager/cmd_odom
+              Unreliable: false
+              Value: true
+            - Class: rviz/Group
+              Displays:
+                - Alpha: 1
+                  Arrow Length: 0.30000001192092896
+                  Axes Length: 0.30000001192092896
+                  Axes Radius: 0.009999999776482582
+                  Class: rviz/PoseArray
+                  Color: 0; 170; 0
+                  Enabled: true
+                  Head Length: 0.07000000029802322
+                  Head Radius: 0.029999999329447746
+                  Name: Poses
+                  Queue Size: 10
+                  Shaft Length: 0.23000000417232513
+                  Shaft Radius: 0.009999999776482582
+                  Shape: Arrow (Flat)
+                  Topic: /uav3/control_manager/trajectory_original/poses
+                  Unreliable: false
+                  Value: true
+                - Class: rviz/MarkerArray
+                  Enabled: true
+                  Marker Topic: /uav3/control_manager/trajectory_original/markers
+                  Name: Markers
+                  Namespaces:
+                    {}
+                  Queue Size: 100
+                  Value: true
+              Enabled: true
+              Name: OriginalTrajectory
+            - Alpha: 0.10000000149011612
+              Class: mrs_rviz_plugins/Bumper
+              Collision alpha: 0.5
+              Collision color: 255; 0; 0
+              Color: 204; 51; 204
+              Colorize collisions: true
+              Display mode: sensor types
+              Enabled: true
+              History Length: 1
+              Horizontal collision threshold: 1
+              Name: Bumper
+              Queue Size: 10
+              Show sectors with no data: false
+              Show undetected obstacles: true
+              Topic: /uav3/bumper/obstacle_sectors
+              Unreliable: false
+              Value: true
+              Vertical collision threshold: 1
+          Enabled: true
+          Name: ControlManager
+        - Class: rviz/Group
+          Displays:
+            - Alpha: 1
+              Autocompute Intensity Bounds: true
+              Autocompute Value Bounds:
+                Max Value: 22.416576385498047
+                Min Value: -0.5015535950660706
+                Value: true
+              Axis: Z
+              Channel Name: intensity
+              Class: rviz/PointCloud2
+              Color: 255; 255; 255
+              Color Transformer: AxisColor
+              Decay Time: 60
+              Enabled: true
+              Invert Rainbow: false
+              Max Color: 255; 255; 255
+              Min Color: 0; 0; 0
+              Name: os1
+              Position Transformer: XYZ
+              Queue Size: 10
+              Selectable: true
+              Size (Pixels): 3
+              Size (m): 0.10000000149011612
+              Style: Flat Squares
+              Topic: /uav3/os1_cloud_node/points
+              Unreliable: true
+              Use Fixed Frame: true
+              Use rainbow: true
+              Value: true
+            - Alpha: 1
+              Autocompute Intensity Bounds: true
+              Autocompute Value Bounds:
+                Max Value: 10
+                Min Value: -10
+                Value: true
+              Axis: Z
+              Channel Name: intensity
+              Class: rviz/LaserScan
+              Color: 0; 0; 0
+              Color Transformer: FlatColor
+              Decay Time: 0
+              Enabled: true
+              Invert Rainbow: false
+              Max Color: 255; 255; 255
+              Min Color: 0; 0; 0
+              Name: rplidar
+              Position Transformer: XYZ
+              Queue Size: 10
+              Selectable: true
+              Size (Pixels): 3
+              Size (m): 0.10000000149011612
+              Style: Flat Squares
+              Topic: /uav3/rplidar/scan
+              Unreliable: false
+              Use Fixed Frame: true
+              Use rainbow: true
+              Value: true
+          Enabled: true
+          Name: Sensors
+        - Class: rviz/Camera
+          Enabled: true
+          Image Rendering: background and overlay
+          Image Topic: /uav3/rgbd/color/image_raw
+          Name: Camera Overlay - UAV3
+          Overlay Alpha: 0.5
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: true
+          Visibility:
+            Grid: true
+            TF: true
+            Value: true
+            uav1:
+              Camera Overlay - UAV1: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV1: true
+              Jeff_Mon - UAV1: true
+              Jeff_Pick - UAV1: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV1: true
+              RS1 - UAV1: true
+              RS2 - UAV1: true
+              RS3 - UAV1: true
+              RS4 - UAV1: true
+              RS5 - UAV1: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav2:
+              Camera Overlay - UAV2: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV2: true
+              Jeff_Mon - UAV2: true
+              Jeff_Pick - UAV2: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV2: true
+              RS1 - UAV2: true
+              RS2 - UAV2: true
+              RS3 - UAV2: true
+              RS4 - UAV2: true
+              RS5 - UAV2: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav3:
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV3: true
+              Jeff_Mon - UAV3: true
+              Jeff_Pick - UAV3: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV3: true
+              RS1 - UAV3: true
+              RS2 - UAV3: true
+              RS3 - UAV3: true
+              RS4 - UAV3: true
+              RS5 - UAV3: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav4:
+              Camera Overlay - UAV4: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV4: true
+              Jeff_Mon - UAV4: true
+              Jeff_Pick - UAV4: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV4: true
+              RS1 - UAV4: true
+              RS2 - UAV4: true
+              RS3 - UAV4: true
+              RS4 - UAV4: true
+              RS5 - UAV4: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav5:
+              Camera Overlay - UAV5: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV5: true
+              Jeff_Mon - UAV5: true
+              Jeff_Pick - UAV5: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV5: true
+              RS1 - UAV5: true
+              RS2 - UAV5: true
+              RS3 - UAV5: true
+              RS4 - UAV5: true
+              RS5 - UAV5: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+          Zoom Factor: 1
+        - Class: rviz/Camera
+          Enabled: false
+          Image Rendering: background
+          Image Topic: /uav3/rgbd/color/image_raw
+          Name: Camera Raw
+          Overlay Alpha: 0.5
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: false
+          Visibility:
+            Grid: false
+            TF: true
+            Value: true
+            uav1:
+              "": true
+              Value: true
+            uav2:
+              Camera Overlay - UAV2: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV2: true
+              Jeff_Mon - UAV2: true
+              Jeff_Pick - UAV2: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV2: true
+              RS1 - UAV2: true
+              RS2 - UAV2: true
+              RS3 - UAV2: true
+              RS4 - UAV2: true
+              RS5 - UAV2: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav3:
+              Camera Overlay - UAV3: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV3: true
+              Jeff_Mon - UAV3: true
+              Jeff_Pick - UAV3: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV3: true
+              RS1 - UAV3: true
+              RS2 - UAV3: true
+              RS3 - UAV3: true
+              RS4 - UAV3: true
+              RS5 - UAV3: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav4:
+              Camera Overlay - UAV4: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV4: true
+              Jeff_Mon - UAV4: true
+              Jeff_Pick - UAV4: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV4: true
+              RS1 - UAV4: true
+              RS2 - UAV4: true
+              RS3 - UAV4: true
+              RS4 - UAV4: true
+              RS5 - UAV4: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav5:
+              "": true
+              Value: true
+          Zoom Factor: 1
+        - Alpha: 1
+          Class: rviz/RobotModel
+          Collision Enabled: false
+          Enabled: true
+          Links:
+            All Links Enabled: true
+            Expand Joint Details: false
+            Expand Link Details: false
+            Expand Tree: false
+            Link Tree Style: Links in Alphabetic Order
+          Name: UAVModel
+          Robot Description: /uav3/robot_model
+          TF Prefix: ""
+          Update Interval: 0
+          Value: true
+          Visual Enabled: true
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav3/uav3_tw/markers
+          Name: Power Tower - UAV3
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav3/uav3_rs1/markers
+          Name: RS1 - UAV3
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav3/uav3_rs2/markers
+          Name: RS2 - UAV3
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav3/uav3_rs3/markers
+          Name: RS3 - UAV3
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav3/uav3_rs4/markers
+          Name: RS4 - UAV3
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav3/uav3_rs5/markers
+          Name: RS5 - UAV3
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav3/uav3_jeff_p/markers
+          Name: Jeff_Pick - UAV3
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav3/uav3_jeff_d/markers
+          Name: Jeff_Del - UAV3
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav3/uav3_jeff_m/markers
+          Name: Jeff_Mon - UAV3
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+      Enabled: true
+      Name: uav3
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/Group
+          Displays:
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav4/trajectory_generation/markers/final
+              Name: final
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav4/trajectory_generation/markers/original
+              Name: original
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+          Enabled: true
+          Name: TrajectoryGeneration
+        - Class: rviz/Group
+          Displays:
+            - Alpha: 1
+              Arrow Length: 0.30000001192092896
+              Axes Length: 0.30000001192092896
+              Axes Radius: 0.009999999776482582
+              Class: rviz/PoseArray
+              Color: 0; 0; 255
+              Enabled: true
+              Head Length: 0.07000000029802322
+              Head Radius: 0.029999999329447746
+              Name: MpcPredictionTrajectory
+              Queue Size: 10
+              Shaft Length: 0.23000000417232513
+              Shaft Radius: 0.009999999776482582
+              Shape: Arrow (Flat)
+              Topic: /uav4/control_manager/mpc_tracker/predicted_trajectory_debugging
+              Unreliable: true
+              Value: true
+            - Angle Tolerance: 0.0010000000474974513
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: true
+              Enabled: true
+              Keep: 1
+              Name: MpcTrackerReference
+              Position Tolerance: 0.0010000000474974513
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 255; 25; 0
+                Head Length: 0.30000001192092896
+                Head Radius: 0.10000000149011612
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Axes
+              Topic: /uav4/control_manager/mpc_tracker/setpoint_odom
+              Unreliable: false
+              Value: true
+            - Alpha: 1
+              Arrow Length: 0.30000001192092896
+              Axes Length: 0.10000000149011612
+              Axes Radius: 0.05000000074505806
+              Class: rviz/PoseArray
+              Color: 255; 25; 0
+              Enabled: true
+              Head Length: 0.07000000029802322
+              Head Radius: 0.029999999329447746
+              Name: MpcInnerReference
+              Queue Size: 10
+              Shaft Length: 0.23000000417232513
+              Shaft Radius: 0.009999999776482582
+              Shape: Axes
+              Topic: /uav4/control_manager/mpc_tracker/mpc_reference_debugging
+              Unreliable: false
+              Value: true
+            - Class: rviz/Group
+              Displays:
+                - Alpha: 1
+                  Arrow Length: 0.30000001192092896
+                  Axes Length: 0.30000001192092896
+                  Axes Radius: 0.009999999776482582
+                  Class: rviz/PoseArray
+                  Color: 255; 25; 0
+                  Enabled: true
+                  Head Length: 0.07000000029802322
+                  Head Radius: 0.029999999329447746
+                  Name: Poses
+                  Queue Size: 10
+                  Shaft Length: 0.23000000417232513
+                  Shaft Radius: 0.009999999776482582
+                  Shape: Arrow (Flat)
+                  Topic: /uav4/control_manager/mpc_tracker/trajectory_processed/poses
+                  Unreliable: false
+                  Value: true
+                - Class: rviz/MarkerArray
+                  Enabled: true
+                  Marker Topic: /uav4/control_manager/mpc_tracker/trajectory_processed/markers
+                  Name: Markers
+                  Namespaces:
+                    {}
+                  Queue Size: 100
+                  Value: true
+              Enabled: true
+              Name: PostprocessedTrajectory
+          Enabled: true
+          Name: MpcTracker
+        - Class: rviz/Group
+          Displays:
+            - Angle Tolerance: 0.009999999776482582
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: true
+              Enabled: true
+              Keep: 1
+              Name: position_cmd
+              Position Tolerance: 0.009999999776482582
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 255; 0; 0
+                Head Length: 0.30000001192092896
+                Head Radius: 0.10000000149011612
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Arrow
+              Topic: /uav4/control_manager/cmd_odom
+              Unreliable: true
+              Value: true
+            - Angle Tolerance: 0.009999999776482582
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: false
+              Enabled: true
+              Keep: 1
+              Name: odom_main
+              Position Tolerance: 0.009999999776482582
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 0; 25; 255
+                Head Length: 1
+                Head Radius: 0.30000001192092896
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Arrow
+              Topic: /uav4/odometry/odom_main
+              Unreliable: true
+              Value: true
+          Enabled: true
+          Name: Odometry
+        - Class: rviz/Group
+          Displays:
+            - Class: rviz/MarkerArray
+              Enabled: false
+              Marker Topic: /uav4/control_manager/safety_area_markers
+              Name: SafetyhArea
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: false
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav4/control_manager/disturbances_markers
+              Name: Disturbances
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav4/control_manager/safety_area_coordinates_markers
+              Name: SafetyAreaCoordinates
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Angle Tolerance: 0.009999999776482582
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: true
+              Enabled: true
+              Keep: 1
+              Name: cmd_odom
+              Position Tolerance: 0.009999999776482582
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 255; 25; 0
+                Head Length: 0.30000001192092896
+                Head Radius: 0.10000000149011612
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Axes
+              Topic: /uav4/control_manager/cmd_odom
+              Unreliable: false
+              Value: true
+            - Class: rviz/Group
+              Displays:
+                - Alpha: 1
+                  Arrow Length: 0.30000001192092896
+                  Axes Length: 0.30000001192092896
+                  Axes Radius: 0.009999999776482582
+                  Class: rviz/PoseArray
+                  Color: 0; 170; 0
+                  Enabled: true
+                  Head Length: 0.07000000029802322
+                  Head Radius: 0.029999999329447746
+                  Name: Poses
+                  Queue Size: 10
+                  Shaft Length: 0.23000000417232513
+                  Shaft Radius: 0.009999999776482582
+                  Shape: Arrow (Flat)
+                  Topic: /uav4/control_manager/trajectory_original/poses
+                  Unreliable: false
+                  Value: true
+                - Class: rviz/MarkerArray
+                  Enabled: true
+                  Marker Topic: /uav4/control_manager/trajectory_original/markers
+                  Name: Markers
+                  Namespaces:
+                    {}
+                  Queue Size: 100
+                  Value: true
+              Enabled: true
+              Name: OriginalTrajectory
+            - Alpha: 0.10000000149011612
+              Class: mrs_rviz_plugins/Bumper
+              Collision alpha: 0.5
+              Collision color: 255; 0; 0
+              Color: 204; 51; 204
+              Colorize collisions: true
+              Display mode: sensor types
+              Enabled: true
+              History Length: 1
+              Horizontal collision threshold: 1
+              Name: Bumper
+              Queue Size: 10
+              Show sectors with no data: false
+              Show undetected obstacles: true
+              Topic: /uav4/bumper/obstacle_sectors
+              Unreliable: false
+              Value: true
+              Vertical collision threshold: 1
+          Enabled: true
+          Name: ControlManager
+        - Class: rviz/Group
+          Displays:
+            - Alpha: 1
+              Autocompute Intensity Bounds: true
+              Autocompute Value Bounds:
+                Max Value: 22.416576385498047
+                Min Value: -0.5015535950660706
+                Value: true
+              Axis: Z
+              Channel Name: intensity
+              Class: rviz/PointCloud2
+              Color: 255; 255; 255
+              Color Transformer: AxisColor
+              Decay Time: 60
+              Enabled: true
+              Invert Rainbow: false
+              Max Color: 255; 255; 255
+              Min Color: 0; 0; 0
+              Name: os1
+              Position Transformer: XYZ
+              Queue Size: 10
+              Selectable: true
+              Size (Pixels): 3
+              Size (m): 0.10000000149011612
+              Style: Flat Squares
+              Topic: /uav4/os1_cloud_node/points
+              Unreliable: true
+              Use Fixed Frame: true
+              Use rainbow: true
+              Value: true
+            - Alpha: 1
+              Autocompute Intensity Bounds: true
+              Autocompute Value Bounds:
+                Max Value: 10
+                Min Value: -10
+                Value: true
+              Axis: Z
+              Channel Name: intensity
+              Class: rviz/LaserScan
+              Color: 0; 0; 0
+              Color Transformer: FlatColor
+              Decay Time: 0
+              Enabled: true
+              Invert Rainbow: false
+              Max Color: 255; 255; 255
+              Min Color: 0; 0; 0
+              Name: rplidar
+              Position Transformer: XYZ
+              Queue Size: 10
+              Selectable: true
+              Size (Pixels): 3
+              Size (m): 0.10000000149011612
+              Style: Flat Squares
+              Topic: /uav4/rplidar/scan
+              Unreliable: false
+              Use Fixed Frame: true
+              Use rainbow: true
+              Value: true
+          Enabled: true
+          Name: Sensors
+        - Class: rviz/Camera
+          Enabled: true
+          Image Rendering: background and overlay
+          Image Topic: /uav4/rgbd/color/image_raw
+          Name: Camera Overlay - UAV4
+          Overlay Alpha: 0.5
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: true
+          Visibility:
+            Grid: true
+            TF: true
+            Value: true
+            uav1:
+              Camera Overlay - UAV1: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV1: true
+              Jeff_Mon - UAV1: true
+              Jeff_Pick - UAV1: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV1: true
+              RS1 - UAV1: true
+              RS2 - UAV1: true
+              RS3 - UAV1: true
+              RS4 - UAV1: true
+              RS5 - UAV1: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav2:
+              Camera Overlay - UAV2: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV2: true
+              Jeff_Mon - UAV2: true
+              Jeff_Pick - UAV2: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV2: true
+              RS1 - UAV2: true
+              RS2 - UAV2: true
+              RS3 - UAV2: true
+              RS4 - UAV2: true
+              RS5 - UAV2: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav3:
+              Camera Overlay - UAV3: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV3: true
+              Jeff_Mon - UAV3: true
+              Jeff_Pick - UAV3: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV3: true
+              RS1 - UAV3: true
+              RS2 - UAV3: true
+              RS3 - UAV3: true
+              RS4 - UAV3: true
+              RS5 - UAV3: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav4:
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV4: true
+              Jeff_Mon - UAV4: true
+              Jeff_Pick - UAV4: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV4: true
+              RS1 - UAV4: true
+              RS2 - UAV4: true
+              RS3 - UAV4: true
+              RS4 - UAV4: true
+              RS5 - UAV4: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav5:
+              Camera Overlay - UAV5: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV5: true
+              Jeff_Mon - UAV5: true
+              Jeff_Pick - UAV5: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV5: true
+              RS1 - UAV5: true
+              RS2 - UAV5: true
+              RS3 - UAV5: true
+              RS4 - UAV5: true
+              RS5 - UAV5: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+          Zoom Factor: 1
+        - Class: rviz/Camera
+          Enabled: false
+          Image Rendering: background
+          Image Topic: /uav4/rgbd/color/image_raw
+          Name: Camera Raw
+          Overlay Alpha: 0.5
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: false
+          Visibility:
+            Grid: false
+            TF: true
+            Value: true
+            uav1:
+              "": true
+              Value: true
+            uav2:
+              "": true
+              Value: true
+            uav3:
+              "": true
+              Value: true
+            uav4:
+              Camera Overlay - UAV4: true
+              ControlManager:
+                "": true
+                Value: true
+              Jeff_Del - UAV4: true
+              Jeff_Mon - UAV4: true
+              Jeff_Pick - UAV4: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                "": true
+                Value: true
+              Power Tower - UAV4: true
+              RS1 - UAV4: true
+              RS2 - UAV4: true
+              RS3 - UAV4: true
+              RS4 - UAV4: true
+              RS5 - UAV4: true
+              Sensors:
+                "": true
+                Value: true
+              TrajectoryGeneration:
+                "": true
+                Value: true
+              UAVModel: true
+              Value: true
+            uav5:
+              "": true
+              Value: true
+          Zoom Factor: 1
+        - Alpha: 1
+          Class: rviz/RobotModel
+          Collision Enabled: false
+          Enabled: true
+          Links:
+            All Links Enabled: true
+            Expand Joint Details: false
+            Expand Link Details: false
+            Expand Tree: false
+            Link Tree Style: Links in Alphabetic Order
+          Name: UAVModel
+          Robot Description: /uav4/robot_model
+          TF Prefix: ""
+          Update Interval: 0
+          Value: true
+          Visual Enabled: true
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav4/uav4_tw/markers
+          Name: Power Tower - UAV4
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav4/uav4_rs1/markers
+          Name: RS1 - UAV4
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav4/uav4_rs2/markers
+          Name: RS2 - UAV4
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav4/uav4_rs3/markers
+          Name: RS3 - UAV4
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav4/uav4_rs4/markers
+          Name: RS4 - UAV4
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav4/uav4_rs5/markers
+          Name: RS5 - UAV4
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav4/uav4_jeff_p/markers
+          Name: Jeff_Pick - UAV4
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav4/uav4_jeff_d/markers
+          Name: Jeff_Del - UAV4
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav4/uav4_jeff_m/markers
+          Name: Jeff_Mon - UAV4
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+      Enabled: true
+      Name: uav4
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/Group
+          Displays:
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav5/trajectory_generation/markers/final
+              Name: final
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav5/trajectory_generation/markers/original
+              Name: original
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+          Enabled: true
+          Name: TrajectoryGeneration
+        - Class: rviz/Group
+          Displays:
+            - Alpha: 1
+              Arrow Length: 0.30000001192092896
+              Axes Length: 0.30000001192092896
+              Axes Radius: 0.009999999776482582
+              Class: rviz/PoseArray
+              Color: 0; 0; 255
+              Enabled: true
+              Head Length: 0.07000000029802322
+              Head Radius: 0.029999999329447746
+              Name: MpcPredictionTrajectory
+              Queue Size: 10
+              Shaft Length: 0.23000000417232513
+              Shaft Radius: 0.009999999776482582
+              Shape: Arrow (Flat)
+              Topic: /uav5/control_manager/mpc_tracker/predicted_trajectory_debugging
+              Unreliable: true
+              Value: true
+            - Angle Tolerance: 0.0010000000474974513
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: true
+              Enabled: true
+              Keep: 1
+              Name: MpcTrackerReference
+              Position Tolerance: 0.0010000000474974513
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 255; 25; 0
+                Head Length: 0.30000001192092896
+                Head Radius: 0.10000000149011612
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Axes
+              Topic: /uav5/control_manager/mpc_tracker/setpoint_odom
+              Unreliable: false
+              Value: true
+            - Alpha: 1
+              Arrow Length: 0.30000001192092896
+              Axes Length: 0.10000000149011612
+              Axes Radius: 0.05000000074505806
+              Class: rviz/PoseArray
+              Color: 255; 25; 0
+              Enabled: true
+              Head Length: 0.07000000029802322
+              Head Radius: 0.029999999329447746
+              Name: MpcInnerReference
+              Queue Size: 10
+              Shaft Length: 0.23000000417232513
+              Shaft Radius: 0.009999999776482582
+              Shape: Axes
+              Topic: /uav5/control_manager/mpc_tracker/mpc_reference_debugging
+              Unreliable: false
+              Value: true
+            - Class: rviz/Group
+              Displays:
+                - Alpha: 1
+                  Arrow Length: 0.30000001192092896
+                  Axes Length: 0.30000001192092896
+                  Axes Radius: 0.009999999776482582
+                  Class: rviz/PoseArray
+                  Color: 255; 25; 0
+                  Enabled: true
+                  Head Length: 0.07000000029802322
+                  Head Radius: 0.029999999329447746
+                  Name: Poses
+                  Queue Size: 10
+                  Shaft Length: 0.23000000417232513
+                  Shaft Radius: 0.009999999776482582
+                  Shape: Arrow (Flat)
+                  Topic: /uav5/control_manager/mpc_tracker/trajectory_processed/poses
+                  Unreliable: false
+                  Value: true
+                - Class: rviz/MarkerArray
+                  Enabled: true
+                  Marker Topic: /uav5/control_manager/mpc_tracker/trajectory_processed/markers
+                  Name: Markers
+                  Namespaces:
+                    {}
+                  Queue Size: 100
+                  Value: true
+              Enabled: true
+              Name: PostprocessedTrajectory
+          Enabled: true
+          Name: MpcTracker
+        - Class: rviz/Group
+          Displays:
+            - Angle Tolerance: 0.009999999776482582
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: true
+              Enabled: true
+              Keep: 1
+              Name: position_cmd
+              Position Tolerance: 0.009999999776482582
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 255; 0; 0
+                Head Length: 0.30000001192092896
+                Head Radius: 0.10000000149011612
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Arrow
+              Topic: /uav5/control_manager/cmd_odom
+              Unreliable: true
+              Value: true
+            - Angle Tolerance: 0.009999999776482582
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: false
+              Enabled: true
+              Keep: 1
+              Name: odom_main
+              Position Tolerance: 0.009999999776482582
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 0; 25; 255
+                Head Length: 1
+                Head Radius: 0.30000001192092896
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Arrow
+              Topic: /uav5/odometry/odom_main
+              Unreliable: true
+              Value: true
+          Enabled: true
+          Name: Odometry
+        - Class: rviz/Group
+          Displays:
+            - Class: rviz/MarkerArray
+              Enabled: false
+              Marker Topic: /uav5/control_manager/safety_area_markers
+              Name: SafetyhArea
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: false
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav5/control_manager/disturbances_markers
+              Name: Disturbances
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/MarkerArray
+              Enabled: true
+              Marker Topic: /uav5/control_manager/safety_area_coordinates_markers
+              Name: SafetyAreaCoordinates
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Angle Tolerance: 0.009999999776482582
+              Class: rviz/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: true
+              Enabled: true
+              Keep: 1
+              Name: cmd_odom
+              Position Tolerance: 0.009999999776482582
+              Queue Size: 10
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 255; 25; 0
+                Head Length: 0.30000001192092896
+                Head Radius: 0.10000000149011612
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Axes
+              Topic: /uav5/control_manager/cmd_odom
+              Unreliable: false
+              Value: true
+            - Class: rviz/Group
+              Displays:
+                - Alpha: 1
+                  Arrow Length: 0.30000001192092896
+                  Axes Length: 0.30000001192092896
+                  Axes Radius: 0.009999999776482582
+                  Class: rviz/PoseArray
+                  Color: 0; 170; 0
+                  Enabled: true
+                  Head Length: 0.07000000029802322
+                  Head Radius: 0.029999999329447746
+                  Name: Poses
+                  Queue Size: 10
+                  Shaft Length: 0.23000000417232513
+                  Shaft Radius: 0.009999999776482582
+                  Shape: Arrow (Flat)
+                  Topic: /uav5/control_manager/trajectory_original/poses
+                  Unreliable: false
+                  Value: true
+                - Class: rviz/MarkerArray
+                  Enabled: true
+                  Marker Topic: /uav5/control_manager/trajectory_original/markers
+                  Name: Markers
+                  Namespaces:
+                    {}
+                  Queue Size: 100
+                  Value: true
+              Enabled: true
+              Name: OriginalTrajectory
+            - Alpha: 0.10000000149011612
+              Class: mrs_rviz_plugins/Bumper
+              Collision alpha: 0.5
+              Collision color: 255; 0; 0
+              Color: 204; 51; 204
+              Colorize collisions: true
+              Display mode: sensor types
+              Enabled: true
+              History Length: 1
+              Horizontal collision threshold: 1
+              Name: Bumper
+              Queue Size: 10
+              Show sectors with no data: false
+              Show undetected obstacles: true
+              Topic: /uav5/bumper/obstacle_sectors
+              Unreliable: false
+              Value: true
+              Vertical collision threshold: 1
+          Enabled: true
+          Name: ControlManager
+        - Class: rviz/Group
+          Displays:
+            - Alpha: 1
+              Autocompute Intensity Bounds: true
+              Autocompute Value Bounds:
+                Max Value: 22.416576385498047
+                Min Value: -0.5015535950660706
+                Value: true
+              Axis: Z
+              Channel Name: intensity
+              Class: rviz/PointCloud2
+              Color: 255; 255; 255
+              Color Transformer: AxisColor
+              Decay Time: 60
+              Enabled: false
+              Invert Rainbow: false
+              Max Color: 255; 255; 255
+              Min Color: 0; 0; 0
+              Name: os1
+              Position Transformer: XYZ
+              Queue Size: 10
+              Selectable: true
+              Size (Pixels): 3
+              Size (m): 0.10000000149011612
+              Style: Flat Squares
+              Topic: /uav5/os1_cloud_node/points
+              Unreliable: true
+              Use Fixed Frame: true
+              Use rainbow: true
+              Value: false
+            - Alpha: 1
+              Autocompute Intensity Bounds: true
+              Autocompute Value Bounds:
+                Max Value: 10
+                Min Value: -10
+                Value: true
+              Axis: Z
+              Channel Name: intensity
+              Class: rviz/LaserScan
+              Color: 0; 0; 0
+              Color Transformer: FlatColor
+              Decay Time: 0
+              Enabled: false
+              Invert Rainbow: false
+              Max Color: 255; 255; 255
+              Min Color: 0; 0; 0
+              Name: rplidar
+              Position Transformer: XYZ
+              Queue Size: 10
+              Selectable: true
+              Size (Pixels): 3
+              Size (m): 0.10000000149011612
+              Style: Flat Squares
+              Topic: /uav5/rplidar/scan
+              Unreliable: false
+              Use Fixed Frame: true
+              Use rainbow: true
+              Value: false
+          Enabled: true
+          Name: Sensors
+        - Class: rviz/Camera
+          Enabled: true
+          Image Rendering: background and overlay
+          Image Topic: /uav5/rgbd/color/image_raw
+          Name: Camera Overlay - UAV5
+          Overlay Alpha: 0.5
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: true
+          Visibility:
+            Grid: true
+            TF: true
+            Value: true
+            uav1:
+              Camera Overlay - UAV1: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV1: true
+              Jeff_Mon - UAV1: true
+              Jeff_Pick - UAV1: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV1: true
+              RS1 - UAV1: true
+              RS2 - UAV1: true
+              RS3 - UAV1: true
+              RS4 - UAV1: true
+              RS5 - UAV1: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav2:
+              Camera Overlay - UAV2: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV2: true
+              Jeff_Mon - UAV2: true
+              Jeff_Pick - UAV2: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV2: true
+              RS1 - UAV2: true
+              RS2 - UAV2: true
+              RS3 - UAV2: true
+              RS4 - UAV2: true
+              RS5 - UAV2: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav3:
+              Camera Overlay - UAV3: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV3: true
+              Jeff_Mon - UAV3: true
+              Jeff_Pick - UAV3: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV3: true
+              RS1 - UAV3: true
+              RS2 - UAV3: true
+              RS3 - UAV3: true
+              RS4 - UAV3: true
+              RS5 - UAV3: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav4:
+              Camera Overlay - UAV4: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV4: true
+              Jeff_Mon - UAV4: true
+              Jeff_Pick - UAV4: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV4: true
+              RS1 - UAV4: true
+              RS2 - UAV4: true
+              RS3 - UAV4: true
+              RS4 - UAV4: true
+              RS5 - UAV4: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav5:
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV5: true
+              Jeff_Mon - UAV5: true
+              Jeff_Pick - UAV5: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV5: true
+              RS1 - UAV5: true
+              RS2 - UAV5: true
+              RS3 - UAV5: true
+              RS4 - UAV5: true
+              RS5 - UAV5: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+          Zoom Factor: 1
+        - Class: rviz/Camera
+          Enabled: false
+          Image Rendering: background
+          Image Topic: /uav5/rgbd/color/image_raw
+          Name: Camera Raw
+          Overlay Alpha: 0.5
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: false
+          Visibility:
+            Grid: false
+            TF: true
+            Value: true
+            uav1:
+              Camera Overlay - UAV1: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV1: true
+              Jeff_Mon - UAV1: true
+              Jeff_Pick - UAV1: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV1: true
+              RS1 - UAV1: true
+              RS2 - UAV1: true
+              RS3 - UAV1: true
+              RS4 - UAV1: true
+              RS5 - UAV1: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav2:
+              Camera Overlay - UAV2: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV2: true
+              Jeff_Mon - UAV2: true
+              Jeff_Pick - UAV2: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV2: true
+              RS1 - UAV2: true
+              RS2 - UAV2: true
+              RS3 - UAV2: true
+              RS4 - UAV2: true
+              RS5 - UAV2: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav3:
+              Camera Overlay - UAV3: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV3: true
+              Jeff_Mon - UAV3: true
+              Jeff_Pick - UAV3: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV3: true
+              RS1 - UAV3: true
+              RS2 - UAV3: true
+              RS3 - UAV3: true
+              RS4 - UAV3: true
+              RS5 - UAV3: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav4:
+              Camera Overlay - UAV4: true
+              Camera Raw: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV4: true
+              Jeff_Mon - UAV4: true
+              Jeff_Pick - UAV4: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV4: true
+              RS1 - UAV4: true
+              RS2 - UAV4: true
+              RS3 - UAV4: true
+              RS4 - UAV4: true
+              RS5 - UAV4: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+            uav5:
+              Camera Overlay - UAV5: true
+              ControlManager:
+                Bumper: true
+                Disturbances: true
+                OriginalTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                SafetyAreaCoordinates: true
+                SafetyhArea: true
+                Value: true
+                cmd_odom: true
+              Jeff_Del - UAV5: true
+              Jeff_Mon - UAV5: true
+              Jeff_Pick - UAV5: true
+              MpcTracker:
+                MpcInnerReference: true
+                MpcPredictionTrajectory: true
+                MpcTrackerReference: true
+                PostprocessedTrajectory:
+                  Markers: true
+                  Poses: true
+                  Value: true
+                Value: true
+              Odometry:
+                Value: true
+                odom_main: true
+                position_cmd: true
+              Power Tower - UAV5: true
+              RS1 - UAV5: true
+              RS2 - UAV5: true
+              RS3 - UAV5: true
+              RS4 - UAV5: true
+              RS5 - UAV5: true
+              Sensors:
+                Value: true
+                os1: true
+                rplidar: true
+              TrajectoryGeneration:
+                Value: true
+                final: true
+                original: true
+              UAVModel: true
+              Value: true
+          Zoom Factor: 1
+        - Alpha: 1
+          Class: rviz/RobotModel
+          Collision Enabled: false
+          Enabled: true
+          Links:
+            All Links Enabled: true
+            Expand Joint Details: false
+            Expand Link Details: false
+            Expand Tree: false
+            Link Tree Style: Links in Alphabetic Order
+          Name: UAVModel
+          Robot Description: /uav5/robot_model
+          TF Prefix: ""
+          Update Interval: 0
+          Value: true
+          Visual Enabled: true
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav5/uav5_tw/markers
+          Name: Power Tower - UAV5
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav5/uav5_rs1/markers
+          Name: RS1 - UAV5
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav5/uav5_rs2/markers
+          Name: RS2 - UAV5
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav5/uav5_rs3/markers
+          Name: RS3 - UAV5
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav5/uav5_rs4/markers
+          Name: RS4 - UAV5
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav5/uav5_rs5/markers
+          Name: RS5 - UAV5
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav5/uav5_jeff_p/markers
+          Name: Jeff_Pick - UAV5
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav5/uav5_jeff_d/markers
+          Name: Jeff_Del - UAV5
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav5/uav5_jeff_m/markers
+          Name: Jeff_Mon - UAV5
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+      Enabled: true
+      Name: uav5
+  Enabled: true
+  Global Options:
+    Background Color: 255; 255; 255
+    Default Light: true
+    Fixed Frame: uav1/rtk_origin
+    Frame Rate: 60
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+      Hide Inactive Objects: true
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+    - Class: rviz/Measure
+    - Class: rviz/SetInitialPose
+      Theta std deviation: 0.2617993950843811
+      Topic: /initialpose
+      X std deviation: 0.5
+      Y std deviation: 0.5
+    - Class: rviz/SetGoal
+      Topic: /move_base_simple/goal
+    - Class: rviz/PublishPoint
+      Single click: true
+      Topic: /clicked_point
+  Value: true
+  Views:
+    Current:
+      Class: rviz/XYOrbit
+      Distance: 31.345258712768555
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Field of View: 0.7853981852531433
+      Focal Point:
+        X: 6.975696086883545
+        Y: -0.4986301362514496
+        Z: 1.9875974430760834e-06
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 0.2903987467288971
+      Target Frame: uav1/fcu
+      Yaw: 5.123581409454346
+    Saved: ~
+Window Geometry:
+  Camera Overlay - UAV1:
+    collapsed: false
+  Camera Overlay - UAV2:
+    collapsed: false
+  Camera Overlay - UAV3:
+    collapsed: false
+  Camera Overlay - UAV4:
+    collapsed: false
+  Camera Overlay - UAV5:
+    collapsed: false
+  Camera Raw:
+    collapsed: false
+  Displays:
+    collapsed: false
+  Height: 1016
+  Hide Left Dock: false
+  Hide Right Dock: true
+  QMainWindow State: 000000ff00000000fd0000000400000000000001560000035afc020000001dfb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000004c6000001a1000001a900000153fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d0000035a000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d00610067006502000003c9000003450000025b000000c9fb0000000800750061007600320000000000ffffffff0000000000000000fb0000000c00430061006d0065007200610000000000ffffffff0000000000000000fb0000000800750061007600310000000000ffffffff0000000000000000fb0000000c00430061006d00650072006100000003c5000000160000000000000000fb0000002a00430061006d0065007200610020004f007600650072006c006100790020002d0020005500410056003203000006290000017c00000157000000e0fb0000000c00430061006d0065007200610000000310000000cb0000000000000000fb0000001400430061006d0065007200610020005200610077000000021b0000008f0000001600fffffffb0000001400430061006d006500720061002000520061007700000002cf0000004e0000001600fffffffb0000002a00430061006d0065007200610020004f007600650072006c006100790020002d0020005500410056003303000006280000025e00000158000000cdfb0000001c00430061006d0065007200610020004f007600650072006c006100790300000402000000cc000002b000000193fb0000001400430061006d006500720061002000520061007702000000480000013c00000280000001e0fb0000001c00430061006d0065007200610020004f007600650072006c00610079010000022c000000a30000000000000000fb0000001400430061006d006500720061002000520061007700000002890000010e0000001600fffffffb0000000c00430061006d006500720061000000032a000000cc0000000000000000fb0000002a00430061006d0065007200610020004f007600650072006c006100790020002d00200055004100560031030000062a000000a100000156000000dafb0000001400430061006d00650072006100200052006100770000000310000000cb0000001600fffffffb0000002a00430061006d0065007200610020004f007600650072006c006100790020002d0020005500410056003403000006280000032b00000158000000d5fb0000001400430061006d006500720061002000520061007700000002e4000000f70000000000000000fb0000002a00430061006d0065007200610020004f007600650072006c006100790020002d0020005500410056003503000004d00000032b00000158000000d5fb0000001400430061006d006500720061002000520061007700000002e4000000f7000000000000000000000001000001160000039efc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003d0000039e000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007380000003efc0100000002fb0000000800540069006d0065010000000000000738000002eb00fffffffb0000000800540069006d00650100000000000004500000000000000000000005dc0000035a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Selection:
+    collapsed: false
+  Time:
+    collapsed: false
+  Tool Properties:
+    collapsed: false
+  Views:
+    collapsed: true
+  Width: 1848
+  X: 72
+  Y: 27

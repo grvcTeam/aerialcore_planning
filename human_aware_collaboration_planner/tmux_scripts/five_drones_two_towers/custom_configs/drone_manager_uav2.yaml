@@ -1,0 +1,56 @@
+land_duration: 10.0 # [s]
+
+recharging_time: 1.0 # [s]
+
+monitoring_time: 1.0 # [s]
+
+picking_time: 5.0 # [s]
+
+trajectory_sampling_rate: 20.0 # [Hz]
+
+waiting_time: 1.0 # [s]
+
+sleeping_time_between_stage_1_and_2: 2.0 # [s]
+
+sleeping_time_between_stage_2_and_3: 10.0 # [s]
+
+sleeping_time_between_stage_3_and_4: 10.0 # [s]
+
+sleeping_time_between_stage_4_and_5: 18.01 # [s]
+
+# NaN means the point is not on the schedule
+# Monitoring the human
+goto_destination_1:
+  x: 23.7620 # [m]
+  y: 39.3749 # [m]
+  z: 2.000000 # [m]
+  heading: 2.618 # [rad]
+  
+# NaN means the point is not on the schedule
+goto_destination_2:
+  x: NaN # [m]
+  y: NaN # [m]
+  z: NaN # [m]
+  heading: NaN # [rad]
+  
+# NaN means the point is not on the schedule
+goto_destination_3:
+  x: NaN # [m]
+  y: NaN # [m]
+  z: NaN # [m]
+  heading: NaN # [rad]
+
+# NaN means the point is not on the schedule  
+goto_destination_4:
+  x: NaN # [m]
+  y: NaN # [m]
+  z: NaN # [m]
+  heading: NaN # [rad]
+  
+# NaN means the point is not on the schedule
+goto_destination_5:
+  x: NaN # [m]
+  y: NaN # [m]
+  z: NaN # [m]
+  heading: NaN # [rad]
+
