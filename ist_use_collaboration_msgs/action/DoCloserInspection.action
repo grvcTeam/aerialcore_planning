@@ -1,0 +1,5 @@
+string[] solar_panels
+---
+bool success
+string message
+---

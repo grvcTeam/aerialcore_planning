@@ -1,0 +1,5 @@
+string requester_id
+---
+bool success
+string message
+---
