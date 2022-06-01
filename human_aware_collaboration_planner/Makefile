@@ -6,6 +6,10 @@ waypoint = "0 10 2 0 15 2"
 tool = hammer
 
 agent_id = 1
+spawn_x = 3.5
+spawn_y = 9
+spawn_z = 0.3
+spawn_heading = 0
 
 .PHONY: launch
 
@@ -138,4 +142,4 @@ phase_2_unforeseen_event_9:
 	@rostopic pub /mission_over human_aware_collaboration_planner/MissionOver "value: true"
 
 mrs_drone_spawn:
-	@rosservice call /mrs_drone_spawner/spawn "1 --f550 --enable-rangefinder --pos 3.5 9 0.3 0"
+	@rosservice call /mrs_drone_spawner/spawn "$(agent_id) --f550 --enable-rangefinder --pos $(spawn_x) $(spawn_y) $(spawn_z) $(spawn_heading)"
