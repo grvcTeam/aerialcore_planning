@@ -5,6 +5,7 @@ number = 2
 waypoint = "0 10 2 0 15 2"
 tool = hammer
 
+agent_prefix = uav
 agent_id = 1
 spawn_x = 3.5
 spawn_y = 9
@@ -35,22 +36,22 @@ deliver:
 	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_$(task_id) D $(tool) $(human_target)
 
 battery:
-	@rostopic echo /uav_$(agent_id)/battery_fake
+	@rostopic echo /$(agent_prefix)$(agent_id)/battery_fake
 
 battery_off:
-	@rostopic pub /uav_$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl "2" "0.2" "0.01" "0.01"
+	@rostopic pub /$(agent_prefx)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl "2" "0.2" "0.01" "0.01"
 
 battery_ok:
-	@rostopic pub /uav_$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl "2" "1" "0.01" "0.01"
+	@rostopic pub /$(agent_prefx)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl "2" "1" "0.01" "0.01"
 
 battery_static:
-	@rostopic pub /uav_$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl "0" "1" "0.01" "0.01"
+	@rostopic pub /$(agent_prefix)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl "0" "1" "0.01" "0.01"
 
 pose:
-	@rostopic echo /uav_$(agent_id)/ual/pose
+	@rostopic echo /$(agent_prefix)$(agent_id)/ual/pose
 
 state:
-	@rostopic echo /uav_$(agent_id)/ual/state
+	@rostopic echo /$(agent_prefix)$(agent_id)/ual/state
 
 mission_over:
 	@rostopic pub /mission_over human_aware_collaboration_planner/MissionOver "value: true"
@@ -74,12 +75,12 @@ phase_1_tasks_3:
 	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_4 I 0 7 3 7 7 3 7 14 3 7 21 3 0 21 3 -7 21 3 -7 14 3 -7 7 3
 
 phase_1_unforeseen_event_1:
-	@echo "Unforeseen event: uav_$(agent_id) has low battery"
-	@rostopic pub /uav_$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl "2" "0.2" "0.01" "0.01"
+	@echo "Unforeseen event: $(agent_prefix)$(agent_id) has low battery"
+	@rostopic pub /$(agent_prefix)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl "2" "0.2" "0.01" "0.01"
 
 phase_1_unforeseen_event_2:
-	@echo "Unforeseen event: uav_$(agent_id) has its battery charged"
-	@rostopic pub /uav_$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl "2" "1" "0.01" "0.01"
+	@echo "Unforeseen event: $(agent_prefix)$(agent_id) has its battery charged"
+	@rostopic pub /$(agent_prefix)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl "2" "1" "0.01" "0.01"
 
 phase_1_unforeseen_event_3:
 	@echo "Unforeseen event: High-Level Planner block disconnection"
@@ -106,36 +107,36 @@ phase_2_tasks_3:
 	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_3 M human_target_1 3 4
 
 phase_2_unforeseen_event_1:
-	@echo "Unforeseen event: UAV_2 has low battery"
-	@rostopic pub /uav_2/battery_fake/control human_aware_collaboration_planner/BatteryControl "0" "0.2" "0.01" "0.01"
+	@echo "Unforeseen event: UAV2 has low battery"
+	@rostopic pub /uav2/battery_fake/control human_aware_collaboration_planner/BatteryControl "0" "0.2" "0.01" "0.01"
 
 phase_2_unforeseen_event_2:
-	@echo "Unforeseen event: UAV_3 has low battery"
-	@rostopic pub /uav_3/battery_fake/control human_aware_collaboration_planner/BatteryControl "0" "0.2" "0.01" "0.01"
+	@echo "Unforeseen event: UAV3 has low battery"
+	@rostopic pub /uav3/battery_fake/control human_aware_collaboration_planner/BatteryControl "0" "0.2" "0.01" "0.01"
 
 phase_2_unforeseen_event_3:
-	@echo "Unforeseen event: UAV_2 has its battery charged"
-	@rostopic pub /uav_2/battery_fake/control human_aware_collaboration_planner/BatteryControl "0" "1" "0.01" "0.01"
+	@echo "Unforeseen event: UAV2 has its battery charged"
+	@rostopic pub /uav2/battery_fake/control human_aware_collaboration_planner/BatteryControl "0" "1" "0.01" "0.01"
 
 phase_2_unforeseen_event_4:
-	@echo "Unforeseen event: UAV_3 has its battery charged"
-	@rostopic pub /uav_3/battery_fake/control human_aware_collaboration_planner/BatteryControl "0" "1" "0.01" "0.01"
+	@echo "Unforeseen event: UAV3 has its battery charged"
+	@rostopic pub /uav3/battery_fake/control human_aware_collaboration_planner/BatteryControl "0" "1" "0.01" "0.01"
 
 phase_2_unforeseen_event_5:
-	@echo "Unforeseen event: UAV_2 disconnection"
-	@rosnode kill /uav_2/agent_behaviour_manager
+	@echo "Unforeseen event: UAV2 disconnection"
+	@rosnode kill /uav2/agent_behaviour_manager
 
 phase_2_unforeseen_event_6:
-	@echo "Unforeseen event: UAV_4 disconnection"
-	@rosnode kill /uav_4/agent_behaviour_manager
+	@echo "Unforeseen event: UAV4 disconnection"
+	@rosnode kill /uav4/agent_behaviour_manager
 
 phase_2_unforeseen_event_7:
-	@echo "Unforeseen event: UAV_2 reconnection"
-	@rosrun human_aware_collaboration_planner agent_behaviour_manager __ns:=uav_2
+	@echo "Unforeseen event: UAV2 reconnection"
+	@rosrun human_aware_collaboration_planner agent_behaviour_manager __ns:=uav2
 
 phase_2_unforeseen_event_8:
-	@echo "Unforeseen event: UAV_4 reconnection"
-	@rosrun human_aware_collaboration_planner agent_behaviour_manager __ns:=uav_4
+	@echo "Unforeseen event: UAV4 reconnection"
+	@rosrun human_aware_collaboration_planner agent_behaviour_manager __ns:=uav4
 
 phase_2_unforeseen_event_9:
 	@echo "Unforseen event: mission over"
