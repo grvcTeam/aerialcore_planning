@@ -96,6 +96,26 @@
       </node>
     </group>
 
+    <group if="$(eval ual_backend == 'mrs_mavros')">
+      <!-- Launch UAL mavros server -->
+      <node pkg="ual_backend_mavros" type="ual_backend_mavros_server" name="ual" ns="$(arg ns_prefix)$(arg id)" output="screen">
+        <param name="uav_id" value="$(arg id)"/>
+        <param name="model_name" value="$(arg robot_model)_$(arg id)"/>
+        <param name="ual_server" value="$(arg ual_server)"/>
+        <param name="ual_pub_rate" value="$(arg ual_pub_rate)"/>
+        <param name="mavros_offboard_rate" value="$(arg mavros_offboard_rate)"/>
+        <param name="position_th" value="$(arg position_th)"/>
+        <param name="orientation_th" value="$(arg orientation_th)"/>
+        <param name="hold_pose_time" value="$(arg hold_pose_time)"/>
+        <param name="pose_frame_id" value="$(arg pose_frame_id)"/>
+        <param name="home_pose_parent_frame" value="map"/>
+        <rosparam param="home_pose" subst_value="True">$(arg home_pose)</rosparam>
+
+        <remap from="/$(arg ns_prefix)$(arg id)/ual/State" to="/mrs_status/display_string" />
+
+      </node>
+    </group>
+
     <!-- Launch camera -->
     <node name="rqt_image_view_uav_$(arg id)" pkg="rqt_image_view" type="rqt_image_view" args="/$(arg ns_prefix)$(arg id)/cgo3_camera/image_raw" if="$(arg camera)"/>
 
