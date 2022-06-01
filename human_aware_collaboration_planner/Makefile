@@ -12,6 +12,8 @@ spawn_y = 9
 spawn_z = 0.3
 spawn_heading = 0
 
+test = 1
+
 .PHONY: launch
 
 main:
@@ -144,4 +146,3 @@ phase_2_unforeseen_event_9:
 
 mrs_drone_spawn:
 	@rosservice call /mrs_drone_spawner/spawn "$(agent_id) --f550 --enable-rangefinder --pos $(spawn_x) $(spawn_y) $(spawn_z) $(spawn_heading)"
-#Test
