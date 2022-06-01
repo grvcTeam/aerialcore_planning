@@ -30,5 +30,5 @@ windows:
   - SW Architecture:
       layout: tiled
       panes:
-        - roslaunch human_aware_collaboration_planner simulation.launch number_UAV:=1 low_level_interface:=MRS agent_debugger:=gdb planner_debugger:=none world:=none
-        - rosrun groot Groot
+        - waitForRos; roslaunch human_aware_collaboration_planner simulation.launch number_UAV:=1 low_level_interface:=MRS agent_debugger:=gdb planner_debugger:=none world:=none
+        - waitForRos; rosrun groot Groot
