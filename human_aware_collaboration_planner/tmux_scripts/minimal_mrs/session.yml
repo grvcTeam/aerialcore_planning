@@ -1,0 +1,34 @@
+name: simulation
+root: ./
+pre_window: export UAV_NAME="uav1"; export UAV_ID="1"; export UAV_TYPE=t650; export RUN_TYPE=simulation; export WORLD_NAME=simulation; export SENSORS="garmin_down"; xdotool key shift+F10 r 2
+startup_window: status
+windows:
+  - roscore/gazebo:
+      layout: tiled
+      panes:
+        - roscore
+        - waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_name:=$(find aerialcore_simulation)/worlds/power_towers_danube_wires_rescaled_jeff_autospawn.world
+        - waitForOdometry; gz camera -c gzclient_camera -f ${UAV_NAME}; history -s gz camera -c gzclient_camera -f ${UAV_NAME}; exit
+  - status/command: 
+      layout: tiled
+      panes:
+        - waitForSimulation; roslaunch mrs_uav_status status.launch
+        -
+  - spawn:
+      layout: tiled
+      panes:
+        - waitForSimulation; rosservice call /mrs_drone_spawner/spawn "${UAV_ID} t650 --enable-rangefinder"; exit
+  - mrs_control:
+      layout: even-vertical
+      panes:
+        - waitForOdometry; roslaunch mrs_uav_general core.launch
+        - waitForSimulation; roslaunch mrs_uav_general automatic_start.launch
+        - 'waitForControl;
+          rosservice call /$UAV_NAME/mavros/cmd/arming 1;
+          sleep 2;
+          rosservice call /$UAV_NAME/mavros/set_mode 0 offboard'
+  - SW Architecture:
+      layout: tiled
+      panes:
+        - roslaunch human_aware_collaboration_planner simulation.launch number_UAV:=1 low_level_interface:=MRS agent_debugger:=gdb planner_debugger:=none world:=none
+        - rosrun groot Groot
