@@ -12,8 +12,6 @@ spawn_y = 9
 spawn_z = 0.3
 spawn_heading = 0
 
-test = 2
-
 .PHONY: launch
 
 main:
