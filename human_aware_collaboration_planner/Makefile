@@ -7,6 +7,10 @@ tool = hammer
 
 agent_prefix = uav
 agent_id = 1
+spawn_x = 3.5
+spawn_y = 9
+spawn_z = 0.3
+spawn_heading = 0
 
 .PHONY: launch
 
@@ -137,3 +141,6 @@ phase_2_unforeseen_event_8:
 phase_2_unforeseen_event_9:
 	@echo "Unforseen event: mission over"
 	@rostopic pub /mission_over human_aware_collaboration_planner/MissionOver "value: true"
+
+mrs_drone_spawn:
+	@rosservice call /mrs_drone_spawner/spawn "$(agent_id) --f550 --enable-rangefinder --pos $(spawn_x) $(spawn_y) $(spawn_z) $(spawn_heading)"
