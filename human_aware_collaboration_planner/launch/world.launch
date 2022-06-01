@@ -1,5 +1,5 @@
 <launch>
-  <!-- Worlds: empty, power_tower, 2towers, burguillos -->
+  <!-- Worlds: empty, power_tower, 2towers, burguillos, mrs, pv_farm -->
   <arg name="world" default="power_tower"/>
 
   <!-- Launch Gazebo simulation -->
@@ -33,6 +33,11 @@
 
   <include file="$(find mrs_simulation)/launch/simulation.launch" if="$(eval world=='mrs')">
     <arg name="world_file" value="$(find aerialcore_simulation)/worlds/power_towers_danube_wires_rescaled_jeff_autospawn.world"/>
+    <arg name="verbose" value="false"/>
+  </include>
+
+  <include file="$(find mrs_simulation)/launch/simulation.launch" if="$(eval world=='pv_farm')">
+    <arg name="world_file" value="$(find durable_gazebo_simulation)/worlds/evora_farm.world"/>
     <arg name="verbose" value="false"/>
   </include>
 
