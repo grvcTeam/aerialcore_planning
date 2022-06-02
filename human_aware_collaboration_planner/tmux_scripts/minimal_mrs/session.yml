@@ -1,13 +1,14 @@
 name: simulation
 root: ./
-pre_window: export UAV_NAME="uav1"; export UAV_ID="1"; export UAV_TYPE=t650; export RUN_TYPE=simulation; export WORLD_NAME=simulation; export SENSORS="garmin_down"; xdotool key shift+F10 r 2
+pre_window: export UAV_NAME="uav1"; export UAV_ID="1"; export UAV_TYPE=t650; export RUN_TYPE=simulation; export WORLD_NAME=simulation; export SENSORS="ouster, garmin_down"; export ODOMETRY_TYPE="gps"; xdotool key shift+F10 r 2
 startup_window: status
 windows:
-  - roscore/gazebo:
+  - roscore/gazebo/mapplan:
       layout: tiled
       panes:
         - roscore
-        - waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_name:=$(find aerialcore_simulation)/worlds/power_towers_danube_wires_rescaled_jeff_autospawn.world
+        - waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_name:=mrs_city
+        - waitForOdometry; roslaunch octomap_mapping_planning mapplan.launch config_octomap:=./custom_configs/octomap.yaml config_pcl_filter_ouster:=./custom_configs/ouster_filter_mapping.yaml config_pathfinder:=./custom_configs/pathfinder.yaml config_trajectory_generation:=./custom_configs/trajectory_generation.yaml config_pcl_filter_rs_front:=./custom_configs/rs_front_filter.yaml config_pcl_filter_rs_down:=./custom_configs/rs_down_filter.yaml
         - waitForOdometry; gz camera -c gzclient_camera -f ${UAV_NAME}; history -s gz camera -c gzclient_camera -f ${UAV_NAME}; exit
   - status/command: 
       layout: tiled
@@ -17,20 +18,28 @@ windows:
   - spawn:
       layout: tiled
       panes:
-        - waitForSimulation; rosservice call /mrs_drone_spawner/spawn "${UAV_ID} t650 --enable-rangefinder"; exit
+        - waitForSimulation; rosservice call /mrs_drone_spawner/spawn "${UAV_ID} ${UAV_TYPE} --enable-rangefinder --enable-ouster --ouster-model OS0-128 --use-gpu-ray --pos 0 0 1 0"; exit 
   - mrs_control:
       layout: even-vertical
       panes:
-        - waitForOdometry; roslaunch mrs_uav_general core.launch
-        - waitForSimulation; roslaunch mrs_uav_general automatic_start.launch
+        - waitForOdometry; roslaunch mrs_uav_general core.launch config_odometry:=./custom_configs/odometry.yaml
         - waitForOdometry; roslaunch mrs_actionlib_interface uav.launch
-        - 'waitForControl;
-          rosservice call /$UAV_NAME/mavros/cmd/arming 1;
-          sleep 2;
-          rosservice call /$UAV_NAME/mavros/set_mode 0 offboard;
-          exit'
+        - 
   - SW Architecture:
       layout: tiled
       panes:
-        - waitForRos; roslaunch human_aware_collaboration_planner simulation.launch number_UAV:=1 low_level_interface:=MRS agent_debugger:=gdb planner_debugger:=none world:=none
+        - waitForRos; roslaunch human_aware_collaboration_planner simulation.launch number_UAV:=1 low_level_interface:=MRS agent_debugger:=none planner_debugger:=none world:=none
         - waitForRos; rosrun groot Groot &
+  #- planner:
+      #layout: tiled
+      #panes:
+        #- waitForRos; roslaunch human_aware_collaboration_planner planner.launch low_level_interface:=MRS
+        #- 
+  #- agent_behavior_manager:
+      #layout: tiled
+      #panes:
+        #- waitForRos; roslaunch human_aware_collaboration_planner agent.launch id:=1 type:=PhysicalACW low_level_interface:=MRS
+  #- fakers:
+      #layout: tiled
+      #panes:
+        #- waitForRos; roslaunch human_aware_collaboration_planner battery_faker.launch id:=1 low_level_interface:=MRS
