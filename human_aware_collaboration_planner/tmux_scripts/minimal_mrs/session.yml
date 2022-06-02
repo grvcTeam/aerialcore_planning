@@ -7,7 +7,7 @@ windows:
       layout: tiled
       panes:
         - roscore
-        - waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_name:=$(find aerialcore_simulation)/power_towers_danube_wires_rescaled_jeff_autospawn.world
+        - waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_name:=$(find aerialcore_simulation)/worlds/power_towers_danube_wires_rescaled_jeff_autospawn.world
         - waitForOdometry; gz camera -c gzclient_camera -f ${UAV_NAME}; history -s gz camera -c gzclient_camera -f ${UAV_NAME}; exit
   - status/command: 
       layout: tiled
