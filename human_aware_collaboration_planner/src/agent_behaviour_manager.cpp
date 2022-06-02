@@ -1561,6 +1561,7 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   BT::PublisherZMQ publisher_zmq(tree, 25, 1666+std::stoi(id_)*2, 1667+std::stoi(id_)*2);
 
   //Waiting for the Agent to initialize
+  ROS_INFO("[AgentNode] Waiting for %s to initialize. State: %i", beacon.id.c_str(), state_);
   loop_rate_.reset();
   while(!state_)
   {

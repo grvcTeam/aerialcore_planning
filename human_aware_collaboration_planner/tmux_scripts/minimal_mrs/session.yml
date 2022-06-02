@@ -7,7 +7,7 @@ windows:
       layout: tiled
       panes:
         - roscore
-        - waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_name:=$(find aerialcore_simulation)/worlds/power_towers_danube_wires_rescaled_jeff_autospawn.world
+        - waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_name:=$(find aerialcore_simulation)/power_towers_danube_wires_rescaled_jeff_autospawn.world
         - waitForOdometry; gz camera -c gzclient_camera -f ${UAV_NAME}; history -s gz camera -c gzclient_camera -f ${UAV_NAME}; exit
   - status/command: 
       layout: tiled
@@ -23,12 +23,14 @@ windows:
       panes:
         - waitForOdometry; roslaunch mrs_uav_general core.launch
         - waitForSimulation; roslaunch mrs_uav_general automatic_start.launch
+        - waitForOdometry; roslaunch mrs_actionlib_interface uav.launch
         - 'waitForControl;
           rosservice call /$UAV_NAME/mavros/cmd/arming 1;
           sleep 2;
-          rosservice call /$UAV_NAME/mavros/set_mode 0 offboard'
+          rosservice call /$UAV_NAME/mavros/set_mode 0 offboard;
+          exit'
   - SW Architecture:
       layout: tiled
       panes:
         - waitForRos; roslaunch human_aware_collaboration_planner simulation.launch number_UAV:=1 low_level_interface:=MRS agent_debugger:=gdb planner_debugger:=none world:=none
-        - waitForRos; rosrun groot Groot
+        - waitForRos; rosrun groot Groot &
