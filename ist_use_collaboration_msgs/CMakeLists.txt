@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(catkin REQUIRED COMPONENTS
   std_msgs
   geometry_msgs
+  sensor_msgs
   message_generation
   roscpp
   genmsg
@@ -31,13 +32,14 @@ generate_messages(
   DEPENDENCIES
   std_msgs
   geometry_msgs
+  sensor_msgs
   actionlib_msgs
 )
 
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES gauss_msgs
-  CATKIN_DEPENDS message_runtime std_msgs geometry_msgs
+  CATKIN_DEPENDS message_runtime std_msgs geometry_msgs sensor_msgs
 #  DEPENDS system_lib
 )
 
