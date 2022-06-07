@@ -1841,7 +1841,7 @@ void AgentNode::positionCallbackMRS(const mrs_msgs::UavStatus& pose){
 }
 void AgentNode::batteryCallback(const sensor_msgs::BatteryState& battery){battery_ = battery.percentage;}
 void AgentNode::stateCallbackUAL(const uav_abstraction_layer::State& state){state_ = state.state;}
-void AgentNode::stateCallbackMRS(const mrs_actionlib_interface::commandFeedback feedback){
+void AgentNode::stateCallbackMRS(const mrs_actionlib_interface::commandFeedbackConstPtr& feedback){
   /* UAL States
    *********************
    * UNINITIALIZED   = 0
@@ -1853,13 +1853,13 @@ void AgentNode::stateCallbackMRS(const mrs_actionlib_interface::commandFeedback 
    * LANDING         = 6
    *********************/
 
-  if(feedback.message == "Current state: UNKNOWN")
+  if(feedback->message == "Current state: UNKNOWN")
     state_ = 0;//state_ = 5:;
-  if(feedback.message == "Current state: LANDED")
+  if(feedback->message == "Current state: LANDED")
     state_ = 2;//state_ = 1;
-  if(feedback.message == "Current state: IDLE_FLYING" || feedback.message == "Current state: GOTO")
+  if(feedback->message == "Current state: IDLE_FLYING" || feedback->message == "Current state: GOTO")
     state_ = 4;
-  if(feedback.message == "Current state: TAKEOFF_LANDING")
+  if(feedback->message == "Current state: TAKEOFF_LANDING")
     state_ = 6;//state_ = 3;
   return;
 }

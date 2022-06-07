@@ -500,7 +500,7 @@ class AgentNode
     void positionCallbackMRS(const mrs_msgs::UavStatus& pose);
     void batteryCallback(const sensor_msgs::BatteryState& battery);
 		void stateCallbackUAL(const uav_abstraction_layer::State& state);
-		void stateCallbackMRS(const mrs_actionlib_interface::commandFeedback feedback);
+		void stateCallbackMRS(const mrs_actionlib_interface::commandFeedbackConstPtr& feedback);
 		void missionOverCallback(const human_aware_collaboration_planner::MissionOver& value);
 		void beaconCallback(const human_aware_collaboration_planner::PlannerBeacon& beacon);
 		bool checkBeaconTimeout(ros::Time now);

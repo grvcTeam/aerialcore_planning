@@ -28,8 +28,8 @@ windows:
   - SW Architecture:
       layout: tiled
       panes:
-        - waitForRos; roslaunch human_aware_collaboration_planner simulation.launch number_UAV:=1 low_level_interface:=MRS agent_debugger:=none planner_debugger:=none world:=none
-        - waitForRos; rosrun groot Groot &
+        - waitForSimulation; roslaunch human_aware_collaboration_planner simulation.launch number_UAV:=1 low_level_interface:=MRS agent_debugger:=none planner_debugger:=none world:=mrs_pv_farm
+        - waitForSimulation; rosrun groot Groot &
   #- planner:
       #layout: tiled
       #panes:
