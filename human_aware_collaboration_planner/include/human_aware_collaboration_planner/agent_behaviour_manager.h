@@ -439,10 +439,12 @@ class AgentNode
 		std::string ns_prefix_;
 
     //Action Server to receive TaskList
-		actionlib::SimpleActionClient<mrs_actionlib_interface::commandAction> mrs_ac_;
     actionlib::SimpleActionServer<human_aware_collaboration_planner::NewTaskListAction> ntl_as_;
     human_aware_collaboration_planner::NewTaskListFeedback ntl_feedback_;
     human_aware_collaboration_planner::NewTaskListResult ntl_result_;
+
+		//Action Client to communicate with the MRS System
+		actionlib::SimpleActionClient<mrs_actionlib_interface::commandAction> mrs_ac_;
 
     //Action Client to Battery Enough
     actionlib::SimpleActionClient<human_aware_collaboration_planner::BatteryEnoughAction> battery_ac_;
@@ -500,7 +502,7 @@ class AgentNode
     void positionCallbackMRS(const mrs_msgs::UavStatus& pose);
     void batteryCallback(const sensor_msgs::BatteryState& battery);
 		void stateCallbackUAL(const uav_abstraction_layer::State& state);
-		void stateCallbackMRS(const mrs_actionlib_interface::commandFeedbackConstPtr& feedback);
+		void stateCallbackMRS(const mrs_actionlib_interface::commandActionFeedback& feedback);
 		void missionOverCallback(const human_aware_collaboration_planner::MissionOver& value);
 		void beaconCallback(const human_aware_collaboration_planner::PlannerBeacon& beacon);
 		bool checkBeaconTimeout(ros::Time now);

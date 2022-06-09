@@ -18,6 +18,10 @@ std::string Position::getID(){return id_;}
 float Position::getX(){return x_;}
 float Position::getY(){return y_;}
 float Position::getZ(){return z_;}
+void Position::print(std::ostream& os) const{
+  os << "(" << x_ << ", " << y_ << ", " << z_ << ")";
+  return;
+}
 
 float classes::distance(Position& p1, Position& p2){
   return sqrt(pow(p1.x_ - p2.x_, 2) + pow(p1.y_ - p2.y_, 2) + pow(p1.z_ - p2.z_, 2));

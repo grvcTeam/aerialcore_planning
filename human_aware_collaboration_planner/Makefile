@@ -12,6 +12,11 @@ spawn_y = 9
 spawn_z = 0.3
 spawn_heading = 0
 
+x = 0
+y = 0
+z = 2
+h = 0
+
 .PHONY: launch
 
 main:
@@ -147,3 +152,12 @@ phase_2_unforeseen_event_9:
 
 mrs_drone_spawn:
 	@rosservice call /mrs_drone_spawner/spawn "$(agent_id) --f550 --enable-rangefinder --pos $(spawn_x) $(spawn_y) $(spawn_z) $(spawn_heading)"
+
+mrs_takeoff:
+	@rostopic pub /$(agent_prefix)$(agent_id)/mrs_actionlib_interface/goal mrs_actionlib_interface/commandActionGoal "{header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: ''}, goal_id: {stamp: {secs: 0, nsecs: 0}, id: ''}, goal: {command: 0, goto_x: 0.0, goto_y: 0.0, goto_z: 0.0, goto_hdg: 0.0}}"
+
+mrs_land:
+	@rostopic pub /$(agent_prefix)$(agent_id)/mrs_actionlib_interface/goal mrs_actionlib_interface/commandActionGoal "{header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: ''}, goal_id: {stamp: {secs: 0, nsecs: 0}, id: ''}, goal: {command: 1, goto_x: 0.0, goto_y: 0.0, goto_z: 0.0, goto_hdg: 0.0}}"
+
+mrs_goto:
+	@rostopic pub /$(agent_prefix)$(agent_id)/mrs_actionlib_interface/goal mrs_actionlib_interface/commandActionGoal "{header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: ''}, goal_id: {stamp: {secs: 0, nsecs: 0}, id: ''}, goal: {command: 2, goto_x: $x, goto_y: $y, goto_z: $z, goto_hdg: $h}}"

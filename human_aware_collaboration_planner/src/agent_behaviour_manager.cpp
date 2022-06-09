@@ -1558,12 +1558,21 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   ss << "bt_trace_" << beacon.id << ".fbl";
   BT::FileLogger logger_file(tree, ss.str().c_str());
   //BT::printTreeRecursively(tree.rootNode());
-  BT::PublisherZMQ publisher_zmq(tree, 25, 1666+std::stoi(id_)*2, 1667+std::stoi(id_)*2);
+  BT::PublisherZMQ publisher_zmq(tree, 25, 1666 + (std::stoi(id_) - 1) * 2, 1667 + (std::stoi(id_) - 1) * 2);
+
+  //TODO: Delete this after debugging
+  loop_rate_ = ros::Rate(5);
+  while(ros::ok())
+  {
+    ROS_INFO_STREAM("State: " << state_ << "\tPosition: " << position_);
+    ros::spinOnce();
+    loop_rate_.sleep();
+  }
 
   //Waiting for the Agent to initialize
   ROS_INFO("[AgentNode] Waiting for %s to initialize. State: %i", beacon.id.c_str(), state_);
   loop_rate_.reset();
-  while(!state_)
+  while(!state_ && ros::ok())
   {
     land(false);
     ros::spinOnce();
@@ -1573,7 +1582,7 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
 
   //Behavior tree execution
   loop_rate_.reset();
-  while(ros::ok() && status == BT::NodeStatus::RUNNING)
+  while(status == BT::NodeStatus::RUNNING && ros::ok())
   {
     //Agent only send beacons when it receibes beacons from Planner to avoid problems with the communication working 
     //only in one dirction. If Planner cant see Agent but this can see Planner, Planner sends an empty task list to the
@@ -1841,25 +1850,25 @@ void AgentNode::positionCallbackMRS(const mrs_msgs::UavStatus& pose){
 }
 void AgentNode::batteryCallback(const sensor_msgs::BatteryState& battery){battery_ = battery.percentage;}
 void AgentNode::stateCallbackUAL(const uav_abstraction_layer::State& state){state_ = state.state;}
-void AgentNode::stateCallbackMRS(const mrs_actionlib_interface::commandFeedbackConstPtr& feedback){
-  /* UAL States
-   *********************
-   * UNINITIALIZED   = 0
-   * LANDED_DISARMED = 1
-   * LANDED_ARMED    = 2
-   * TAKING_OFF      = 3
-   * FLYING_AUTO     = 4
-   * FLYING_MANUAL   = 5
-   * LANDING         = 6
-   *********************/
+void AgentNode::stateCallbackMRS(const mrs_actionlib_interface::commandActionFeedback& feedback){
+  /* UAL States                 MRS States
+   *********************        *********************
+   * UNINITIALIZED   = 0        * LANDED          = 0
+   * LANDED_DISARMED = 1        * TAKEOFF_LANDING = 1
+   * LANDED_ARMED    = 2        * IDLE_FLYING     = 2
+   * TAKING_OFF      = 3        * GOTO            = 3
+   * FLYING_AUTO     = 4        * UNKNOWN         = 4
+   * FLYING_MANUAL   = 5        * 
+   * LANDING         = 6        * 
+   *********************        *********************/
 
-  if(feedback->message == "Current state: UNKNOWN")
+  if(feedback.feedback.message == "Current state: UNKNOWN")
     state_ = 0;//state_ = 5:;
-  if(feedback->message == "Current state: LANDED")
+  if(feedback.feedback.message == "Current state: LANDED")
     state_ = 2;//state_ = 1;
-  if(feedback->message == "Current state: IDLE_FLYING" || feedback->message == "Current state: GOTO")
+  if(feedback.feedback.message == "Current state: IDLE_FLYING" || feedback.feedback.message == "Current state: GOTO")
     state_ = 4;
-  if(feedback->message == "Current state: TAKEOFF_LANDING")
+  if(feedback.feedback.message == "Current state: TAKEOFF_LANDING")
     state_ = 6;//state_ = 3;
   return;
 }

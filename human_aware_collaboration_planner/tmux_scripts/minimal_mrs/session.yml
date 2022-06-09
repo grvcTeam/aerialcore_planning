@@ -7,14 +7,14 @@ windows:
       layout: tiled
       panes:
         - roscore
-        - waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_name:=mrs_city
+        - waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_name:='$(find aerialcore_simulation)/worlds/power_towers_danube_wires_rescaled_jeff_autospawn.world'
         - waitForOdometry; roslaunch octomap_mapping_planning mapplan.launch config_octomap:=./custom_configs/octomap.yaml config_pcl_filter_ouster:=./custom_configs/ouster_filter_mapping.yaml config_pathfinder:=./custom_configs/pathfinder.yaml config_trajectory_generation:=./custom_configs/trajectory_generation.yaml config_pcl_filter_rs_front:=./custom_configs/rs_front_filter.yaml config_pcl_filter_rs_down:=./custom_configs/rs_down_filter.yaml
-        - waitForOdometry; gz camera -c gzclient_camera -f ${UAV_NAME}; history -s gz camera -c gzclient_camera -f ${UAV_NAME}; exit
+        #- waitForOdometry; gz camera -c gzclient_camera -f ${UAV_NAME}; history -s gz camera -c gzclient_camera -f ${UAV_NAME}; exit
   - status/command: 
       layout: tiled
       panes:
         - waitForSimulation; roslaunch mrs_uav_status status.launch
-        -
+        - roscd human_aware_collaboration_planner
   - spawn:
       layout: tiled
       panes:
@@ -24,12 +24,12 @@ windows:
       panes:
         - waitForOdometry; roslaunch mrs_uav_general core.launch config_odometry:=./custom_configs/odometry.yaml
         - waitForOdometry; roslaunch mrs_actionlib_interface uav.launch
-        - 
+        - roscd human_aware_collaboration_planner
   - SW Architecture:
       layout: tiled
       panes:
-        - waitForSimulation; roslaunch human_aware_collaboration_planner simulation.launch number_UAV:=1 low_level_interface:=MRS agent_debugger:=none planner_debugger:=none world:=mrs_pv_farm
-        - waitForSimulation; rosrun groot Groot &
+        - waitForSimulation; roslaunch human_aware_collaboration_planner simulation.launch number_UAV:=1 low_level_interface:=MRS agent_debugger:=none planner_debugger:=none world:=none
+        - waitForSimulation; rosrun groot Groot &; roscd human_aware_collaboration_planner
   #- planner:
       #layout: tiled
       #panes:
