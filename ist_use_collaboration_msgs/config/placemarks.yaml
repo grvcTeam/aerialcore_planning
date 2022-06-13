@@ -1,0 +1,114 @@
+placemarks:
+  origin:
+		geographic:
+			lon: -7.961719444444443
+			lat: 38.54100277777778
+		cartesian:
+			x: 0
+			y: 0
+	
+	corners:
+		corner_1:
+			geographic:
+				lon: -7.962942076064321
+				lat: 38.54177309396464
+			cartesian:
+				x: -107.518
+				y: 84.2767
+		
+		corner_2:
+			geographic:
+				lon: -7.9629480581306344
+				lat: 38.54039336284828
+			cartesian:
+				x: -106.313
+				y: -68.833
+	
+		corner_3:
+			geographic:
+				lon: -7.961787958103741
+				lat: 38.54039429900664
+			cartesian:
+				x: -5.20867
+				y: -67.5882
+
+		corner_4:
+			geographic:
+				lon: -7.961658935157954
+				lat: 38.54030189108661
+			cartesian:
+				x: 6.15178
+				y: -77.7154
+
+		corner_5:
+			geographic:
+				lon: -7.960496759467491
+				lat: 38.54030193546264
+			cartesian:
+				x: 107.438
+				y: -76.566
+				
+		corner_6:
+			geographic:
+				lon: -7.960489992223724
+				lat: 38.54141425641861
+			cartesian:
+				x: 106.633
+				y: 46.871
+			
+		corner_7:
+			geographic:
+				lon: -7.96072758647242
+				lat: 38.54145687503872
+			cartesian:
+				x: 85.8725
+				y: 51.3662
+
+		corner_8:
+			geographic:
+				lon: -7.960721369043029
+				lat: 38.54168245095227
+			cartesian:
+				x: 86.1314
+				y: 76.4036
+
+		corner_9:
+			geographic:
+				lon: -7.960958858684202
+				lat: 38.54172245695723
+			cartesian:
+				x: 65.3838
+				y: 80.609
+
+		corner_10:
+			geographic:
+				lon: -7.960953988064704
+				lat: 38.54177135475743
+			cartesian:
+				x: 65.747
+				y: 86.0399
+	
+  solar_panels:
+		solar_panel_3_4:
+			geographic:
+				lon: -7.96213167462045
+				lat: 38.54156780106911
+			cartesian:
+				x: -36.6343
+				y: 62.293
+				
+		solar_panel_14_2:
+			geographic:
+				lon: -7.962595411729742
+				lat: 38.54059468129904
+			cartesian:
+				x: -75.8311
+				y: -46.1467
+			
+		solar_panel_10_8:
+			geographic:
+				lon: -7.96107416997165
+				lat: 38.54094889488317
+			cartesian:
+				x: 56.3043
+				y: -5.34396
