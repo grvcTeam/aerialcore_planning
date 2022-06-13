@@ -1,5 +1,5 @@
 <launch>
-  <!-- Worlds: empty, power_tower, 2towers, burguillos, mrs, pv_farm -->
+  <!-- Worlds: none, empty, power_tower, 2towers, burguillos, mrs, pv_farm, mrs_pv_farm -->
   <arg name="world" default="power_tower"/>
 
   <!-- Launch Gazebo simulation -->
@@ -36,9 +36,16 @@
     <arg name="verbose" value="false"/>
   </include>
 
-  <include file="$(find mrs_simulation)/launch/simulation.launch" if="$(eval world=='pv_farm')">
-    <arg name="world_file" value="$(find durable_gazebo_simulation)/worlds/evora_farm.world"/>
-    <arg name="verbose" value="false"/>
-  </include>
+  <node pkg="px4_bringup" type="launch_gzworld.py" name="gazebo_world" output="screen" if="$(eval world=='pv_farm')"
+    args="-physics=ode -world=$(find grvc_gazebo_worlds)/worlds/evora_solar_panel_farm.world
+    -add_model_path=$(find grvc_gazebo_worlds)/models
+    -description_package=robots_description">
+		<rosparam param="sim_origin">[38.54177309396464, -7.962942076064321, 227.61875915527344]</rosparam>
+  </node>
+
+  <param name="agriculture_geom2" command="$(find xacro)/xacro --inorder '$(find durable_gazebo_simulation)/urdf/evora_farm.urdf.xacro'"/>
+  <node name="agriculture_world_spawner" pkg="gazebo_ros" type="spawn_model" 
+    args="-urdf -model agriculture_geom2 -param agriculture_geom2 -x -82.6 -y 110.5 -z -2 -Y 0"
+    if="$(eval world=='mrs_pv_farm')"/>
 
 </launch>
