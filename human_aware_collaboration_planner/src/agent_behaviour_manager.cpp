@@ -1560,15 +1560,6 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   //BT::printTreeRecursively(tree.rootNode());
   BT::PublisherZMQ publisher_zmq(tree, 25, 1666 + (std::stoi(id_) - 1) * 2, 1667 + (std::stoi(id_) - 1) * 2);
 
-  //TODO: Delete this after debugging
-  loop_rate_ = ros::Rate(5);
-  while(ros::ok())
-  {
-    ROS_INFO_STREAM("State: " << state_ << "\tPosition: " << position_);
-    ros::spinOnce();
-    loop_rate_.sleep();
-  }
-
   //Waiting for the Agent to initialize
   ROS_INFO("[AgentNode] Waiting for %s to initialize. State: %i", beacon.id.c_str(), state_);
   loop_rate_.reset();
@@ -1850,7 +1841,7 @@ void AgentNode::positionCallbackMRS(const mrs_msgs::UavStatus& pose){
 }
 void AgentNode::batteryCallback(const sensor_msgs::BatteryState& battery){battery_ = battery.percentage;}
 void AgentNode::stateCallbackUAL(const uav_abstraction_layer::State& state){state_ = state.state;}
-void AgentNode::stateCallbackMRS(const mrs_actionlib_interface::commandActionFeedback& feedback){
+void AgentNode::stateCallbackMRS(const mrs_actionlib_interface::State& state){
   /* UAL States                 MRS States
    *********************        *********************
    * UNINITIALIZED   = 0        * LANDED          = 0
@@ -1862,14 +1853,26 @@ void AgentNode::stateCallbackMRS(const mrs_actionlib_interface::commandActionFee
    * LANDING         = 6        * 
    *********************        *********************/
 
-  if(feedback.feedback.message == "Current state: UNKNOWN")
-    state_ = 0;//state_ = 5:;
-  if(feedback.feedback.message == "Current state: LANDED")
-    state_ = 2;//state_ = 1;
-  if(feedback.feedback.message == "Current state: IDLE_FLYING" || feedback.feedback.message == "Current state: GOTO")
-    state_ = 4;
-  if(feedback.feedback.message == "Current state: TAKEOFF_LANDING")
-    state_ = 6;//state_ = 3;
+  switch(state.state){
+    case 0:
+      state_ = 2; //state_ = 1;
+      break;
+    case 1:
+      state_ = 6; //state_ = 3;
+      break;
+    case 2:
+      state_ = 4;
+      break;
+    case 3:
+      state_ = 4;
+      break;
+    case 4:
+      state_ = 0; //state_ = 5;
+      break;
+    default:
+      state_ = 0; //state_ = 5;
+      break;
+  }
   return;
 }
 void AgentNode::missionOverCallback(const human_aware_collaboration_planner::MissionOver& value){

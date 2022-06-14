@@ -30,6 +30,7 @@
 #include "uav_abstraction_layer/TakeOff.h"
 #include "uav_abstraction_layer/GoToWaypoint.h"
 #include "uav_abstraction_layer/State.h"
+#include "mrs_actionlib_interface/State.h"
 
 #include "geometry_msgs/PoseStamped.h"
 #include "mrs_msgs/UavStatus.h"
@@ -502,7 +503,7 @@ class AgentNode
     void positionCallbackMRS(const mrs_msgs::UavStatus& pose);
     void batteryCallback(const sensor_msgs::BatteryState& battery);
 		void stateCallbackUAL(const uav_abstraction_layer::State& state);
-		void stateCallbackMRS(const mrs_actionlib_interface::commandActionFeedback& feedback);
+		void stateCallbackMRS(const mrs_actionlib_interface::State& state);
 		void missionOverCallback(const human_aware_collaboration_planner::MissionOver& value);
 		void beaconCallback(const human_aware_collaboration_planner::PlannerBeacon& beacon);
 		bool checkBeaconTimeout(ros::Time now);
