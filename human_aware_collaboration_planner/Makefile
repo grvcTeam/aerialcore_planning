@@ -27,7 +27,7 @@ launch:
 	@roslaunch human_aware_collaboration_planner simulation.launch
 
 start:
-	@./tmux_scripts/minimal_mrs/start.sh
+	@./tmux_scripts/no_mapping_no_collision_avoidance/start.sh
 
 monitor:
 	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_$(task_id) M $(human_target) $(distance) $(number)
