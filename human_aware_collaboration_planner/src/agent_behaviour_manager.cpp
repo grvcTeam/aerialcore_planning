@@ -1846,9 +1846,9 @@ void AgentNode::stateCallbackMRS(const mrs_actionlib_interface::State& state){
    * UNINITIALIZED   = 0        * LANDED          = 0
    * LANDED_DISARMED = 1        * TAKEOFF_LANDING = 1
    * LANDED_ARMED    = 2        * IDLE_FLYING     = 2
-   * TAKING_OFF      = 3        * GOTO            = 3
-   * FLYING_AUTO     = 4        * UNKNOWN         = 4
-   * FLYING_MANUAL   = 5        * 
+   * TAKING_OFF      = 3        * GOTO_PATHFINDER = 3
+   * FLYING_AUTO     = 4        * GOTO_DIRECT     = 4
+   * FLYING_MANUAL   = 5        * UNKNOWN         = 5 
    * LANDING         = 6        * 
    *********************        *********************/
 
@@ -1860,14 +1860,11 @@ void AgentNode::stateCallbackMRS(const mrs_actionlib_interface::State& state){
       state_ = 6; //state_ = 3;
       break;
     case 2:
-      state_ = 4;
-      break;
     case 3:
+    case 4:
       state_ = 4;
       break;
-    case 4:
-      state_ = 0; //state_ = 5;
-      break;
+    case 5:
     default:
       state_ = 0; //state_ = 5;
       break;
