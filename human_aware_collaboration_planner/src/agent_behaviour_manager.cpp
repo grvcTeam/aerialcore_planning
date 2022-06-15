@@ -1475,7 +1475,7 @@ inline void RegisterNodes(BT::BehaviorTreeFactory& factory){
 AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : battery_enough_(true), loop_rate_(1),
   ntl_as_(nh_, "task_list", boost::bind(&AgentNode::newTaskList, this, _1), false), tool_flag_("none"), timeout_(false),
   battery_ac_("/" + beacon.id + "/battery_enough", true), beacon_(beacon), mission_over_(false), state_(0), battery_(0),
-  mrs_ac_("/" + beacon.id + "/mrs_actionlib_interface/goal", true)
+  mrs_ac_("/" + beacon.id + "/mrs_actionlib_interface", true)
 {
   //Start the server to receive tasks list through actions
   ntl_as_.start();
@@ -1938,7 +1938,7 @@ bool AgentNode::take_off(float height, bool blocking){
     //Goto command to change the height because it's not an option in takeoff command with the MRS System
     if(mrs_ac_.waitForResult(ros::Duration(10.0)))
     {
-      goal.command = 2;
+      goal.command = 3;
       goal.goto_x = position_.getX();
       goal.goto_y = position_.getY();
       goal.goto_z = height + std::stoi(id_);
@@ -1975,7 +1975,7 @@ bool AgentNode::go_to_waypoint(float x, float y, float z, bool blocking){
   {
     mrs_ac_.waitForServer(ros::Duration(1.0));
     mrs_actionlib_interface::commandGoal goal;
-    goal.command = 2;
+    goal.command = 3;
     goal.goto_x = x;
     goal.goto_y = y;
     //TODO: Change the following four lines when lower level controller for travelling are integrated
@@ -2016,7 +2016,7 @@ bool AgentNode::stop(bool blocking){
     {
       mrs_ac_.waitForServer(ros::Duration(1.0));
       mrs_actionlib_interface::commandGoal goal;
-      goal.command = 2;
+      goal.command = 3;
       goal.goto_x = position_.getX();
       goal.goto_y = position_.getY();
       //TODO: Change the following four lines when lower level controller for travelling are integrated

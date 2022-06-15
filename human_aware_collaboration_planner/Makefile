@@ -2,7 +2,7 @@ task_id = i
 human_target = human_target_1
 distance = 1.5
 number = 2
-waypoint = "0 10 2 0 15 2"
+waypoints = "0 10 2 0 15 2"
 tool = hammer
 
 agent_prefix = uav
@@ -33,7 +33,7 @@ monitor:
 	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_$(task_id) M $(human_target) $(distance) $(number)
 
 inspect:
-	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_$(task_id) I 0 7 3 7 7 3 7 14 3 7 21 3 0 21 3 -7 21 3 -7 14 3 -7 7 3
+	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_$(task_id) I $(waypoints)
 
 deliver:
 	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_$(task_id) D $(tool) $(human_target)
