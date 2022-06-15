@@ -34,8 +34,7 @@
 //Forward declarations
 class Planner;
 
-class Agent
-{
+class Agent{
   private:
     std::string id_;
     std::string type_;
@@ -110,14 +109,12 @@ class Agent
     void print(std::ostream& os);
 };
 
-std::ostream& operator << (std::ostream& os, Agent& a)
-{
+std::ostream& operator << (std::ostream& os, Agent& a){
   a.print(os);
   return os;
 }
 
-class Planner
-{
+class Planner {
   private:
     //Node Handlers
     ros::NodeHandle nh_;
@@ -176,8 +173,7 @@ class Planner
 		bool getMissionOver();
 };
 
-struct Cost
-{
+struct Cost{
 	public:
 		Cost(float cost, std::string id) : cost_(cost), id_(id) {}
 

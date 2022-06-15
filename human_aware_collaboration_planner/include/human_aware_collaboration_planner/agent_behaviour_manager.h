@@ -507,7 +507,7 @@ class AgentNode
 		void missionOverCallback(const human_aware_collaboration_planner::MissionOver& value);
 		void beaconCallback(const human_aware_collaboration_planner::PlannerBeacon& beacon);
 		bool checkBeaconTimeout(ros::Time now);
-		//UAL Service calls
+		// UAL/MRS Service calls
 		bool land(bool blocking);
 		bool take_off(float height, bool blocking);
 		bool go_to_waypoint(float x, float y, float z, bool blocking);

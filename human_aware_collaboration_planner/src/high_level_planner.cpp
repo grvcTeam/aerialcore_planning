@@ -20,7 +20,7 @@ Agent::Agent(Planner* planner, std::string id, std::string type, ros::Time first
   ros::param::param<std::string>("~battery_topic", battery_topic_, "/battery_fake");
 
   if(low_level_interface_ == "UAL")
-    position_sub_ = nh_.subscribe("/" + id + pose_topic_, 1, &Agent::positionCallbackMRS, this);
+    position_sub_ = nh_.subscribe("/" + id + pose_topic_, 1, &Agent::positionCallbackUAL, this);
   else if(low_level_interface_ == "MRS")
     position_sub_ = nh_.subscribe("/" + id + pose_topic_, 1, &Agent::positionCallbackMRS, this);
   battery_sub_ = nh_.subscribe("/" + id + battery_topic_, 1, &Agent::batteryCallback, this);
