@@ -10,8 +10,8 @@ windows:
         - waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_name:=grass_plane
         #- waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_name:='$(find aerialcore_simulation)/worlds/power_towers_danube_wires_rescaled_jeff_autospawn.world'
         #- waitForOdometry; gz camera -c gzclient_camera -f ${UAV_NAME}; history -s gz camera -c gzclient_camera -f ${UAV_NAME}; exit
-        - waitForControl; rosrun rviz rviz -d ./rviz.rviz
-        - waitForControl; roslaunch mrs_rviz_plugins load_robot.launch
+        #- waitForControl; rosrun rviz rviz -d ./rviz.rviz
+        #- waitForControl; roslaunch mrs_rviz_plugins load_robot.launch
   - control: 
       layout: even-vertical
       panes:
