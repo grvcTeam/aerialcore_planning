@@ -23,6 +23,7 @@ find_package(catkin REQUIRED COMPONENTS
   #roscpp
   mavros_msgs
   #YAML_CPP
+  ist_use_collaboration_msgs
 )
 
 # 4. Enable Python module suport (catkin_python_setup())
@@ -67,13 +68,14 @@ generate_messages(
   actionlib_msgs
   #mrs_msgs
   mrs_actionlib_interface
+  ist_use_collaboration_msgs
 )
 
 # 7. Specify package build info export (catkin_package())
 catkin_package(
   INCLUDE_DIRS include
   #LIBRARIES ${PROJECT_NAME} #MrsActionlibInterface
-  CATKIN_DEPENDS behaviortree_cpp_v3 message_runtime mrs_actionlib_interface 
+  CATKIN_DEPENDS behaviortree_cpp_v3 message_runtime mrs_actionlib_interface ist_use_collaboration_msgs
   #CATKIN_DEPENDS behaviortree_cpp_v3 message_runtime mrs_actionlib_interface roscpp mrs_lib mrs_msgs
 )
 

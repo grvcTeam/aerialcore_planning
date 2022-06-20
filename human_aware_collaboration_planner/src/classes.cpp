@@ -258,6 +258,43 @@ void Inspect::updateParams(classes::Task* task){
   return;
 }
 
+//class InspectPVArray : public Task
+InspectPVArray::InspectPVArray() : Task() {}
+InspectPVArray::InspectPVArray(std::string task_id, std::vector<human_aware_collaboration_planner::Waypoint> waypoints) : 
+  Task(task_id), waypoints_(waypoints) {}
+InspectPVArray::InspectPVArray(std::string task_id, std::vector<human_aware_collaboration_planner::Waypoint> waypoints, 
+    std::vector<std::string> agent_list) : Task(task_id), waypoints_(waypoints), agent_list_(agent_list) {}
+InspectPVArray::InspectPVArray(const InspectPVArray& i) : Task(i.id_), waypoints_(i.waypoints_), agent_list_(i.agent_list_) {}
+InspectPVArray::~InspectPVArray(){}
+//class InspectPVArray Getters
+std::string InspectPVArray::getID(){return id_;}
+char InspectPVArray::getType(){return 'A';}
+std::vector<human_aware_collaboration_planner::Waypoint> InspectPVArray::getInspectWaypoints(){return waypoints_;}
+std::vector<std::string> InspectPVArray::getAgentList(){return agent_list_;}
+void InspectPVArray::print(std::ostream& os) const{
+  os << "\t" << id_ << ": InspectPVArray\n\t\tPositions:";
+  for(auto wp = waypoints_.begin(); wp != waypoints_.end(); ++wp)
+    os << " (" << wp->x << ", " << wp->y << ", " << wp->z << ")";
+  os << "\n\t\tAgent List:";
+  for(auto a = agent_list_.begin(); a != agent_list_.end(); ++a)
+    os << " (" << *a << ")";
+  return;
+}
+//Class InspectPVArray Setters
+void InspectPVArray::setWaypoints(std::vector<human_aware_collaboration_planner::Waypoint> waypoints){
+  waypoints_ = waypoints;
+  return;
+}
+void InspectPVArray::setAgentList(std::vector<std::string> agent_list){
+  agent_list_ = agent_list;
+  return;
+}
+void InspectPVArray::updateParams(classes::Task* task){
+  if(task->getType() == 'A')
+    waypoints_ = task->getInspectWaypoints();
+  return;
+}
+
 //class DeliverTool : public Task
 DeliverTool::DeliverTool() : Task(), tool_(nullptr), human_target_(nullptr) {}
 DeliverTool::DeliverTool(std::string task_id, const Tool* tool, const HumanTarget* human_target) : 

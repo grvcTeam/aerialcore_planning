@@ -669,26 +669,36 @@ BT::NodeStatus GoNearWP::tick(){
 
   human_aware_collaboration_planner::Waypoint nearest_wp;
 
-  if(task->getType() != 'I')
+  if(task->getType() != 'I' && task->getType() != 'A')
   {
     if(isHaltRequested())
       return BT::NodeStatus::IDLE;
-    ROS_WARN("[GoNearWP] First task of the queue isn't type Inspect");
+    ROS_WARN("[GoNearWP] First task of the queue isn't type Inspect or InspectPVArray");
     return BT::NodeStatus::FAILURE;
   }
 
-  //Find the closest WP from the list
-  float distance = -1;
-  float tmp_distance;
-  for(auto& waypoint : task->getInspectWaypoints())
+  if(task->getType() == 'I')
   {
-    tmp_distance = classes::distance(agent_->position_, waypoint);
-    if(distance == -1 || tmp_distance < distance)
+    //Find the closest WP from the list
+    float distance = -1;
+    float tmp_distance;
+    for(auto& waypoint : task->getInspectWaypoints())
     {
-      distance = tmp_distance;
-      nearest_wp = waypoint;
+      tmp_distance = classes::distance(agent_->position_, waypoint);
+      if(distance == -1 || tmp_distance < distance)
+      {
+        distance = tmp_distance;
+        nearest_wp = waypoint;
+      }
     }
   }
+
+  if(task->getType() == 'A')
+  {
+    auto waypoint = task->getInspectWaypoints();
+    nearest_wp = waypoint[0];
+  }
+
   classes::Position near_waypoint = classes::close_pose_2D(agent_->position_, nearest_wp, 1.5);
 
   while(!isHaltRequested())
@@ -817,6 +827,292 @@ BT::NodeStatus TakeImage::tick(){
 }
 void TakeImage::halt(){
   ROS_INFO("[TakeImage] halt requested");
+  //Do some cleanup if necessary
+  
+  BT::AsyncActionNode::halt();
+}
+// }
+
+//InspectPVArray {
+InspectPVArray::InspectPVArray(const std::string& name, const BT::NodeConfiguration& config) : BT::AsyncActionNode(name, config) {}
+InspectPVArray::~InspectPVArray(){halt();}
+void InspectPVArray::init(AgentNode* agent){agent_ = agent;}
+BT::PortsList InspectPVArray::providedPorts() {return{};}
+BT::NodeStatus InspectPVArray::tick(){
+  if(!agent_->stop(false))
+    ROS_ERROR("Failed to call stop");
+
+  classes::Task* task;
+  if(agent_->task_queue_.empty())
+  {
+    if(isHaltRequested())
+      return BT::NodeStatus::IDLE;
+    ROS_WARN("[InspectPVArray] Task queue is empty");
+    return BT::NodeStatus::FAILURE;
+  }
+  task = agent_->task_queue_.front();
+
+  std::string task_id = task->getID();
+
+  if(task->getType() != 'A')
+  {
+    if(isHaltRequested())
+      return BT::NodeStatus::IDLE;
+    ROS_WARN("[InspectPVArray] First task of the queue isn't type Inspect PV Array");
+    return BT::NodeStatus::FAILURE;
+  }
+
+  actionlib::SimpleActionClient<human_aware_collaboration_planner::TaskResultAction> 
+    task_result_ac_("/" + agent_->beacon_.id + "/task_result", true);
+  human_aware_collaboration_planner::TaskResultGoal goal;
+
+  //TODO: Calling Inspection lower level controllers (faked) 
+  ROS_INFO("[InspectPVArray] Calling Lower-level controllers...");
+  //********************************************* FAKED *************************************************************
+  auto wp = task->getInspectWaypoints();
+
+  while(!isHaltRequested())
+  {
+    switch(agent_->state_)
+    {
+      case 2: //LANDED_ARMED
+        if(isHaltRequested())
+        {
+          task_result_ac_.waitForServer(ros::Duration(1.0));
+          goal.task.id = task_id;
+          goal.task.type = 'A';
+          goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
+          task_result_ac_.sendGoal(goal);
+          if(goal.result)
+            agent_->removeTaskFromQueue(task_id, 'A');
+          ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+          agent_->infoQueue();
+          return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+        }
+        if(!agent_->take_off(3, false))
+        {
+          if(isHaltRequested())
+          {
+            task_result_ac_.waitForServer(ros::Duration(1.0));
+            goal.task.id = task_id;
+            goal.task.type = 'A';
+            goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
+            task_result_ac_.sendGoal(goal);
+            if(goal.result)
+              agent_->removeTaskFromQueue(task_id, 'A');
+            ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+            agent_->infoQueue();
+            return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+          }
+          ROS_ERROR("[InspectPVArray] Failed to call service take_off");
+          task_result_ac_.waitForServer(ros::Duration(1.0));
+          goal.task.id = task_id;
+          goal.task.type = 'A';
+          goal.result = 0; //TODO: Change with the result of Lower-level controllers
+          task_result_ac_.sendGoal(goal);
+          if(goal.result)
+            agent_->removeTaskFromQueue(task_id, 'A');
+          ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+          agent_->infoQueue();
+          return BT::NodeStatus::FAILURE;
+        }
+        else
+        {
+          while(agent_->state_ != 4)
+          {
+            if(isHaltRequested())
+            {
+              task_result_ac_.waitForServer(ros::Duration(1.0));
+              goal.task.id = task_id;
+              goal.task.type = 'A';
+              goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
+              task_result_ac_.sendGoal(goal);
+              if(goal.result)
+                agent_->removeTaskFromQueue(task_id, 'A');
+              ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+              agent_->infoQueue();
+              return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          }
+        }
+        break;
+      case 4: //FLYING_AUTO
+        if(isHaltRequested())
+        {
+          task_result_ac_.waitForServer(ros::Duration(1.0));
+          goal.task.id = task_id;
+          goal.task.type = 'A';
+          goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
+          task_result_ac_.sendGoal(goal);
+          if(goal.result)
+            agent_->removeTaskFromQueue(task_id, 'A');
+          ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+          agent_->infoQueue();
+          return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+        }
+        ROS_INFO("[InspectPVArray] Moving to the beggining...");
+        if(agent_->go_to_waypoint(wp[0].x, wp[0].y, wp[0].z, false))
+        {
+          while(!agent_->checkIfGoToServiceSucceeded(wp[0].x, wp[0].y, wp[0].z))
+          {
+            if(isHaltRequested())
+            {
+              task_result_ac_.waitForServer(ros::Duration(1.0));
+              goal.task.id = task_id;
+              goal.task.type = 'A';
+              goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
+              task_result_ac_.sendGoal(goal);
+              if(goal.result)
+                agent_->removeTaskFromQueue(task_id, 'A');
+              ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+              agent_->infoQueue();
+              return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          }
+          ROS_INFO("[InspectPVArray] Moving to the end...");
+          if(agent_->go_to_waypoint(wp[1].x, wp[1].y, wp[1].z, false))
+          {
+            while(!agent_->checkIfGoToServiceSucceeded(wp[1].x, wp[1].y, wp[1].z))
+            {
+              if(isHaltRequested())
+              {
+                task_result_ac_.waitForServer(ros::Duration(1.0));
+                goal.task.id = task_id;
+                goal.task.type = 'A';
+                goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
+                task_result_ac_.sendGoal(goal);
+                if(goal.result)
+                  agent_->removeTaskFromQueue(task_id, 'A');
+                ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+                agent_->infoQueue();
+                return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+              }
+              std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            ROS_INFO("[InspectPVArray] Returning SUCCESS...");
+            task_result_ac_.waitForServer(ros::Duration(1.0));
+            goal.task.id = task_id;
+            goal.task.type = 'A';
+            goal.result = 1; //TODO: Change with the result of Lower-level controllers
+            //Solar Panel 3_4
+            geometry_msgs::Point target_xyz;
+            target_xyz.x = -36.6343;
+            target_xyz.y =  62.293;
+            sensor_msgs::NavSatFix target_gps;
+            target_gps.latitude  = -7.96213167462045;
+            target_gps.longitude = 38.54156780106911;
+            goal.do_closer_inspection.xyz_coordinates.push_back(target_xyz);
+            goal.do_closer_inspection.gps_coordinates.push_back(target_gps);
+            task_result_ac_.sendGoal(goal);
+            if(goal.result)
+              agent_->removeTaskFromQueue(task_id, 'A');
+            ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+            agent_->infoQueue();
+            return BT::NodeStatus::SUCCESS;
+          }
+          else
+          {
+            if(isHaltRequested())
+            {
+              task_result_ac_.waitForServer(ros::Duration(1.0));
+              goal.task.id = task_id;
+              goal.task.type = 'A';
+              goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
+              task_result_ac_.sendGoal(goal);
+              if(goal.result)
+                agent_->removeTaskFromQueue(task_id, 'A');
+              ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+              agent_->infoQueue();
+              return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+            }
+            ROS_ERROR("[InspectPVArray] Failed to call service go_to_waypoint");
+            task_result_ac_.waitForServer(ros::Duration(1.0));
+            goal.task.id = task_id;
+            goal.task.type = 'A';
+            goal.result = 0; //TODO: Change with the result of Lower-level controllers
+            task_result_ac_.sendGoal(goal);
+            if(goal.result)
+              agent_->removeTaskFromQueue(task_id, 'A');
+            ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+            agent_->infoQueue();
+            return BT::NodeStatus::FAILURE;
+          }
+          ROS_INFO("[InspectPVArray] Returning SUCCESS...");
+          task_result_ac_.waitForServer(ros::Duration(1.0));
+          goal.task.id = task_id;
+          goal.task.type = 'A';
+          goal.result = 1; //TODO: Change with the result of Lower-level controllers
+          //Solar Panel 3_4
+          geometry_msgs::Point target_xyz;
+          target_xyz.x = -36.6343;
+          target_xyz.y =  62.293;
+          sensor_msgs::NavSatFix target_gps;
+          target_gps.latitude  = -7.96213167462045;
+          target_gps.longitude = 38.54156780106911;
+          goal.do_closer_inspection.xyz_coordinates.push_back(target_xyz);
+          goal.do_closer_inspection.gps_coordinates.push_back(target_gps);
+          task_result_ac_.sendGoal(goal);
+          if(goal.result)
+            agent_->removeTaskFromQueue(task_id, 'A');
+          ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+          agent_->infoQueue();
+          return BT::NodeStatus::SUCCESS;
+        }
+        else
+        {
+          if(isHaltRequested())
+          {
+            task_result_ac_.waitForServer(ros::Duration(1.0));
+            goal.task.id = task_id;
+            goal.task.type = 'A';
+            goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
+            task_result_ac_.sendGoal(goal);
+            if(goal.result)
+              agent_->removeTaskFromQueue(task_id, 'A');
+            ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+            agent_->infoQueue();
+            return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+          }
+          ROS_ERROR("[InspectPVArray] Failed to call service go_to_waypoint");
+          task_result_ac_.waitForServer(ros::Duration(1.0));
+          goal.task.id = task_id;
+          goal.task.type = 'A';
+          goal.result = 0; //TODO: Change with the result of Lower-level controllers
+          task_result_ac_.sendGoal(goal);
+          if(goal.result)
+            agent_->removeTaskFromQueue(task_id, 'A');
+          ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+          agent_->infoQueue();
+          return BT::NodeStatus::FAILURE;
+        }
+        break;
+      case 0: //UNINITIALIZED
+      case 1: //LANDED_DISARMED
+      case 3: //TAKING_OFF
+      case 5: //FLIYING_MANUAL
+      case 6: //LANDING
+      default:
+        break;
+    }
+  }
+
+  task_result_ac_.waitForServer(ros::Duration(1.0));
+  goal.task.id = task_id;
+  goal.task.type = 'A';
+  goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
+  task_result_ac_.sendGoal(goal);
+  if(goal.result)
+      agent_->removeTaskFromQueue(task_id, 'A');
+  ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+  agent_->infoQueue();
+
+  return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+  //*****************************************************************************************************************
+}
+void InspectPVArray::halt(){
+  ROS_INFO("[InspectPVArray] halt requested");
   //Do some cleanup if necessary
   
   BT::AsyncActionNode::halt();
@@ -1213,6 +1509,31 @@ BT::NodeStatus IsTaskInspect::tick(){
 }
 // }
 
+//IsTaskInspectPVArray {
+IsTaskInspectPVArray::IsTaskInspectPVArray(const std::string& name) : BT::ConditionNode(name, {}) {}
+void IsTaskInspectPVArray::init(AgentNode* agent){agent_ = agent;}
+BT::NodeStatus IsTaskInspectPVArray::tick(){
+  classes::Task* task;
+  if(agent_->task_queue_.empty())
+  {
+    ROS_WARN("[IsTaskInspectPVArray] Task queue is empty");
+    return BT::NodeStatus::FAILURE;
+  }
+  task = agent_->task_queue_.front();
+
+  switch(task->getType())
+  {
+    case 'A':
+    case 'a':
+      return BT::NodeStatus::SUCCESS;
+      break;
+    default:
+      return BT::NodeStatus::FAILURE;
+      break;
+  }
+}
+// }
+
 //IsTaskDeliverTool {
 IsTaskDeliverTool::IsTaskDeliverTool(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsTaskDeliverTool::init(AgentNode* agent){agent_ = agent;}
@@ -1334,15 +1655,24 @@ BT::NodeStatus IsAgentNearWP::tick(){
   }
   task = agent_->task_queue_.front();
 
-  if(task->getType() != 'I')
+  if(task->getType() != 'I' && task->getType() != 'A')
   {
-    ROS_WARN("[IsAgentNearWP] First task of the queue isn't type Inspect");
+    ROS_WARN("[IsAgentNearWP] First task of the queue isn't type Inspect or InspectPVArray");
     return BT::NodeStatus::FAILURE;
   }
 
-  for(auto& waypoint : task->getInspectWaypoints())
+  if(task->getType() == 'I')
   {
-    if(classes::distance(agent_->position_, waypoint) < 2)
+    for(auto& waypoint : task->getInspectWaypoints())
+    {
+      if(classes::distance(agent_->position_, waypoint) < 2)
+        return BT::NodeStatus::SUCCESS;
+    }
+  }
+  if(task->getType() == 'A')
+  {
+    auto waypoint = task->getInspectWaypoints();
+    if(classes::distance(agent_->position_, waypoint[0]) < 2)
       return BT::NodeStatus::SUCCESS;
   }
   return BT::NodeStatus::FAILURE;
@@ -1475,6 +1805,7 @@ inline void RegisterNodes(BT::BehaviorTreeFactory& factory){
   factory.registerNodeType<MonitorHumanTarget>("MonitorHumanTarget");
   factory.registerNodeType<GoNearWP>("GoNearWP");
   factory.registerNodeType<TakeImage>("TakeImage");
+  factory.registerNodeType<InspectPVArray>("InspectPVArray");
   factory.registerNodeType<GoNearStation>("GoNearStation");
   factory.registerNodeType<PickTool>("PickTool");
   factory.registerNodeType<DropTool>("DropTool");
@@ -1488,6 +1819,7 @@ inline void RegisterNodes(BT::BehaviorTreeFactory& factory){
   factory.registerNodeType<IsTaskRecharge>("IsTaskRecharge");
   factory.registerNodeType<IsTaskMonitor>("IsTaskMonitor");
   factory.registerNodeType<IsTaskInspect>("IsTaskInspect");
+  factory.registerNodeType<IsTaskInspectPVArray>("IsTaskInspectPVArray");
   factory.registerNodeType<IsTaskDeliverTool>("IsTaskDeliverTool");
   factory.registerNodeType<IsAgentNearChargingStation>("IsAgentNearChargingStation");
   factory.registerNodeType<IsAgentNearHumanTarget>("IsAgentNearHumanTarget");
@@ -1519,8 +1851,11 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
 
   //Load of config file
   std::string path = ros::package::getPath("human_aware_collaboration_planner");
+  //std::string path_evora = ros::package::getPath("ist_use_collaboration_msgs");
   ros::param::param<std::string>("~config_file", config_file_, path + "/config/conf.yaml");
+  //ros::param::param<std::string>("~config_file_evora", config_file_evora_, path_evora + "/config/placemarks.yaml");
   readConfigFile(config_file_);
+  //readEvoraConfigFile(config_file_evora_);
 
   beacon_pub_ = nh_.advertise<human_aware_collaboration_planner::AgentBeacon>("/agent_beacon", 1);
   battery_sub_ = nh_.subscribe(battery_topic_, 1, &AgentNode::batteryCallback, this);
@@ -1558,6 +1893,7 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
     {monitor_human_target->init(this);}
     else if( auto go_near_wp = dynamic_cast<GoNearWP*>(node.get())) {go_near_wp->init(this);}
     else if( auto take_image = dynamic_cast<TakeImage*>(node.get())) {take_image->init(this);}
+    else if( auto inspect_pv_array = dynamic_cast<InspectPVArray*>(node.get())) {inspect_pv_array->init(this);}
     else if( auto go_near_station = dynamic_cast<GoNearStation*>(node.get())) {go_near_station->init(this);}
     else if( auto pick_tool = dynamic_cast<PickTool*>(node.get())) {pick_tool->init(this);}
     else if( auto drop_tool = dynamic_cast<DropTool*>(node.get())) {drop_tool->init(this);}
@@ -1569,6 +1905,7 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
     else if( auto is_task_recharge = dynamic_cast<IsTaskRecharge*>(node.get())) {is_task_recharge->init(this);}
     else if( auto is_task_monitor = dynamic_cast<IsTaskMonitor*>(node.get())) {is_task_monitor->init(this);}
     else if( auto is_task_inspect = dynamic_cast<IsTaskInspect*>(node.get())) {is_task_inspect->init(this);}
+    else if( auto is_task_inspect_pv_array = dynamic_cast<IsTaskInspectPVArray*>(node.get())) {is_task_inspect_pv_array->init(this);}
     else if( auto is_task_deliver_tool = dynamic_cast<IsTaskDeliverTool*>(node.get()))
     {is_task_deliver_tool->init(this);}
     else if( auto is_agent_near_charging_station = dynamic_cast<IsAgentNearChargingStation*>(node.get()))
@@ -1649,6 +1986,8 @@ void AgentNode::readConfigFile(std::string config_file){
           tool.second['z'].as<float>());
     }
   }
+}
+void AgentNode::readEvoraConfigFile(std::string config_file){
 }
 void AgentNode::isBatteryEnough(){
   bool previous_state = battery_enough_;

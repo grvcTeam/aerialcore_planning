@@ -168,6 +168,11 @@ void Agent::sendQueueToAgent(){
         task_msg.inspect.waypoints = task->getInspectWaypoints();
         task_msg.inspect.agent_list = task->getAgentList();
         break;
+      case 'A':
+      case 'a':
+        task_msg.inspect.waypoints = task->getInspectWaypoints();
+        task_msg.inspect.agent_list = task->getAgentList();
+        break;
       case 'D':
       case 'd':
         task_msg.deliver.tool_id = task->getToolID();
@@ -219,6 +224,10 @@ float Agent::computeTaskCost(classes::Task* task){
       case 'i':
         agent_type_cost = 1;
         break;
+      case 'A':
+      case 'a':
+        agent_type_cost = 1;
+        break;
       case 'D':
       case 'd':
         agent_type_cost = 0;
@@ -240,6 +249,10 @@ float Agent::computeTaskCost(classes::Task* task){
       case 'i':
         agent_type_cost = 0;
         break;
+      case 'A':
+      case 'a':
+        agent_type_cost = 0;
+        break;
       case 'D':
       case 'd':
         agent_type_cost = 1;
@@ -259,6 +272,10 @@ float Agent::computeTaskCost(classes::Task* task){
         break;
       case 'I':
       case 'i':
+        agent_type_cost = 1;
+        break;
+      case 'A':
+      case 'a':
         agent_type_cost = 1;
         break;
       case 'D':
@@ -287,6 +304,12 @@ float Agent::computeTaskCost(classes::Task* task){
         break;
       case 'I':
       case 'i':
+        inspect_waypoints = task->getInspectWaypoints();
+        central_position = classes::central_position(inspect_waypoints);
+        traveling_cost = classes::distance(position_, central_position);
+        break;
+      case 'A':
+      case 'a':
         inspect_waypoints = task->getInspectWaypoints();
         central_position = classes::central_position(inspect_waypoints);
         traveling_cost = classes::distance(position_, central_position);
@@ -332,6 +355,13 @@ float Agent::computeTaskCost(classes::Task* task){
             central_position = classes::central_position(inspect_waypoints);
             traveling_cost = classes::distance(previous_human_position, central_position);
             break;
+          case 'A':
+          case 'a':
+            previous_human_position = previous_task->getHumanPosition();
+            inspect_waypoints = task->getInspectWaypoints();
+            central_position = classes::central_position(inspect_waypoints);
+            traveling_cost = classes::distance(previous_human_position, central_position);
+            break;
           case 'D':
           case 'd':
             previous_human_position = previous_task->getHumanPosition();
@@ -358,6 +388,55 @@ float Agent::computeTaskCost(classes::Task* task){
             break;
           case 'I':
           case 'i':
+            previous_inspect_waypoints = previous_task->getInspectWaypoints();
+            previous_central_position = classes::central_position(previous_inspect_waypoints);
+            inspect_waypoints = previous_task->getInspectWaypoints();
+            central_position = classes::central_position(previous_inspect_waypoints);
+            traveling_cost = classes::distance(previous_central_position, central_position);
+            break;
+          case 'A':
+          case 'a':
+            previous_inspect_waypoints = previous_task->getInspectWaypoints();
+            previous_central_position = classes::central_position(previous_inspect_waypoints);
+            inspect_waypoints = previous_task->getInspectWaypoints();
+            central_position = classes::central_position(previous_inspect_waypoints);
+            traveling_cost = classes::distance(previous_central_position, central_position);
+            break;
+          case 'D':
+          case 'd':
+            previous_inspect_waypoints = previous_task->getInspectWaypoints();
+            previous_central_position = classes::central_position(previous_inspect_waypoints);
+            tool_position = task->getToolPosition();
+            human_position = task->getHumanPosition();
+            traveling_cost = classes::distance(previous_central_position, tool_position) + 
+              classes::distance(tool_position, human_position); 
+            break;
+          default:
+            traveling_cost = 0;
+            break;
+        }
+        break;
+      case 'A':
+      case 'a':
+        switch(task->getType())
+        {
+          case 'M':
+          case 'm':
+            previous_inspect_waypoints = previous_task->getInspectWaypoints();
+            previous_central_position = classes::central_position(previous_inspect_waypoints);
+            human_position = task->getHumanPosition();
+            traveling_cost = classes::distance(previous_central_position, human_position);
+            break;
+          case 'I':
+          case 'i':
+            previous_inspect_waypoints = previous_task->getInspectWaypoints();
+            previous_central_position = classes::central_position(previous_inspect_waypoints);
+            inspect_waypoints = previous_task->getInspectWaypoints();
+            central_position = classes::central_position(previous_inspect_waypoints);
+            traveling_cost = classes::distance(previous_central_position, central_position);
+            break;
+          case 'A':
+          case 'a':
             previous_inspect_waypoints = previous_task->getInspectWaypoints();
             previous_central_position = classes::central_position(previous_inspect_waypoints);
             inspect_waypoints = previous_task->getInspectWaypoints();
@@ -395,6 +474,13 @@ float Agent::computeTaskCost(classes::Task* task){
             central_position = classes::central_position(inspect_waypoints);
             traveling_cost = classes::distance(previous_human_position, central_position);
             break;
+          case 'A':
+          case 'a':
+            previous_human_position = previous_task->getHumanPosition();
+            inspect_waypoints = task->getInspectWaypoints();
+            central_position = classes::central_position(inspect_waypoints);
+            traveling_cost = classes::distance(previous_human_position, central_position);
+            break;
           case 'D':
           case 'd':
             previous_human_position = previous_task->getHumanPosition();
@@ -420,6 +506,13 @@ float Agent::computeTaskCost(classes::Task* task){
             break;
           case 'I':
           case 'i':
+            previous_charging_station = previous_task->getChargingStation();
+            inspect_waypoints = task->getInspectWaypoints();
+            central_position = classes::central_position(inspect_waypoints);
+            traveling_cost = classes::distance(previous_charging_station, central_position);
+            break;
+          case 'A':
+          case 'a':
             previous_charging_station = previous_task->getChargingStation();
             inspect_waypoints = task->getInspectWaypoints();
             central_position = classes::central_position(inspect_waypoints);
@@ -472,6 +565,10 @@ float Agent::computeTaskCost(classes::Task* task){
             case 'i':
               interruption_cost = 0;
               break;
+            case 'A':
+            case 'a':
+              interruption_cost = 0;
+              break;
             case 'D':
             case 'd':
               interruption_cost = 0;
@@ -493,6 +590,35 @@ float Agent::computeTaskCost(classes::Task* task){
             case 'i':
               interruption_cost = 1;
               break;
+            case 'A':
+            case 'a':
+              interruption_cost = 1;
+              break;
+            case 'D':
+            case 'd':
+              interruption_cost = 0;
+              break;
+            default:
+              interruption_cost = 0;
+              break;
+          }
+          break;
+        case 'A':
+        case 'a':
+          switch(task->getType())
+          {
+            case 'M':
+            case 'm':
+              interruption_cost = 2;
+              break;
+            case 'I':
+            case 'i':
+              interruption_cost = 1;
+              break;
+            case 'A':
+            case 'a':
+              interruption_cost = 1;
+              break;
             case 'D':
             case 'd':
               interruption_cost = 0;
@@ -512,6 +638,10 @@ float Agent::computeTaskCost(classes::Task* task){
               break;
             case 'I':
             case 'i':
+              interruption_cost = 2;
+              break;
+            case 'A':
+            case 'a':
               interruption_cost = 2;
               break;
             case 'D':
@@ -585,6 +715,7 @@ void Agent::taskResultCB(const human_aware_collaboration_planner::TaskResultGoal
     ROS_INFO_STREAM("[taskResultCB] (" << id_ << ") " << goal->task.id << "(" << (
             task_type == 'M' ? "Monitor" : 
             task_type == 'I' ? "Inspect" : 
+            task_type == 'A' ? "InspectPVArray" : 
             task_type == 'D' ? "DeliverTool" :
             task_type == 'R' ? "Recharge" :
             task_type == 'W' ? "Wait" : 
@@ -611,6 +742,7 @@ void Agent::taskResultCB(const human_aware_collaboration_planner::TaskResultGoal
       << ") Halted becouse of a task (" << (
           task_type == 'M' ? "Monitor" : 
           task_type == 'I' ? "Inspect" : 
+          task_type == 'A' ? "InspectPVArray" : 
           task_type == 'D' ? "DeliverTool" :
           task_type == 'R' ? "Recharge" :
           task_type == 'W' ? "Wait" : 
@@ -626,6 +758,7 @@ void Agent::taskResultCB(const human_aware_collaboration_planner::TaskResultGoal
     ROS_INFO_STREAM("[taskResultCB] (" << id_ << ") " << goal->task.id << "(" << (
             task_type == 'M' ? "Monitor" : 
             task_type == 'I' ? "Inspect" : 
+            task_type == 'A' ? "InspectPVArray" : 
             task_type == 'D' ? "DeliverTool" :
             task_type == 'R' ? "Recharge" :
             task_type == 'W' ? "Wait" : 
@@ -640,6 +773,7 @@ void Agent::taskResultCB(const human_aware_collaboration_planner::TaskResultGoal
     ROS_INFO_STREAM("[taskResultCB] (" << id_ << ") " << goal->task.id << "(" << (
             task_type == 'M' ? "Monitor" : 
             task_type == 'I' ? "Inspect" : 
+            task_type == 'A' ? "InspectPVArray" : 
             task_type == 'D' ? "DeliverTool" :
             task_type == 'R' ? "Recharge" :
             task_type == 'W' ? "Wait" : 
@@ -658,6 +792,7 @@ void Agent::taskResultCB(const human_aware_collaboration_planner::TaskResultGoal
       ROS_INFO_STREAM("[taskResultCB] (" << id_ << ") " << goal->task.id << " (" << (
               task_type == 'M' ? "Monitor" : 
               task_type == 'I' ? "Inspect" : 
+              task_type == 'A' ? "InspectPVArray" : 
               task_type == 'D' ? "DeliverTool" :
               task_type == 'R' ? "Recharge" :
               task_type == 'W' ? "Wait" : 
@@ -673,6 +808,7 @@ void Agent::taskResultCB(const human_aware_collaboration_planner::TaskResultGoal
       ROS_INFO_STREAM("[taskResultCB] (" << id_ << ") " << goal->task.id << " (" << (
               task_type == 'M' ? "Monitor" : 
               task_type == 'I' ? "Inspect" : 
+              task_type == 'A' ? "InspectPVArray" : 
               task_type == 'D' ? "DeliverTool" :
               task_type == 'R' ? "Recharge" :
               task_type == 'W' ? "Wait" : 
@@ -686,6 +822,7 @@ void Agent::taskResultCB(const human_aware_collaboration_planner::TaskResultGoal
       ROS_ERROR_STREAM("[taskResultCB] (" << id_ << ") " << goal->task.id << " (" << (
               task_type == 'M' ? "Monitor" : 
               task_type == 'I' ? "Inspect" : 
+              task_type == 'A' ? "InspectPVArray" : 
               task_type == 'D' ? "DeliverTool" :
               task_type == 'R' ? "Recharge" :
               task_type == 'W' ? "Wait" : 
@@ -698,6 +835,7 @@ void Agent::taskResultCB(const human_aware_collaboration_planner::TaskResultGoal
       ROS_INFO_STREAM("[taskResultCB] (" << id_ << ") " << goal->task.id << " (" << (
               task_type == 'M' ? "Monitor" : 
               task_type == 'I' ? "Inspect" : 
+              task_type == 'A' ? "InspectPVArray" : 
               task_type == 'D' ? "DeliverTool" :
               task_type == 'R' ? "Recharge" :
               task_type == 'W' ? "Wait" : 
@@ -726,6 +864,7 @@ void Agent::print(std::ostream& os){
     os << "\n\t" << tmp->getID() << ": " << (
         task_type == 'M' ? "Monitor" : 
         task_type == 'I' ? "Inspect" : 
+        task_type == 'A' ? "InspectPVArray" : 
         task_type == 'D' ? "DeliverTool" :
         task_type == 'R' ? "Recharge" :
         task_type == 'W' ? "Wait" : 
@@ -845,6 +984,14 @@ bool Planner::checkTaskParams(const human_aware_collaboration_planner::NewTaskGo
         return false;
       }
       break;
+    case 'A':
+    case 'a':
+      if(goal->task.inspect.waypoints.size() != 2)
+      {
+        ROS_INFO("[checkTaskParams] Invalid task: There has to be two waypoints");
+        return false;
+      }
+      break;
     case 'D':
     case 'd':
       human_itr = human_targets_.find(goal->task.deliver.human_target_id);
@@ -897,6 +1044,7 @@ void Planner::incomingTask(const human_aware_collaboration_planner::NewTaskGoalC
       ROS_INFO_STREAM("[incomingTask] " << id << "(" << (
               old_type == 'M' ? "Monitor" : 
               old_type == 'I' ? "Inspect" :
+              old_type == 'A' ? "InspectiPVArray" :
               old_type == 'D' ? "DeliverTool" : 
               old_type == 'R' ? "Recharge" : 
               old_type == 'W' ? "Wait" : 
@@ -953,6 +1101,7 @@ void Planner::incomingTask(const human_aware_collaboration_planner::NewTaskGoalC
       ROS_WARN_STREAM("[incomingTask] Duplicated ID. An unfinished task is going to be deleted: " << id << "(" << (
               old_type == 'M' ? "Monitor" : 
               old_type == 'I' ? "Inspect" : 
+              old_type == 'A' ? "InspectPVArray" : 
               old_type == 'D' ? "DeliverTool" : 
               old_type == 'R' ? "Recharge" : 
               old_type == 'W' ? "Wait" : 
@@ -976,6 +1125,11 @@ void Planner::incomingTask(const human_aware_collaboration_planner::NewTaskGoalC
     case 'I':
     case 'i':
       pending_tasks_[id] = new classes::Inspect(id, goal->task.inspect.waypoints);//Memory Leak
+      inspect_tasks_.push_back(id);
+      break;
+    case 'A':
+    case 'a':
+      pending_tasks_[id] = new classes::InspectPVArray(id, goal->task.inspect.waypoints);//Memory Leak
       inspect_tasks_.push_back(id);
       break;
     case 'D':
@@ -1156,6 +1310,8 @@ void Planner::performTaskAllocation(){
           agents_to_select = 2;
         else
           agents_to_select = 3;
+        if(pending_tasks_[task]->getType() == 'A')
+          agents_to_select = 1;
 
         number_of_idle_agents = idle_inspect_agents.size();
         if(number_of_idle_agents < agents_to_select)
@@ -1297,6 +1453,10 @@ void Planner::deletePendingTask(std::string task_id){
       case 'i':
         inspect_tasks_.erase(std::find(inspect_tasks_.begin(), inspect_tasks_.end(), task_itr->second->getID()));
         break;
+      case 'A':
+      case 'a':
+        inspect_tasks_.erase(std::find(inspect_tasks_.begin(), inspect_tasks_.end(), task_itr->second->getID()));
+        break;
       case 'D':
       case 'd':
         deliver_tasks_.erase(std::find(deliver_tasks_.begin(), deliver_tasks_.end(), task_itr->second->getID()));
@@ -1355,6 +1515,11 @@ bool Planner::updateTaskParams(const human_aware_collaboration_planner::NewTaskG
       case 'I':
       case 'i':
         aux = new classes::Inspect(id, goal->task.inspect.waypoints);//Memory Leak
+        task_itr->second->updateParams(aux);//Memory Leak
+        break;
+      case 'A':
+      case 'a':
+        aux = new classes::InspectPVArray(id, goal->task.inspect.waypoints);//Memory Leak
         task_itr->second->updateParams(aux);//Memory Leak
         break;
       case 'D':

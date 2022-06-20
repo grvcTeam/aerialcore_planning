@@ -33,9 +33,11 @@
 #include "mrs_actionlib_interface/State.h"
 
 #include "geometry_msgs/PoseStamped.h"
+#include "geometry_msgs/Point.h"
 #include "mrs_msgs/UavStatus.h"
 #include "mrs_actionlib_interface/commandAction.h"
 #include "sensor_msgs/BatteryState.h"
+#include "sensor_msgs/NavSatFix.h"
 
 #include "behaviortree_cpp_v3/behavior_tree.h"
 #include "behaviortree_cpp_v3/bt_factory.h"
@@ -147,6 +149,21 @@ class TakeImage : public BT::AsyncActionNode
   public:
 		TakeImage(const std::string& name, const BT::NodeConfiguration& config);
 		~TakeImage();
+    void init(AgentNode* agent);
+		static BT::PortsList providedPorts();
+    BT::NodeStatus tick() override;
+    virtual void halt() override;
+};
+
+//InspectPVArray
+class InspectPVArray : public BT::AsyncActionNode
+{
+  private:
+    AgentNode* agent_;
+
+  public:
+		InspectPVArray(const std::string& name, const BT::NodeConfiguration& config);
+		~InspectPVArray();
     void init(AgentNode* agent);
 		static BT::PortsList providedPorts();
     BT::NodeStatus tick() override;
@@ -298,6 +315,18 @@ class IsTaskInspect : public BT::ConditionNode
 		BT::NodeStatus tick() override;
 };
 
+//IsTaskInspectPVArray
+class IsTaskInspectPVArray : public BT::ConditionNode
+{
+  private:
+    AgentNode* agent_;
+
+	public:
+		IsTaskInspectPVArray(const std::string& name);
+    void init(AgentNode* agent);
+		BT::NodeStatus tick() override;
+};
+
 //IsTaskDeliverTool
 class IsTaskDeliverTool : public BT::ConditionNode
 {
@@ -407,6 +436,7 @@ class AgentNode
   friend class MonitorHumanTarget;
   friend class GoNearWP;
   friend class TakeImage;
+  friend class InspectPVArray;
   friend class GoNearStation;
   friend class PickTool;
   friend class DropTool;
@@ -420,6 +450,7 @@ class AgentNode
   friend class IsTaskRecharge;
   friend class IsTaskMonitor;
   friend class IsTaskInspect;
+  friend class IsTaskInspectPVArray;
   friend class IsTaskDeliverTool;
   friend class IsTaskRecharge;
   friend class IsAgentNearHumanTarget;
@@ -478,6 +509,7 @@ class AgentNode
 		std::string battery_topic_;
 
     std::string config_file_;
+    std::string config_file_evora_;
 
     std::map <std::string, std::map <std::string, classes::Position>> known_positions_;
     std::map <std::string, classes::HumanTarget> human_targets_;
@@ -485,6 +517,7 @@ class AgentNode
 
   protected:
     void readConfigFile(std::string config_file);
+    void readEvoraConfigFile(std::string config_file);
 
   public:
     AgentNode(human_aware_collaboration_planner::AgentBeacon beacon);

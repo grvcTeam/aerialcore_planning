@@ -30,6 +30,7 @@
   <depend>std_msgs</depend>
   <depend>yaml-cpp</depend>
   <depend>mrs_actionlib_interface</depend>
+  <depend>ist_use_collaboration_msgs</depend>
   <!--depend>roscpp</depend!-->
   <!--depend>mrs_lib</depend!-->
   <!--depend>mrs_msgs</depend!-->

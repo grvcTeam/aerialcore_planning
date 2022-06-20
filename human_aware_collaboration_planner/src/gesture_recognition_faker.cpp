@@ -70,6 +70,22 @@ int main(int argc, char **argv)
         if(goal.task.inspect.waypoints.size())
           error = 0;
         break;
+      case 'A':
+      case 'a':
+        i = 3;
+        while(i + 2 < argc)
+        {
+          human_aware_collaboration_planner::Waypoint waypoint;
+          waypoint.x = atof(argv[i]);
+          waypoint.y = atof(argv[i+1]);
+          waypoint.z = atof(argv[i+2]);
+
+          goal.task.inspect.waypoints.push_back(waypoint);
+          i += 3;
+        }
+        if(goal.task.inspect.waypoints.size())
+          error = 0;
+        break;
       case 'D':
       case 'd':
         if (argc == 5)

@@ -21,6 +21,7 @@ class Task;
 class Monitor;
 class Inspect;
 class DeliverTool;
+class InspectPVArray;
 class Recharge;
 class Agent;
 
@@ -30,6 +31,7 @@ class Position {
   friend class Monitor;
   friend class Inspect;
   friend class DeliverTool;
+	friend class InspectPVArray;
 	friend class Recharge;
   
   protected:
@@ -196,6 +198,29 @@ class Inspect : public Task {
 				std::vector<std::string> agent_list);
     Inspect(const Inspect& i);
     ~Inspect();
+		//Getters
+    std::string getID();
+    char getType();
+		std::vector<human_aware_collaboration_planner::Waypoint> getInspectWaypoints();
+		std::vector<std::string> getAgentList();
+    void print(std::ostream& os) const;
+		//Setters
+		void setWaypoints(std::vector<human_aware_collaboration_planner::Waypoint> waypoints);
+		void setAgentList(std::vector<std::string> agent_list);
+		void updateParams(classes::Task* task);
+};
+
+class InspectPVArray : public Task {
+  protected:
+		std::vector<human_aware_collaboration_planner::Waypoint> waypoints_;
+		std::vector<std::string> agent_list_;
+  public:
+    InspectPVArray();
+    InspectPVArray(std::string task_id, std::vector<human_aware_collaboration_planner::Waypoint> waypoints);
+    InspectPVArray(std::string task_id, std::vector<human_aware_collaboration_planner::Waypoint> waypoints, 
+				std::vector<std::string> agent_list);
+    InspectPVArray(const InspectPVArray& i);
+    ~InspectPVArray();
 		//Getters
     std::string getID();
     char getType();
