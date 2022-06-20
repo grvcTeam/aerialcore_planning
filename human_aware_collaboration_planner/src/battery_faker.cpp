@@ -54,10 +54,13 @@ class BatteryFaker{
       ros::param::param<std::string>("~pose_topic", pose_topic_, "/" + id_ + "/ual/pose");
       ros::param::param<std::string>("~state_topic", state_topic_, "/" + id_ + "/ual/state");
 
+      ROS_INFO_STREAM("UAV: " << id_ << "\tLow Level Interface: " << low_level_interface_);
+
       //load of known position and human targets known positions
       std::string path = ros::package::getPath("human_aware_collaboration_planner");
       ros::param::param<std::string>("~config_file", config_file, path + "/config/conf.yaml");
 
+      ROS_INFO("Reading config file...");
       readConfigFile(config_file);
 
       battery_pub_ = nh_.advertise<sensor_msgs::BatteryState>("/" + id_ + "/battery_fake", 1);
@@ -74,6 +77,7 @@ class BatteryFaker{
         state_sub_ = nh_.subscribe(state_topic_, 1, &BatteryFaker::stateCallbackMRS, this);
       }
 
+      ROS_INFO("READY");
       battery_.percentage = 0.9;
       loop_rate_.reset();
       while(ros::ok())
@@ -117,7 +121,7 @@ class BatteryFaker{
               flag = 0;
               for(auto& charging_station : known_positions_["charging_stations"])
               {
-                if(classes::distance(position_, charging_station.second) < 0.2)
+                if(classes::distance(position_, charging_station.second) < 0.5)
                   flag = 1;
               }
               if(flag)
@@ -161,6 +165,7 @@ class BatteryFaker{
           break;
       }
       battery_pub_.publish(battery_);
+      ROS_INFO_STREAM("Mode: " << mode_ << "\tUAV State: " << state_ << "\tPercentage: " << battery_.percentage);
     }
     void readConfigFile(std::string config_file){
       YAML::Node yaml_config = YAML::LoadFile(config_file);

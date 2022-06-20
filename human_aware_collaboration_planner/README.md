@@ -171,12 +171,12 @@ make groot
 
 To monitor a BT we just has to specify:
 * Server IP: localhost
-* Publisher Port: 1666 + ID * 2
-* Server Port: 1667 + ID * 2
+* Publisher Port: 1666 + (ID - 1) * 2
+* Server Port: 1667 + (ID - 1) * 2
 
 E.g. for the UAV_1:
 * Server IP: localhost
-* Publisher Port: 1668
-* Server Port: 1669
+* Publisher Port: 1666
+* Server Port: 1667
 
 **Note**: fbl log files are stored in `~/.ros` and are named as `bt_trace_uav_` + ID + `.fbl`

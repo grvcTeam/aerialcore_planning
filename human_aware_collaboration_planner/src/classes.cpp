@@ -39,6 +39,22 @@ float classes::distance(human_aware_collaboration_planner::Waypoint& p1, human_a
   return sqrt(pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2) + pow(p1.z - p2.z, 2));
 }
 
+float classes::distance2D(Position& p1, Position& p2){
+  return sqrt(pow(p1.x_ - p2.x_, 2) + pow(p1.y_ - p2.y_, 2));
+}
+
+float classes::distance2D(Position& p1, human_aware_collaboration_planner::Waypoint& p2){
+  return sqrt(pow(p1.x_ - p2.x, 2) + pow(p1.y_ - p2.y, 2));
+}
+
+float classes::distance2D(human_aware_collaboration_planner::Waypoint& p1, Position& p2){
+  return sqrt(pow(p1.x - p2.x_, 2) + pow(p1.y - p2.y_, 2));
+}
+
+float classes::distance2D(human_aware_collaboration_planner::Waypoint& p1, human_aware_collaboration_planner::Waypoint& p2){
+  return sqrt(pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2));
+}
+
 Position classes::close_pose(Position& orig, Position& dest, float dist){
   float mod = sqrt(pow(orig.x_ - dest.x_, 2) + pow(orig.y_ - dest.y_, 2) + pow(orig.z_ - dest.z_, 2));
   float x = dest.x_ + dist*(orig.x_ - dest.x_)/mod;

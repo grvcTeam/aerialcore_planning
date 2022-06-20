@@ -9,8 +9,8 @@ static const char* behaviour_tree_xml = R"(
  )";
 
 //Behavior Tree Nodes declaration ***********************************************************************************
-//******************************* Actions
-//GoNearChargingStation
+//******************************* Actions {
+//GoNearChargingStation {
 GoNearChargingStation::GoNearChargingStation(const std::string& name, const BT::NodeConfiguration& config) :
   BT::AsyncActionNode(name, config) {}
 GoNearChargingStation::~GoNearChargingStation(){halt();}
@@ -40,7 +40,7 @@ BT::NodeStatus GoNearChargingStation::tick(){
     }
   }*/
 
-  //While programig a shared resource with the charging stations, this will be where the Agent goes to recharge
+  //TODO: While programig a shared resource with the charging stations, this will be where the Agent goes to recharge
   nearest_station = "charging_station_" + agent_->id_;
 
   //Emergency Recharging
@@ -102,10 +102,10 @@ BT::NodeStatus GoNearChargingStation::tick(){
         ROS_INFO("[GoNearChargingStation] Moving to recharging station (%.1f,%.1f)[%s]",
             assigned_charging_station.getX(), assigned_charging_station.getY(), agent_->pose_frame_id_.c_str());
         if(agent_->go_to_waypoint(assigned_charging_station.getX(), assigned_charging_station.getY(),
-              assigned_charging_station.getZ() + 0.4, false))
+              assigned_charging_station.getZ() + 1, false))
         {
           while(!agent_->checkIfGoToServiceSucceeded(assigned_charging_station.getX(),
-                assigned_charging_station.getY(), assigned_charging_station.getZ() + 0.4))
+                assigned_charging_station.getY(), assigned_charging_station.getZ() + 1))
           {
             if(isHaltRequested())
               return BT::NodeStatus::IDLE;
@@ -139,8 +139,9 @@ void GoNearChargingStation::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//Recharge
+//Recharge {
 Recharge::Recharge(const std::string& name, const BT::NodeConfiguration& config) : BT::AsyncActionNode(name, config) {}
 Recharge::~Recharge(){halt();}
 void Recharge::init(AgentNode* agent){agent_ = agent;}
@@ -296,8 +297,9 @@ void Recharge::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//BackToStation
+//BackToStation {
 BackToStation::BackToStation(const std::string& name, const BT::NodeConfiguration& config) : BT::AsyncActionNode(name,
     config) {}
 BackToStation::~BackToStation(){halt();}
@@ -323,7 +325,7 @@ BT::NodeStatus BackToStation::tick(){
     //If Agent is already in station. Land if needed and back_to_station
     for(auto& station : agent_->known_positions_["stations"])
     {
-      if(classes::distance(agent_->position_, station.second) < 0.2)
+      if(classes::distance2D(agent_->position_, station.second) < 0.5)
         flag = 1;
     }
     if(flag)
@@ -415,7 +417,7 @@ BT::NodeStatus BackToStation::tick(){
           //UAL goto service call
           if(!agent_->go_to_waypoint(agent_->known_positions_["stations"][nearest_station].getX(),
                 agent_->known_positions_["stations"][nearest_station].getY(),
-                agent_->known_positions_["stations"][nearest_station].getZ() + 0.4, false))
+                agent_->known_positions_["stations"][nearest_station].getZ() + 1, false))
           {
             if(isHaltRequested())
               return BT::NodeStatus::IDLE;
@@ -427,7 +429,7 @@ BT::NodeStatus BackToStation::tick(){
           {
             while(!agent_->checkIfGoToServiceSucceeded(agent_->known_positions_["stations"][nearest_station].getX(),
                   agent_->known_positions_["stations"][nearest_station].getY(),
-                  agent_->known_positions_["stations"][nearest_station].getZ() + 0.4))
+                  agent_->known_positions_["stations"][nearest_station].getZ() + 1))
             {
               if(isHaltRequested())
                 return BT::NodeStatus::IDLE;
@@ -473,8 +475,9 @@ void BackToStation::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//GoNearHumanTarget
+//GoNearHumanTarget {
 GoNearHumanTarget::GoNearHumanTarget(const std::string& name, const BT::NodeConfiguration& config) :
   BT::AsyncActionNode(name, config) {}
 GoNearHumanTarget::~GoNearHumanTarget(){halt();}
@@ -579,8 +582,9 @@ void GoNearHumanTarget::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//MonitorHumanTarget
+//MonitorHumanTarget {
 MonitorHumanTarget::MonitorHumanTarget(const std::string& name, const BT::NodeConfiguration& config) :
   BT::AsyncActionNode(name, config) {}
 MonitorHumanTarget::~MonitorHumanTarget(){halt();}
@@ -642,8 +646,9 @@ void MonitorHumanTarget::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//GoNearWP
+//GoNearWP {
 GoNearWP::GoNearWP(const std::string& name, const BT::NodeConfiguration& config) : BT::AsyncActionNode(name, config) {}
 GoNearWP::~GoNearWP(){halt();}
 void GoNearWP::init(AgentNode* agent){agent_ = agent;}
@@ -752,8 +757,9 @@ void GoNearWP::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//TakeImage
+//TakeImage {
 TakeImage::TakeImage(const std::string& name, const BT::NodeConfiguration& config) : BT::AsyncActionNode(name, config) {}
 TakeImage::~TakeImage(){halt();}
 void TakeImage::init(AgentNode* agent){agent_ = agent;}
@@ -815,8 +821,9 @@ void TakeImage::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//GoNearStation
+//GoNearStation {
 GoNearStation::GoNearStation(const std::string& name, const BT::NodeConfiguration& config) : BT::AsyncActionNode(name,
     config) {}
 GoNearStation::~GoNearStation(){halt();}
@@ -921,8 +928,9 @@ void GoNearStation::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//PickTool
+//PickTool {
 PickTool::PickTool(const std::string& name, const BT::NodeConfiguration& config) : BT::AsyncActionNode(name, config) {}
 PickTool::~PickTool(){halt();}
 void PickTool::init(AgentNode* agent){agent_ = agent;}
@@ -971,8 +979,9 @@ void PickTool::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//DropTool
+//DropTool {
 DropTool::DropTool(const std::string& name, const BT::NodeConfiguration& config) : BT::AsyncActionNode(name, config) {}
 DropTool::~DropTool(){halt();}
 void DropTool::init(AgentNode* agent){agent_ = agent;}
@@ -1001,8 +1010,9 @@ void DropTool::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//DeliverTool
+//DeliverTool {
 DeliverTool::DeliverTool(const std::string& name, const BT::NodeConfiguration& config) : BT::AsyncActionNode(name,
     config) {}
 DeliverTool::~DeliverTool(){halt();}
@@ -1068,9 +1078,11 @@ void DeliverTool::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
+// }
 
-//******************************* Conditions
-//MissionOver
+//******************************* Conditions {
+//MissionOver {
 MissionOver::MissionOver(const std::string& name) : BT::ConditionNode(name, {}) {}
 void MissionOver::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus MissionOver::tick(){
@@ -1079,8 +1091,9 @@ BT::NodeStatus MissionOver::tick(){
   else
     return BT::NodeStatus::FAILURE;
 }
+// }
 
-//Idle
+//Idle {
 Idle::Idle(const std::string& name) : BT::ConditionNode(name, {}) {}
 void Idle::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus Idle::tick(){
@@ -1101,8 +1114,9 @@ BT::NodeStatus Idle::tick(){
       break;
   }
 }
+// }
 
-//IsBatteryEnough
+//IsBatteryEnough {
 IsBatteryEnough::IsBatteryEnough(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsBatteryEnough::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsBatteryEnough::tick(){
@@ -1111,8 +1125,9 @@ BT::NodeStatus IsBatteryEnough::tick(){
   else
     return BT::NodeStatus::FAILURE;
 }
+// }
 
-//IsBatteryFull
+//IsBatteryFull {
 IsBatteryFull::IsBatteryFull(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsBatteryFull::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsBatteryFull::tick(){
@@ -1121,8 +1136,9 @@ BT::NodeStatus IsBatteryFull::tick(){
   else
     return BT::NodeStatus::FAILURE;
 }
+// }
 
-//IsTaskRecharge
+//IsTaskRecharge {
 IsTaskRecharge::IsTaskRecharge(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsTaskRecharge::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsTaskRecharge::tick(){
@@ -1145,8 +1161,9 @@ BT::NodeStatus IsTaskRecharge::tick(){
       break;
   }
 }
+// }
 
-//IsTaskMonitor
+//IsTaskMonitor {
 IsTaskMonitor::IsTaskMonitor(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsTaskMonitor::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsTaskMonitor::tick(){
@@ -1169,8 +1186,9 @@ BT::NodeStatus IsTaskMonitor::tick(){
       break;
   }
 }
+// }
 
-//IsTaskInspect
+//IsTaskInspect {
 IsTaskInspect::IsTaskInspect(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsTaskInspect::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsTaskInspect::tick(){
@@ -1193,8 +1211,9 @@ BT::NodeStatus IsTaskInspect::tick(){
       break;
   }
 }
+// }
 
-//IsTaskDeliverTool
+//IsTaskDeliverTool {
 IsTaskDeliverTool::IsTaskDeliverTool(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsTaskDeliverTool::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsTaskDeliverTool::tick(){
@@ -1217,8 +1236,9 @@ BT::NodeStatus IsTaskDeliverTool::tick(){
       break;
   }
 }
+// }
 
-//IsAgentNearChargingStation
+//IsAgentNearChargingStation {
 IsAgentNearChargingStation::IsAgentNearChargingStation(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsAgentNearChargingStation::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsAgentNearChargingStation::tick(){
@@ -1229,7 +1249,7 @@ BT::NodeStatus IsAgentNearChargingStation::tick(){
   if(agent_->task_queue_.empty())
   {
     for(auto& charging_station : agent_->known_positions_["charging_stations"])
-      if(classes::distance(agent_->position_, charging_station.second) < 0.5)
+      if(classes::distance2D(agent_->position_, charging_station.second) < 0.5)
         return BT::NodeStatus::SUCCESS;
     return BT::NodeStatus::FAILURE;
   }
@@ -1247,7 +1267,7 @@ BT::NodeStatus IsAgentNearChargingStation::tick(){
   {
     for(auto& charging_station : agent_->known_positions_["charging_stations"])
     {
-      if(classes::distance(agent_->position_, charging_station.second) < 0.5)
+      if(classes::distance2D(agent_->position_, charging_station.second) < 0.5)
       {
         //Assign and reserve this charging station for this Agent (to be improved)
         task->setChargingStation(&(charging_station.second));
@@ -1258,15 +1278,16 @@ BT::NodeStatus IsAgentNearChargingStation::tick(){
   }
   else
   {
-    if(classes::distance(agent_->position_, assigned_charging_station) < 0.5)
+    if(classes::distance2D(agent_->position_, assigned_charging_station) < 0.5)
       return BT::NodeStatus::SUCCESS;
     return BT::NodeStatus::FAILURE;
   }
 
   return BT::NodeStatus::FAILURE;
 }
+// }
 
-//IsAgentNearHumanTarget
+//IsAgentNearHumanTarget {
 IsAgentNearHumanTarget::IsAgentNearHumanTarget(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsAgentNearHumanTarget::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsAgentNearHumanTarget::tick(){
@@ -1299,8 +1320,9 @@ BT::NodeStatus IsAgentNearHumanTarget::tick(){
   }
   return BT::NodeStatus::FAILURE;
 }
+// }
 
-//IsAgentNearWP
+//IsAgentNearWP {
 IsAgentNearWP::IsAgentNearWP(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsAgentNearWP::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsAgentNearWP::tick(){
@@ -1325,8 +1347,9 @@ BT::NodeStatus IsAgentNearWP::tick(){
   }
   return BT::NodeStatus::FAILURE;
 }
+// }
 
-//NeedToDropTheTool
+//NeedToDropTheTool {
 NeedToDropTheTool::NeedToDropTheTool(const std::string& name) : BT::ConditionNode(name, {}) {}
 void NeedToDropTheTool::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus NeedToDropTheTool::tick(){
@@ -1348,8 +1371,9 @@ BT::NodeStatus NeedToDropTheTool::tick(){
   else
     return BT::NodeStatus::SUCCESS;
 }
+// }
 
-//HasAgentTheTool
+//HasAgentTheTool {
 HasAgentTheTool::HasAgentTheTool(const std::string& name) : BT::ConditionNode(name, {}) {}
 void HasAgentTheTool::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus HasAgentTheTool::tick(){
@@ -1379,8 +1403,9 @@ BT::NodeStatus HasAgentTheTool::tick(){
     return BT::NodeStatus::FAILURE;
   }
 }
+// }
 
-//IsAgentNearStation
+//IsAgentNearStation {
 IsAgentNearStation::IsAgentNearStation(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsAgentNearStation::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsAgentNearStation::tick(){
@@ -1412,9 +1437,11 @@ BT::NodeStatus IsAgentNearStation::tick(){
   else
     return BT::NodeStatus::FAILURE;
 }
+// }
+// }
 
-//******************************* Decorators
-//ForceRunnigNode
+//******************************* Decorators {
+//ForceRunnigNode {
 ForceRunningNode::ForceRunningNode(const std::string& name) : BT::DecoratorNode(name, {} ){
   setRegistrationID("ForceRunning");
 }
@@ -1435,6 +1462,8 @@ BT::NodeStatus ForceRunningNode::tick(){
   }
   return status();
 }
+// }
+// }
 
 //Behavior Tree Nodes registration function *************************************************************************
 inline void RegisterNodes(BT::BehaviorTreeFactory& factory){

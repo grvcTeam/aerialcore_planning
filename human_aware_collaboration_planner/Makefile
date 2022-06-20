@@ -42,13 +42,13 @@ battery:
 	@rostopic echo /$(agent_prefix)$(agent_id)/battery_fake
 
 battery_off:
-	@rostopic pub /$(agent_prefx)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl "2" "0.2" "0.01" "0.01"
+	@rostopic pub /$(agent_prefx)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl 2 0.2 0.01 0.01
 
 battery_ok:
-	@rostopic pub /$(agent_prefx)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl "2" "1" "0.01" "0.01"
+	@rostopic pub /$(agent_prefx)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl 2 1 0.01 0.01
 
 battery_static:
-	@rostopic pub /$(agent_prefix)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl "0" "1" "0.01" "0.01"
+	@rostopic pub /$(agent_prefix)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl 0 1 0.01 0.01
 
 mission_over:
 	@rostopic pub /mission_over human_aware_collaboration_planner/MissionOver "value: true"
@@ -148,5 +148,8 @@ mrs_takeoff:
 mrs_land:
 	@rostopic pub /$(agent_prefix)$(agent_id)/mrs_actionlib_interface/goal mrs_actionlib_interface/commandActionGoal "{header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: ''}, goal_id: {stamp: {secs: 0, nsecs: 0}, id: ''}, goal: {command: 1, goto_x: 0.0, goto_y: 0.0, goto_z: 0.0, goto_hdg: 0.0}}"
 
-mrs_goto:
+mrs_goto_pathfinder:
 	@rostopic pub /$(agent_prefix)$(agent_id)/mrs_actionlib_interface/goal mrs_actionlib_interface/commandActionGoal "{header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: ''}, goal_id: {stamp: {secs: 0, nsecs: 0}, id: ''}, goal: {command: 2, goto_x: $x, goto_y: $y, goto_z: $z, goto_hdg: $h}}"
+
+mrs_goto_direct:
+	@rostopic pub /$(agent_prefix)$(agent_id)/mrs_actionlib_interface/goal mrs_actionlib_interface/commandActionGoal "{header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: ''}, goal_id: {stamp: {secs: 0, nsecs: 0}, id: ''}, goal: {command: 3, goto_x: $x, goto_y: $y, goto_z: $z, goto_hdg: $h}}"

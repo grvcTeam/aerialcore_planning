@@ -14,20 +14,17 @@
   <group ns="$(arg ns_prefix)$(arg id)/agent_behaviour_manager">
 
     <param name="low_level_interface" value="$(arg low_level_interface)"/>
+    <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/mavros/battery" unless="$(eval battery_faker)"/>
+    <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/battery_fake" if="$(eval battery_faker)"/>
 
     <group if="$(eval low_level_interface == 'UAL')">
       <param name="pose_topic" value="/$(arg ns_prefix)$(arg id)/ual/pose"/>
       <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/ual/state"/>
-      <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/mavros/battery" unless="$(eval battery_faker)"/>
-      <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/battery_fake" if="$(eval battery_faker)"/>
     </group>
 
     <group if="$(eval low_level_interface == 'MRS')">
       <param name="pose_topic" value="/$(arg ns_prefix)$(arg id)/mrs_uav_status/uav_status"/>
-      <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/mrs_actionlib_interface/feedback"/>
       <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/mrs_actionlib_interface/state"/>
-      <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/mavros/battery" unless="$(eval battery_faker)"/>
-      <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/battery_fake" if="$(eval battery_faker)"/>
     </group>
 
   </group>
