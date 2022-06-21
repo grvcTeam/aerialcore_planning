@@ -842,6 +842,19 @@ void Agent::taskResultCB(const human_aware_collaboration_planner::TaskResultGoal
               "Task") << ") in " << id_ << " FAILED but seems to be planned (reallocation).");
   }
 
+  //Request Closer Inspection to UGVs if needed
+  actionlib::SimpleActionClient<ist_use_collaboration_msgs::DoCloserInspectionAction> 
+    do_closer_inspection_ac_("/DoCloserInspection", true);
+  ist_use_collaboration_msgs::DoCloserInspectionGoal msg;
+  if(!goal->do_closer_inspection.xyz_coordinates.empty() || !goal->do_closer_inspection.gps_coordinates.empty())
+  {
+    do_closer_inspection_ac_.waitForServer(ros::Duration(1.0));
+    msg.ids = goal->do_closer_inspection.ids;
+    msg.xyz_coordinates = goal->do_closer_inspection.xyz_coordinates;
+    msg.gps_coordinates = goal->do_closer_inspection.gps_coordinates;
+    do_closer_inspection_ac_.sendGoal(msg);
+  }
+
   task_result_result_.ack = true;
   task_result_as_.setSucceeded(task_result_result_);
   return;
