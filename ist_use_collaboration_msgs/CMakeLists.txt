@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(catkin REQUIRED COMPONENTS
   std_msgs
-  geometry_msgs
+  geographic_msgs
   sensor_msgs
   message_generation
   roscpp
@@ -31,7 +31,7 @@ add_action_files(
 generate_messages(
   DEPENDENCIES
   std_msgs
-  geometry_msgs
+  geographic_msgs
   sensor_msgs
   actionlib_msgs
 )
@@ -39,7 +39,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES gauss_msgs
-  CATKIN_DEPENDS message_runtime std_msgs geometry_msgs sensor_msgs
+  CATKIN_DEPENDS message_runtime std_msgs geographic_msgs sensor_msgs
 #  DEPENDS system_lib
 )
 
