@@ -1,6 +1,6 @@
 string[] ids
 geometry_msgs/Point[] xyz_coordinates
-sensor_msgs/NavSatFix[] gps_coordinates
+geographic_msgs/GeoPoint[] gps_coordinates
 ---
 bool success
 string message
