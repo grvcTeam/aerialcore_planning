@@ -1000,9 +1000,9 @@ BT::NodeStatus InspectPVArray::tick(){
             geometry_msgs::Point target_xyz;
             target_xyz.x = -36.6343;
             target_xyz.y =  62.293;
-            sensor_msgs::NavSatFix target_gps;
-            target_gps.latitude  = -7.96213167462045;
-            target_gps.longitude = 38.54156780106911;
+            geographic_msgs::GeoPose target_gps;
+            target_gps.position.latitude  = -7.96213167462045;
+            target_gps.position.longitude = 38.54156780106911;
             goal.do_closer_inspection.xyz_coordinates.push_back(target_xyz);
             goal.do_closer_inspection.gps_coordinates.push_back(target_gps);
             task_result_ac_.sendGoal(goal);
@@ -1048,9 +1048,9 @@ BT::NodeStatus InspectPVArray::tick(){
           geometry_msgs::Point target_xyz;
           target_xyz.x = -36.6343;
           target_xyz.y =  62.293;
-          sensor_msgs::NavSatFix target_gps;
-          target_gps.latitude  = -7.96213167462045;
-          target_gps.longitude = 38.54156780106911;
+          geographic_msgs::GeoPose target_gps;
+          target_gps.position.latitude  = -7.96213167462045;
+          target_gps.position.longitude = 38.54156780106911;
           goal.do_closer_inspection.xyz_coordinates.push_back(target_xyz);
           goal.do_closer_inspection.gps_coordinates.push_back(target_gps);
           task_result_ac_.sendGoal(goal);
@@ -1214,7 +1214,6 @@ BT::NodeStatus GoNearStation::tick(){
       default:
         break;
     }
-    //MAYBE PUT SOME SLEEP TIME HERE ********************************************************************************
   }
   return BT::NodeStatus::IDLE;
 }
@@ -1834,8 +1833,9 @@ inline void RegisterNodes(BT::BehaviorTreeFactory& factory){
 
 //AgentNode definition **********************************************************************************************
 AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : battery_enough_(true), loop_rate_(1),
-  ntl_as_(nh_, "task_list", boost::bind(&AgentNode::newTaskList, this, _1), false), tool_flag_("none"), timeout_(false),
-  battery_ac_("/" + beacon.id + "/battery_enough", true), beacon_(beacon), mission_over_(false), state_(0), battery_(0),
+  tool_flag_("none"), timeout_(false), beacon_(beacon), mission_over_(false), state_(0), battery_(0),
+  ntl_as_(nh_, "task_list", boost::bind(&AgentNode::newTaskList, this, _1), false),
+  battery_ac_("/" + beacon.id + "/battery_enough", true), 
   mrs_ac_("/" + beacon.id + "/mrs_actionlib_interface", true)
 {
   //Start the server to receive tasks list through actions
@@ -1848,6 +1848,12 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   ros::param::param<std::string>("~pose_topic", pose_topic_, "/" + beacon_.id + "/ual/pose");
   ros::param::param<std::string>("~state_topic", state_topic_, "/" + beacon_.id + "/ual/state");
   ros::param::param<std::string>("~battery_topic", battery_topic_, "/" + beacon_.id + "/battery_fake");
+
+  std::vector<double> origin_geo_aux(3, 0.0);
+  ros::param::get("~origin_geo", origin_geo_aux);
+  origin_geo_.latitude  = origin_geo_aux[0];
+  origin_geo_.longitude = origin_geo_aux[1];
+  origin_geo_.altitude  = origin_geo_aux[2];
 
   //Load of config file
   std::string path = ros::package::getPath("human_aware_collaboration_planner");
@@ -1872,6 +1878,9 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
     position_sub_ = nh_.subscribe(pose_topic_, 1, &AgentNode::positionCallbackMRS, this);
     state_sub_ = nh_.subscribe(state_topic_, 1, &AgentNode::stateCallbackMRS, this);
   }
+  //UGVs position callbacks
+  atrvjr_geopose_sub_ = nh_.subscribe("/atrvjr/geopose", 1, &AgentNode::atrvjrPositionCallback, this);
+  jackal_geopose_sub_ = nh_.subscribe("/jackal0/geopose", 1, &AgentNode::jackalPositionCallback, this);
 
   //Behavior Tree declaration
   BT::NodeStatus status = BT::NodeStatus::RUNNING;
@@ -2257,6 +2266,16 @@ bool AgentNode::checkBeaconTimeout(ros::Time now){
     beacon_.timeout = true;
   }
   return timeout_;
+}
+void AgentNode::atrvjrPositionCallback(const geographic_msgs::GeoPoseStamped& geo_pose){ 
+  geometry_msgs::Point32 pose = geographic_to_cartesian(geo_pose.pose.position, origin_geo_);
+  atrvjr_pose_ = classes::Position(pose.x, pose.y, pose.z);
+  return;
+}
+void AgentNode::jackalPositionCallback(const geographic_msgs::GeoPoseStamped& geo_pose){ 
+  geometry_msgs::Point32 pose = geographic_to_cartesian(geo_pose.pose.position, origin_geo_);
+  jackal_pose_ = classes::Position(pose.x, pose.y, pose.z);
+  return;
 }
 // UAL/MRS Service calls
 bool AgentNode::land(bool blocking){

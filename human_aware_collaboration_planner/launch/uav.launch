@@ -2,6 +2,7 @@
     <!-- Mode: sitl, serial, custom -->
     <!-- Debuggers: gdb, valgrind, none -->
     <!-- Low Level Interface: UAL, MRS -->
+    <!-- Worlds: none, empty, power_tower, 2towers, burguillos, mrs, pv_farm, mrs_pv_farm -->
     <arg name="mode" default="sitl"/>
     <arg name="agent_debugger" default="none"/>
 
@@ -36,6 +37,8 @@
     <arg name="max_orientation_error" default="0.01"/>
 
     <arg name="battery_faker" default="false"/>
+
+    <arg name="world" default="power_tower"/>
 
 
     <!-- Launch UAL -->
@@ -106,6 +109,7 @@
       <arg name="pose_frame_id" value="$(arg pose_frame_id)"/>
       <arg name="config_file" value="$(arg config_file)"/>
       <arg name="battery_faker" value="$(arg battery_faker)"/>
+      <arg name="world" value="$(arg world)"/>
     </include>
 
     <!-- Launch fakers -->

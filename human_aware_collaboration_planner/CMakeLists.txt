@@ -75,7 +75,7 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
   #LIBRARIES ${PROJECT_NAME} #MrsActionlibInterface
-  CATKIN_DEPENDS behaviortree_cpp_v3 message_runtime mrs_actionlib_interface ist_use_collaboration_msgs
+  CATKIN_DEPENDS behaviortree_cpp_v3 message_runtime mrs_actionlib_interface ist_use_collaboration_msgs uav_abstraction_layer
   #CATKIN_DEPENDS behaviortree_cpp_v3 message_runtime mrs_actionlib_interface roscpp mrs_lib mrs_msgs
 )
 

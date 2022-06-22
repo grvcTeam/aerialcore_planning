@@ -34,6 +34,9 @@
 
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Point.h"
+#include "geographic_msgs/GeoPoseStamped.h"
+#include "geographic_msgs/GeoPose.h"
+#include "geographic_msgs/GeoPoint.h"
 #include "mrs_msgs/UavStatus.h"
 #include "mrs_actionlib_interface/commandAction.h"
 #include "sensor_msgs/BatteryState.h"
@@ -44,6 +47,8 @@
 #include "behaviortree_cpp_v3/action_node.h"
 #include "behaviortree_cpp_v3/condition_node.h"
 #include "behaviortree_cpp_v3/decorator_node.h"
+
+#include <uav_abstraction_layer/geographic_to_cartesian.h>
 
 //Forward declaration
 class AgentNode;
@@ -470,6 +475,8 @@ class AgentNode
 		std::string id_;
 		std::string ns_prefix_;
 
+		geographic_msgs::GeoPoint origin_geo_;
+
     //Action Server to receive TaskList
     actionlib::SimpleActionServer<human_aware_collaboration_planner::NewTaskListAction> ntl_as_;
     human_aware_collaboration_planner::NewTaskListFeedback ntl_feedback_;
@@ -481,18 +488,22 @@ class AgentNode
     //Action Client to Battery Enough
     actionlib::SimpleActionClient<human_aware_collaboration_planner::BatteryEnoughAction> battery_ac_;
 
-    // Subscribers: ual (position), mavros(battery), ual(state)
+    // Subscribers: ual (position), mavros(battery), ual(state), UGV geo position
     ros::Subscriber position_sub_; 
     ros::Subscriber battery_sub_;
 		ros::Subscriber state_sub_;
 		ros::Subscriber mission_over_sub_;
 		ros::Subscriber planner_beacon_sub_;
+		ros::Subscriber atrvjr_geopose_sub_;
+		ros::Subscriber jackal_geopose_sub_;
     classes::Position position_;
     float battery_; //percentage
 		int state_;
 		bool mission_over_;
 		ros::Time last_beacon_;
 		bool timeout_;
+    classes::Position atrvjr_pose_;
+    classes::Position jackal_pose_;
 
     // Publishers
     ros::Publisher beacon_pub_;
@@ -540,6 +551,8 @@ class AgentNode
 		void missionOverCallback(const human_aware_collaboration_planner::MissionOver& value);
 		void beaconCallback(const human_aware_collaboration_planner::PlannerBeacon& beacon);
 		bool checkBeaconTimeout(ros::Time now);
+		void atrvjrPositionCallback(const geographic_msgs::GeoPoseStamped& geo_pose);
+		void jackalPositionCallback(const geographic_msgs::GeoPoseStamped& geo_pose);
 		// UAL/MRS Service calls
 		bool land(bool blocking);
 		bool take_off(float height, bool blocking);

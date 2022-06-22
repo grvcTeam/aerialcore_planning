@@ -1,6 +1,6 @@
 <launch>
     <!-- Mode: sitl, serial, custom -->
-    <!-- Worlds: none, empty, power_tower, 2towers, burguillos, mrs, pv_farm -->
+    <!-- Worlds: none, empty, power_tower, 2towers, burguillos, mrs, pv_farm, mrs_pv_farm -->
     <!-- Debuggers: gdb, valgrind, none -->
     <!-- Low Level Interface: UAL, MRS -->
     <arg name="number_UAV" default="1"/>
@@ -78,6 +78,8 @@
       <arg name="config_file" value="$(arg config_file)"/>
 
       <arg name="battery_faker" value="$(arg battery_faker)"/>
+
+      <arg name="world" value="$(arg world)"/>
     </include>
 
     <!-- Launch UAV 2 nodes -->
@@ -113,6 +115,8 @@
       <arg name="config_file" value="$(arg config_file)"/>
 
       <arg name="battery_faker" value="$(arg battery_faker)"/>
+
+      <arg name="world" value="$(arg world)"/>
     </include>
 
     <!-- Launch UAV 3 nodes -->
@@ -148,6 +152,8 @@
       <arg name="config_file" value="$(arg config_file)"/>
 
       <arg name="battery_faker" value="$(arg battery_faker)"/>
+
+      <arg name="world" value="$(arg world)"/>
     </include>
 
     <!-- Launch UAV 4 nodes -->
@@ -183,6 +189,8 @@
       <arg name="config_file" value="$(arg config_file)"/>
 
       <arg name="battery_faker" value="$(arg battery_faker)"/>
+
+      <arg name="world" value="$(arg world)"/>
     </include>
 
     <!-- Launch UAV 5 nodes -->
@@ -218,6 +226,8 @@
       <arg name="config_file" value="$(arg config_file)"/>
 
       <arg name="battery_faker" value="$(arg battery_faker)"/>
+
+      <arg name="world" value="$(arg world)"/>
     </include>
 
 </launch>

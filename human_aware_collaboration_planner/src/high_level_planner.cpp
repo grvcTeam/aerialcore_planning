@@ -844,7 +844,7 @@ void Agent::taskResultCB(const human_aware_collaboration_planner::TaskResultGoal
 
   //Request Closer Inspection to UGVs if needed
   actionlib::SimpleActionClient<ist_use_collaboration_msgs::DoCloserInspectionAction> 
-    do_closer_inspection_ac_("/DoCloserInspection", true);
+    do_closer_inspection_ac_("/atrvjr/cooperation_use/do_closer_inspection", true);
   ist_use_collaboration_msgs::DoCloserInspectionGoal msg;
   if(!goal->do_closer_inspection.xyz_coordinates.empty() || !goal->do_closer_inspection.gps_coordinates.empty())
   {

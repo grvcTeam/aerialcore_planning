@@ -2,6 +2,7 @@
 
   <!-- Launch Agent Node -->
   <!-- Low Level Interface: UAL, MRS -->
+  <!-- Worlds: none, empty, power_tower, 2towers, burguillos, mrs, pv_farm, mrs_pv_farm -->
   <arg name="agent_debugger" default="none"/>
   <arg name="id" default="0"/>
   <arg name="ns_prefix" default="uav"/>
@@ -10,6 +11,13 @@
   <arg name="pose_frame_id" default="map"/>
   <arg name="config_file" default="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
   <arg name="battery_faker" default="true"/>
+
+  <arg name="world" default="power_tower"/>
+  <arg name="origin_geo" value="[0, 0, 0]"/>
+  <arg name="origin_geo" value="[38.138728, -3.173825, 0]" if="$(eval world=='power_tower')"/>
+  <arg name="origin_geo" value="[38.138728, -3.173825, 0]" if="$(eval world=='2towers')"/>
+  <arg name="origin_geo" value="[37.564003804467, -6.003676484441573, 65.36515808105469]" if="$(eval world=='burguillos')"/>
+  <arg name="origin_geo" value="[38.54177309396464, -7.962942076064321, 227.61875915527344]" if="$(eval world=='pv_farm')"/>
 
   <group ns="$(arg ns_prefix)$(arg id)/agent_behaviour_manager">
 
@@ -37,6 +45,7 @@
     <param name="type" value="$(arg type)"/>
     <param name="pose_frame_id" value="$(arg pose_frame_id)"/>
     <param name="config_file" value="$(arg config_file)"/>
+    <rosparam param="origin_geo" subst_value="True">$(arg origin_geo)</rosparam>
   </node>
 
   <node pkg="human_aware_collaboration_planner" type="agent_behaviour_manager" name="agent_behaviour_manager" 
