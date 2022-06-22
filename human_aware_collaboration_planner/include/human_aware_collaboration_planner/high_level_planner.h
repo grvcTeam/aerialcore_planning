@@ -31,7 +31,6 @@
 #include "sensor_msgs/BatteryState.h"
 
 #include "ist_use_collaboration_msgs/DoCloserInspectionAction.h"
-#include "ist_use_collaboration_msgs/RequestMobileChargingStationAction.h"
 
 
 //Forward declarations

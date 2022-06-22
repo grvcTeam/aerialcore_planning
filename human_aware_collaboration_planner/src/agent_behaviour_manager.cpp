@@ -68,6 +68,25 @@ BT::NodeStatus GoNearChargingStation::tick(){
   }
   /*************************************************************************************************************/
 
+  /************************** IST Collaboration: Mobile Charging Station ***************************************/
+  actionlib::SimpleActionClient<ist_use_collaboration_msgs::RequestMobileChargingStationAction> 
+    request_charging_ac_("/jackal0/cooperation_use/request_mobile_charging_station", true);
+  ist_use_collaboration_msgs::RequestMobileChargingStationGoal goal;
+  request_charging_ac_.waitForServer(ros::Duration(1.0));
+  goal.requester_id = agent_->id_;
+  request_charging_ac_.sendGoal(goal);
+
+  //Wait for result. Maximum 5 seconds. If timeout, recharge on a fixed platform.
+  //If result, read result. If true, change assigned_charging_station_, if false, land on a fixed platform.
+  if(request_charging_ac_.waitForResult(ros::Duration(5.0)))
+  {
+    ist_use_collaboration_msgs::RequestMobileChargingStationResultConstPtr result = request_charging_ac_.getResult();
+    if(result->success)
+      assigned_charging_station = agent_->atrvjr_pose_;
+  }
+
+  /*************************************************************************************************************/
+
   while(!isHaltRequested())
   {
     switch(agent_->state_)
@@ -2269,12 +2288,12 @@ bool AgentNode::checkBeaconTimeout(ros::Time now){
 }
 void AgentNode::atrvjrPositionCallback(const geographic_msgs::GeoPoseStamped& geo_pose){ 
   geometry_msgs::Point32 pose = geographic_to_cartesian(geo_pose.pose.position, origin_geo_);
-  atrvjr_pose_ = classes::Position(pose.x, pose.y, pose.z);
+  atrvjr_pose_ = classes::Position(pose.x, pose.y, 3); //As UGV are at ground level, z id fiex at 3m for goto purposes
   return;
 }
 void AgentNode::jackalPositionCallback(const geographic_msgs::GeoPoseStamped& geo_pose){ 
   geometry_msgs::Point32 pose = geographic_to_cartesian(geo_pose.pose.position, origin_geo_);
-  jackal_pose_ = classes::Position(pose.x, pose.y, pose.z);
+  jackal_pose_ = classes::Position(pose.x, pose.y, 3); //As UGV are at ground level, z id fiex at 3m for goto purposes
   return;
 }
 // UAL/MRS Service calls

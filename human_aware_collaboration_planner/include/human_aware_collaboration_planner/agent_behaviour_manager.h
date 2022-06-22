@@ -50,6 +50,8 @@
 
 #include <uav_abstraction_layer/geographic_to_cartesian.h>
 
+#include "ist_use_collaboration_msgs/RequestMobileChargingStationAction.h"
+
 //Forward declaration
 class AgentNode;
 
