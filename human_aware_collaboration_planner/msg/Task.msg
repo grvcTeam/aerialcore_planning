@@ -7,6 +7,7 @@
 string id
 uint8 type
 MonitorParams monitor
+MonitorUGVParams monitor_ugv
 InspectParams inspect
 DeliverToolParams deliver
 RechargeParams recharge

@@ -54,6 +54,15 @@ int main(int argc, char **argv)
           error = 0;
         }
         break;
+      case 'F':
+      case 'f':
+        if (argc == 5)
+        {
+          goal.task.monitor_ugv.ugv_id = argv[3];
+          goal.task.monitor_ugv.height = atof(argv[4]);
+          error = 0;
+        }
+        break;
       case 'I':
       case 'i':
         i = 3;

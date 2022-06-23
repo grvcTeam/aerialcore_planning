@@ -51,6 +51,10 @@
                 <SubTree ID="MonitorTree"/>
             </ReactiveSequence>
             <ReactiveSequence>
+                <IsTaskMonitor/>
+                <SubTree ID="MonitorUGVTree"/>
+            </ReactiveSequence>
+            <ReactiveSequence>
                 <IsTaskInspect/>
                 <SubTree ID="InspectTree"/>
             </ReactiveSequence>
@@ -76,6 +80,16 @@
                 <GoNearHumanTarget/>
             </Fallback>
             <MonitorHumanTarget/>
+        </Sequence>
+    </BehaviorTree>
+
+    <BehaviorTree ID="MonitorUGVTree">
+        <Sequence>
+            <Fallback>
+                <IsAgentNearUGV/>
+                <GoNearUGV/>
+            </Fallback>
+            <MonitorUGV/>
         </Sequence>
     </BehaviorTree>
 

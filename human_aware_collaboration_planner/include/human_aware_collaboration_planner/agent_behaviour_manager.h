@@ -132,6 +132,36 @@ class MonitorHumanTarget : public BT::AsyncActionNode
     virtual void halt() override;
 };
 
+//GoNearUGV
+class GoNearUGV : public BT::AsyncActionNode
+{
+  private:
+    AgentNode* agent_;
+
+  public:
+		GoNearUGV(const std::string& name, const BT::NodeConfiguration& config);
+		~GoNearUGV();
+    void init(AgentNode* agent);
+		static BT::PortsList providedPorts();
+    BT::NodeStatus tick() override;
+    virtual void halt() override;
+};
+
+//MonitorUGV
+class MonitorUGV : public BT::AsyncActionNode
+{
+  private:
+    AgentNode* agent_;
+
+  public:
+		MonitorUGV(const std::string& name, const BT::NodeConfiguration& config);
+		~MonitorUGV();
+    void init(AgentNode* agent);
+		static BT::PortsList providedPorts();
+    BT::NodeStatus tick() override;
+    virtual void halt() override;
+};
+
 //GoNearWP
 class GoNearWP : public BT::AsyncActionNode
 {
@@ -310,6 +340,18 @@ class IsTaskMonitor : public BT::ConditionNode
 		BT::NodeStatus tick() override;
 };
 
+//IsTaskMonitorUGV
+class IsTaskMonitorUGV : public BT::ConditionNode
+{
+  private:
+    AgentNode* agent_;
+
+	public:
+		IsTaskMonitorUGV(const std::string& name);
+    void init(AgentNode* agent);
+		BT::NodeStatus tick() override;
+};
+
 //IsTaskInspect
 class IsTaskInspect : public BT::ConditionNode
 {
@@ -366,6 +408,18 @@ class IsAgentNearHumanTarget : public BT::ConditionNode
 
 	public:
 		IsAgentNearHumanTarget(const std::string& name);
+    void init(AgentNode* agent);
+		BT::NodeStatus tick() override;
+};
+
+//IsAgentNearUGV
+class IsAgentNearUGV : public BT::ConditionNode
+{
+  private:
+    AgentNode* agent_;
+
+	public:
+		IsAgentNearUGV(const std::string& name);
     void init(AgentNode* agent);
 		BT::NodeStatus tick() override;
 };
@@ -441,6 +495,8 @@ class AgentNode
   friend class BackToStation;
   friend class GoNearHumanTarget;
   friend class MonitorHumanTarget;
+  friend class GoNearUGV;
+  friend class MonitorUGV;
   friend class GoNearWP;
   friend class TakeImage;
   friend class InspectPVArray;
@@ -456,11 +512,13 @@ class AgentNode
   friend class IsBatteryFull;
   friend class IsTaskRecharge;
   friend class IsTaskMonitor;
+  friend class IsTaskMonitorUGV;
   friend class IsTaskInspect;
   friend class IsTaskInspectPVArray;
   friend class IsTaskDeliverTool;
   friend class IsTaskRecharge;
   friend class IsAgentNearHumanTarget;
+  friend class IsAgentNearUGV;
   friend class IsAgentNearWP;
   friend class NeedToDropTheTool;
   friend class HasAgentTheTool;

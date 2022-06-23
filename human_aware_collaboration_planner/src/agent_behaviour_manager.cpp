@@ -82,7 +82,7 @@ BT::NodeStatus GoNearChargingStation::tick(){
   {
     ist_use_collaboration_msgs::RequestMobileChargingStationResultConstPtr result = request_charging_ac_.getResult();
     if(result->success)
-      assigned_charging_station = agent_->atrvjr_pose_;
+      assigned_charging_station = agent_->jackal_pose_;
   }
 
   /*************************************************************************************************************/
@@ -661,6 +661,184 @@ BT::NodeStatus MonitorHumanTarget::tick(){
 }
 void MonitorHumanTarget::halt(){
   ROS_INFO("[MonitorHumanTarget] halt requested");
+  //Do some cleanup if necessary
+  
+  BT::AsyncActionNode::halt();
+}
+// }
+
+//GoNearUGV {
+GoNearUGV::GoNearUGV(const std::string& name, const BT::NodeConfiguration& config) :
+  BT::AsyncActionNode(name, config) {}
+GoNearUGV::~GoNearUGV(){halt();}
+void GoNearUGV::init(AgentNode* agent){agent_ = agent;}
+BT::PortsList GoNearUGV::providedPorts() {return{};}
+BT::NodeStatus GoNearUGV::tick(){
+  if(!agent_->stop(false))
+    ROS_ERROR("Failed to call stop");
+
+  classes::Task* task;
+  if(agent_->task_queue_.empty())
+  {
+    if(isHaltRequested())
+      return BT::NodeStatus::IDLE;
+    ROS_WARN("[GoNearUGV] Task queue is empty");
+    return BT::NodeStatus::FAILURE;
+  }
+  task = agent_->task_queue_.front();
+
+  float height;
+  switch(task->getType())
+  {
+    case 'F':
+    case 'f':
+      height = task->getHeight();
+      break;
+    default:
+      if(isHaltRequested())
+        return BT::NodeStatus::IDLE;
+      ROS_WARN("[GoNearUGV] First task of the queue isn't type MonitorUGV");
+      return BT::NodeStatus::FAILURE;
+      break;
+  }
+
+
+
+  while(!isHaltRequested())
+  {
+    switch(agent_->state_)
+    {
+      case 2: //LANDED_ARMED
+        if(isHaltRequested())
+          return BT::NodeStatus::IDLE;
+        if(!agent_->take_off(3, false))
+        {
+          if(isHaltRequested())
+            return BT::NodeStatus::IDLE;
+          ROS_ERROR("[GoNearUGV] Failed to call service take_off");
+          return BT::NodeStatus::FAILURE;
+        }
+        else
+        {
+          while(agent_->state_ != 4)
+          {
+            if(isHaltRequested())
+              return BT::NodeStatus::IDLE;
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          }
+        }
+        break;
+      case 4: //FLYING_AUTO
+        if(isHaltRequested())
+          return BT::NodeStatus::IDLE;
+        ROS_INFO("[GoNearUGV] Moving near HT...");
+        if(agent_->go_to_waypoint(agent_->atrvjr_pose_.getX(), agent_->atrvjr_pose_.getY(), height, false))
+        {
+          while(!agent_->checkIfGoToServiceSucceeded(agent_->atrvjr_pose_.getX(), agent_->atrvjr_pose_.getY(), height))
+          {
+            if(isHaltRequested())
+              return BT::NodeStatus::IDLE;
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          }
+          if(classes::distance2D(agent_->atrvjr_pose_, agent_->position_) < 1.5)
+          {
+            ROS_INFO("[GoNearUGV] Returning SUCCESS...");
+            return BT::NodeStatus::SUCCESS;
+          }
+        }
+        else
+        {
+          if(isHaltRequested())
+            return BT::NodeStatus::IDLE;
+          ROS_ERROR("[GoNearUGV] Failed to call service go_to_waypoint");
+          return BT::NodeStatus::FAILURE;
+        }
+        break;
+      case 0: //UNINITIALIZED
+      case 1: //LANDED_DISARMED
+      case 3: //TAKING_OFF
+      case 5: //FLIYING_MANUAL
+      case 6: //LANDING
+      default:
+        break;
+    }
+  }
+  return BT::NodeStatus::IDLE;
+}
+void GoNearUGV::halt(){
+  ROS_INFO("[GoNearUGV] halt requested");
+  //Do some cleanup if necessary
+  
+  BT::AsyncActionNode::halt();
+}
+// }
+
+//MonitorUGV {
+MonitorUGV::MonitorUGV(const std::string& name, const BT::NodeConfiguration& config) :
+  BT::AsyncActionNode(name, config) {}
+MonitorUGV::~MonitorUGV(){halt();}
+void MonitorUGV::init(AgentNode* agent){agent_ = agent;}
+BT::PortsList MonitorUGV::providedPorts() {return{};}
+BT::NodeStatus MonitorUGV::tick(){
+  if(!agent_->stop(false))
+    ROS_ERROR("Failed to call stop");
+
+  classes::Task* task;
+  if(agent_->task_queue_.empty())
+  {
+    if(isHaltRequested())
+      return BT::NodeStatus::IDLE;
+    ROS_WARN("[MonitorUGV] Task queue is empty");
+    return BT::NodeStatus::FAILURE;
+  }
+  task = agent_->task_queue_.front();
+
+  std::string task_id = task->getID();
+
+  if(task->getType() != 'F')
+  {
+    if(isHaltRequested())
+      return BT::NodeStatus::IDLE;
+    ROS_WARN("[MonitorUGV] First task of the queue isn't type MonitorUGV");
+    return BT::NodeStatus::FAILURE;
+  }
+
+  actionlib::SimpleActionClient<human_aware_collaboration_planner::TaskResultAction> 
+    task_result_ac_("/" + agent_->beacon_.id + "/task_result", true);
+  human_aware_collaboration_planner::TaskResultGoal goal;
+
+  ROS_INFO("[MonitorUGV] Calling Lower-level controllers..."); 
+  while(!isHaltRequested())
+  {
+    if(agent_->go_to_waypoint(agent_->atrvjr_pose_.getX(), agent_->atrvjr_pose_.getY(), task->getHeight(), false))
+    {
+      while(!agent_->checkIfGoToServiceSucceeded(agent_->atrvjr_pose_.getX(), agent_->atrvjr_pose_.getY(), task->getHeight()))
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    else
+    {
+      if(isHaltRequested())
+        break;
+      ROS_ERROR("[MonitorUGV] Failed to call service go_to_waypoint");
+      return BT::NodeStatus::FAILURE;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+
+  task_result_ac_.waitForServer(ros::Duration(1.0));
+  goal.task.id = task_id;
+  goal.task.type = 'F';
+  goal.result = isHaltRequested() ? 0 : 1; 
+  task_result_ac_.sendGoal(goal);
+  if(goal.result)
+      agent_->removeTaskFromQueue(task_id, 'F');
+  ROS_INFO("[MonitorUGV] MONITOR UGV TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+  agent_->infoQueue();
+  
+  return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+}
+void MonitorUGV::halt(){
+  ROS_INFO("[MonitorUGV] halt requested");
   //Do some cleanup if necessary
   
   BT::AsyncActionNode::halt();
@@ -1661,6 +1839,33 @@ BT::NodeStatus IsAgentNearHumanTarget::tick(){
 }
 // }
 
+//IsAgentNearUGV {
+IsAgentNearUGV::IsAgentNearUGV(const std::string& name) : BT::ConditionNode(name, {}) {}
+void IsAgentNearUGV::init(AgentNode* agent){agent_ = agent;}
+BT::NodeStatus IsAgentNearUGV::tick(){
+  classes::Task* task;
+  if(agent_->task_queue_.empty())
+  {
+    ROS_WARN("[IsAgentNearUGV] Task queue is empty");
+    return BT::NodeStatus::FAILURE;
+  }
+  task = agent_->task_queue_.front();
+
+  switch(task->getType())
+  {
+    case 'F':
+    case 'f':
+      if(classes::distance2D(agent_->atrvjr_pose_, agent_->position_) < 1.5)
+        return BT::NodeStatus::SUCCESS;
+      break;
+    default:
+      ROS_WARN("[IsAgentNearUGV] First task of the queue isn't type MonitorUGV");
+      break;
+  }
+  return BT::NodeStatus::FAILURE;
+}
+// }
+
 //IsAgentNearWP {
 IsAgentNearWP::IsAgentNearWP(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsAgentNearWP::init(AgentNode* agent){agent_ = agent;}
@@ -1820,7 +2025,9 @@ inline void RegisterNodes(BT::BehaviorTreeFactory& factory){
   factory.registerNodeType<Recharge>("Recharge");
   factory.registerNodeType<BackToStation>("BackToStation");
   factory.registerNodeType<GoNearHumanTarget>("GoNearHumanTarget");
+  factory.registerNodeType<GoNearUGV>("GoNearUGV");
   factory.registerNodeType<MonitorHumanTarget>("MonitorHumanTarget");
+  factory.registerNodeType<MonitorUGV>("MonitorUGV");
   factory.registerNodeType<GoNearWP>("GoNearWP");
   factory.registerNodeType<TakeImage>("TakeImage");
   factory.registerNodeType<InspectPVArray>("InspectPVArray");
@@ -1841,6 +2048,7 @@ inline void RegisterNodes(BT::BehaviorTreeFactory& factory){
   factory.registerNodeType<IsTaskDeliverTool>("IsTaskDeliverTool");
   factory.registerNodeType<IsAgentNearChargingStation>("IsAgentNearChargingStation");
   factory.registerNodeType<IsAgentNearHumanTarget>("IsAgentNearHumanTarget");
+  factory.registerNodeType<IsAgentNearUGV>("IsAgentNearUGV");
   factory.registerNodeType<IsAgentNearWP>("IsAgentNearWP");
   factory.registerNodeType<NeedToDropTheTool>("NeedToDropTheTool");
   factory.registerNodeType<HasAgentTheTool>("HasAgentTheTool");
@@ -1917,8 +2125,10 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
     else if( auto back_to_station = dynamic_cast<BackToStation*>(node.get())) {back_to_station->init(this);}
     else if( auto go_near_human_target = dynamic_cast<GoNearHumanTarget*>(node.get()))
     {go_near_human_target->init(this);}
+    else if( auto go_near_ugv = dynamic_cast<GoNearUGV*>(node.get())) {go_near_ugv->init(this);}
     else if( auto monitor_human_target = dynamic_cast<MonitorHumanTarget*>(node.get()))
     {monitor_human_target->init(this);}
+    else if( auto monitor_ugv = dynamic_cast<MonitorUGV*>(node.get())) {monitor_ugv->init(this);}
     else if( auto go_near_wp = dynamic_cast<GoNearWP*>(node.get())) {go_near_wp->init(this);}
     else if( auto take_image = dynamic_cast<TakeImage*>(node.get())) {take_image->init(this);}
     else if( auto inspect_pv_array = dynamic_cast<InspectPVArray*>(node.get())) {inspect_pv_array->init(this);}
@@ -1940,6 +2150,7 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
     {is_agent_near_charging_station->init(this);}
     else if( auto is_agent_near_human_target = dynamic_cast<IsAgentNearHumanTarget*>(node.get()))
     {is_agent_near_human_target->init(this);}
+    else if( auto is_agent_near_ugv = dynamic_cast<IsAgentNearUGV*>(node.get())){is_agent_near_ugv->init(this);}
     else if( auto is_agent_near_wp = dynamic_cast<IsAgentNearWP*>(node.get())) {is_agent_near_wp->init(this);}
     else if( auto need_to_drop_the_tool = dynamic_cast<NeedToDropTheTool*>(node.get()))
     {need_to_drop_the_tool->init(this);}
@@ -2097,7 +2308,9 @@ void AgentNode::infoQueue(){
     task_type = tmp->getType();
     ROS_INFO_STREAM("" << tmp->getID() << ": " << (
           task_type == 'M' ? "Monitor" : 
+          task_type == 'F' ? "MonitorUGV" : 
           task_type == 'I' ? "Inspect" : 
+          task_type == 'A' ? "InspectPVArray" : 
           task_type == 'D' ? "DeliverTool" :
           task_type == 'R' ? "Recharge" :
           task_type == 'W' ? "Wait" :
@@ -2135,7 +2348,9 @@ void AgentNode::taskQueueManager(){
   goal.task.type = current_task->getType();
   ROS_INFO_STREAM("[taskQueueManager] " << goal.task.id << ": " << (
           goal.task.type == 'M' ? "Monitor" : 
+          goal.task.type == 'F' ? "MonitorUGV" : 
           goal.task.type == 'I' ? "Inspect" : 
+          goal.task.type == 'A' ? "InspectPVArray" : 
           goal.task.type == 'D' ? "DeliverTool" :
           goal.task.type == 'R' ? "Recharge" :
           goal.task.type == 'W' ? "Wait" :
@@ -2178,8 +2393,14 @@ void AgentNode::newTaskList(const human_aware_collaboration_planner::NewTaskList
           task = new classes::Monitor(task_msg.id, &(human_targets_[task_msg.monitor.human_target_id]), 
               task_msg.monitor.distance, task_msg.monitor.number, task_msg.monitor.agent_list);
           break;
+        case 'F':
+        case 'f':
+          task = new classes::MonitorUGV(task_msg.id, task_msg.monitor_ugv.ugv_id, task_msg.monitor_ugv.height);
+          break;
         case 'I':
         case 'i':
+        case 'A':
+        case 'a':
           task = new classes::Inspect(task_msg.id, task_msg.inspect.waypoints, task_msg.inspect.agent_list);
           break;
         case 'D':

@@ -138,6 +138,8 @@ class Task {
 		virtual Position getHumanPosition();
 		virtual float getDistance();
 		virtual int getNumber();
+		virtual float getHeight();
+    virtual std::string getUGVID();
 		virtual std::vector<std::string> getAgentList();
 		virtual std::vector<human_aware_collaboration_planner::Waypoint> getInspectWaypoints();
 		virtual Tool getTool();
@@ -184,6 +186,25 @@ class Monitor : public Task {
     void print(std::ostream& os) const;
 		//Setters
 		void setAgentList(std::vector<std::string> agent_list);
+		void updateParams(classes::Task* task);
+};
+
+class MonitorUGV : public Task {
+  protected:
+		std::string ugv_id_;
+		float height_;
+  public:
+    MonitorUGV();
+    MonitorUGV(std::string task_id, std::string ugv_id, float height);
+    MonitorUGV(const MonitorUGV& m);
+    ~MonitorUGV();
+		//Getters
+    std::string getID();
+    char getType();
+    std::string getUGVID();
+		float getHeight();
+    void print(std::ostream& os) const;
+		//Setters
 		void updateParams(classes::Task* task);
 };
 

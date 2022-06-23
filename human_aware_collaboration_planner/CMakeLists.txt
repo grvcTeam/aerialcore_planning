@@ -35,6 +35,7 @@ add_message_files(
   PlannerBeacon.msg
   Waypoint.msg
   MonitorParams.msg
+  MonitorUGVParams.msg
   InspectParams.msg
   DeliverToolParams.msg
   RechargeParams.msg

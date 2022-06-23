@@ -155,6 +155,8 @@ std::string Task::getHumanID(){return "";}
 Position Task::getHumanPosition(){return Position();}
 float Task::getDistance(){return 0;}
 int Task::getNumber(){return 0;}
+float Task::getHeight(){return 0;}
+std::string Task::getUGVID(){return "";}
 std::vector<std::string> Task::getAgentList(){return std::vector<std::string>();}
 std::vector<human_aware_collaboration_planner::Waypoint> Task::getInspectWaypoints(){
   return std::vector<human_aware_collaboration_planner::Waypoint>();
@@ -217,6 +219,30 @@ void Monitor::updateParams(classes::Task* task){
     human_target_ = task->getHumanPtr();
     distance_ = task->getDistance();
     number_ = task->getNumber();
+  }
+  return;
+}
+
+//class MonitorUGV : public Task
+MonitorUGV::MonitorUGV() : Task(), ugv_id_(""), height_(0) {}
+MonitorUGV::MonitorUGV(std::string task_id, std::string ugv_id, float height) : 
+  Task(task_id), ugv_id_(ugv_id), height_(height) {}
+MonitorUGV::MonitorUGV(const MonitorUGV& m) : Task(m.id_), ugv_id_(m.ugv_id_), height_(m.height_) {}
+MonitorUGV::~MonitorUGV(){}
+//class monitor Getters
+std::string MonitorUGV::getID(){return id_;}
+char MonitorUGV::getType(){return 'F';}
+std::string MonitorUGV::getUGVID(){return ugv_id_;}
+float MonitorUGV::getHeight(){return height_;}
+void MonitorUGV::print(std::ostream& os) const{
+  os << "\t" << id_ << ": MonitorUGV (" << ugv_id_ << ", " << height_ << ")";
+  return;
+}
+//Class MonitorUGV Setters
+void MonitorUGV::updateParams(classes::Task* task){
+  if(task->getType() == 'F'){
+    ugv_id_ = task->getUGVID();
+    height_ = task->getHeight();
   }
   return;
 }
