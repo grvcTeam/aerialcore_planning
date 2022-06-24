@@ -536,7 +536,7 @@ BT::NodeStatus GoNearHumanTarget::tick(){
   }
 
   classes::Position human_position = task->getHumanPosition();
-  classes::Position near_human_pose = classes::close_pose_2D(agent_->position_, human_position, distance);
+  classes::Position near_human_pose = classes::closePose2D(agent_->position_, human_position, distance);
 
   while(!isHaltRequested())
   {
@@ -896,7 +896,7 @@ BT::NodeStatus GoNearWP::tick(){
     nearest_wp = waypoint[0];
   }
 
-  classes::Position near_waypoint = classes::close_pose_2D(agent_->position_, nearest_wp, 1.5);
+  classes::Position near_waypoint = classes::closePose2D(agent_->position_, nearest_wp, 1.5);
 
   while(!isHaltRequested())
   {
@@ -1353,7 +1353,7 @@ BT::NodeStatus GoNearStation::tick(){
 
     tool_position = task->getToolPosition();
   }
-  near_tool_pose = classes::close_pose_2D(agent_->position_, tool_position, 1.5);
+  near_tool_pose = classes::closePose2D(agent_->position_, tool_position, 1.5);
 
   while(!isHaltRequested())
   {

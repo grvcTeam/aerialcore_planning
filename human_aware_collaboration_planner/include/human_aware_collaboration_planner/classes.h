@@ -50,10 +50,10 @@ class Position {
 		friend float distance2D(Position&, Position&);
 		friend float distance2D(Position&, human_aware_collaboration_planner::Waypoint&);
 		friend float distance2D(human_aware_collaboration_planner::Waypoint&, Position&);
-		friend Position close_pose(Position&, Position&, float);
-		friend Position close_pose(Position&, human_aware_collaboration_planner::Waypoint&, float);
-		friend Position close_pose_2D(Position&, Position&, float);
-		friend Position close_pose_2D(Position&, human_aware_collaboration_planner::Waypoint&, float);
+		friend Position closePose(Position&, Position&, float);
+		friend Position closePose(Position&, human_aware_collaboration_planner::Waypoint&, float);
+		friend Position closePose2D(Position&, Position&, float);
+		friend Position closePose2D(Position&, human_aware_collaboration_planner::Waypoint&, float);
 		//Getters
 		std::string getID();
 		float getX();
@@ -75,10 +75,10 @@ float distance2D(Position&, Position&);
 float distance2D(Position&, human_aware_collaboration_planner::Waypoint&);
 float distance2D(human_aware_collaboration_planner::Waypoint&, Position&);
 float distance2D(human_aware_collaboration_planner::Waypoint&, human_aware_collaboration_planner::Waypoint&);
-Position close_pose(Position& orig, Position& dest, float dist);
-Position close_pose(Position&, human_aware_collaboration_planner::Waypoint&, float);
-Position close_pose_2D(Position&, Position&, float);
-Position close_pose_2D(Position&, human_aware_collaboration_planner::Waypoint&, float);
+Position closePose(Position& orig, Position& dest, float dist);
+Position closePose(Position&, human_aware_collaboration_planner::Waypoint&, float);
+Position closePose2D(Position&, Position&, float);
+Position closePose2D(Position&, human_aware_collaboration_planner::Waypoint&, float);
 human_aware_collaboration_planner::Waypoint central_position(std::vector<human_aware_collaboration_planner::Waypoint>&);
 
 class HumanTarget {

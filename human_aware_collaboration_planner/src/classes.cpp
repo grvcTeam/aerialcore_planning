@@ -55,7 +55,7 @@ float classes::distance2D(human_aware_collaboration_planner::Waypoint& p1, human
   return sqrt(pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2));
 }
 
-Position classes::close_pose(Position& orig, Position& dest, float dist){
+Position classes::closePose(Position& orig, Position& dest, float dist){
   float mod = sqrt(pow(orig.x_ - dest.x_, 2) + pow(orig.y_ - dest.y_, 2) + pow(orig.z_ - dest.z_, 2));
   float x = dest.x_ + dist*(orig.x_ - dest.x_)/mod;
   float y = dest.y_ + dist*(orig.y_ - dest.y_)/mod;
@@ -64,7 +64,7 @@ Position classes::close_pose(Position& orig, Position& dest, float dist){
   return Position(x, y, z);
 }
 
-Position classes::close_pose(Position& orig, human_aware_collaboration_planner::Waypoint& dest, float dist){
+Position classes::closePose(Position& orig, human_aware_collaboration_planner::Waypoint& dest, float dist){
   float mod = sqrt(pow(orig.x_ - dest.x, 2) + pow(orig.y_ - dest.y, 2) + pow(orig.z_ - dest.z, 2));
   float x = dest.x + dist*(orig.x_ - dest.x)/mod;
   float y = dest.y + dist*(orig.y_ - dest.y)/mod;
@@ -73,7 +73,7 @@ Position classes::close_pose(Position& orig, human_aware_collaboration_planner::
   return Position(x, y, z);
 }
 
-Position classes::close_pose_2D(Position& orig, Position& dest, float dist){
+Position classes::closePose2D(Position& orig, Position& dest, float dist){
   float mod = sqrt(pow(orig.x_ - dest.x_, 2) + pow(orig.y_ - dest.y_, 2));
   float x = dest.x_ + dist*(orig.x_ - dest.x_)/mod;
   float y = dest.y_ + dist*(orig.y_ - dest.y_)/mod;
@@ -82,7 +82,7 @@ Position classes::close_pose_2D(Position& orig, Position& dest, float dist){
   return Position(x, y, z);
 }
 
-Position classes::close_pose_2D(Position& orig, human_aware_collaboration_planner::Waypoint& dest, float dist){
+Position classes::closePose2D(Position& orig, human_aware_collaboration_planner::Waypoint& dest, float dist){
   float mod = sqrt(pow(orig.x_ - dest.x, 2) + pow(orig.y_ - dest.y, 2));
   float x = dest.x + dist*(orig.x_ - dest.x)/mod;
   float y = dest.y + dist*(orig.y_ - dest.y)/mod;
