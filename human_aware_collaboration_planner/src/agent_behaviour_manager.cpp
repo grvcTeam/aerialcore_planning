@@ -1680,6 +1680,31 @@ BT::NodeStatus IsTaskMonitor::tick(){
 }
 // }
 
+//IsTaskMonitorUGV {
+IsTaskMonitorUGV::IsTaskMonitorUGV(const std::string& name) : BT::ConditionNode(name, {}) {}
+void IsTaskMonitorUGV::init(AgentNode* agent){agent_ = agent;}
+BT::NodeStatus IsTaskMonitorUGV::tick(){
+  classes::Task* task;
+  if(agent_->task_queue_.empty())
+  {
+    ROS_WARN("[IsTaskMonitorUGV] Task queue is empty");
+    return BT::NodeStatus::FAILURE;
+  }
+  task = agent_->task_queue_.front();
+
+  switch(task->getType())
+  {
+    case 'F':
+    case 'f':
+      return BT::NodeStatus::SUCCESS;
+      break;
+    default:
+      return BT::NodeStatus::FAILURE;
+      break;
+  }
+}
+// }
+
 //IsTaskInspect {
 IsTaskInspect::IsTaskInspect(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsTaskInspect::init(AgentNode* agent){agent_ = agent;}
@@ -2043,6 +2068,7 @@ inline void RegisterNodes(BT::BehaviorTreeFactory& factory){
   factory.registerNodeType<IsBatteryFull>("IsBatteryFull");
   factory.registerNodeType<IsTaskRecharge>("IsTaskRecharge");
   factory.registerNodeType<IsTaskMonitor>("IsTaskMonitor");
+  factory.registerNodeType<IsTaskMonitorUGV>("IsTaskMonitorUGV");
   factory.registerNodeType<IsTaskInspect>("IsTaskInspect");
   factory.registerNodeType<IsTaskInspectPVArray>("IsTaskInspectPVArray");
   factory.registerNodeType<IsTaskDeliverTool>("IsTaskDeliverTool");
@@ -2142,6 +2168,7 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
     else if( auto is_battery_full = dynamic_cast<IsBatteryFull*>(node.get())) {is_battery_full->init(this);}
     else if( auto is_task_recharge = dynamic_cast<IsTaskRecharge*>(node.get())) {is_task_recharge->init(this);}
     else if( auto is_task_monitor = dynamic_cast<IsTaskMonitor*>(node.get())) {is_task_monitor->init(this);}
+    else if( auto is_task_monitor_ugv = dynamic_cast<IsTaskMonitorUGV*>(node.get())) {is_task_monitor_ugv->init(this);}
     else if( auto is_task_inspect = dynamic_cast<IsTaskInspect*>(node.get())) {is_task_inspect->init(this);}
     else if( auto is_task_inspect_pv_array = dynamic_cast<IsTaskInspectPVArray*>(node.get())) {is_task_inspect_pv_array->init(this);}
     else if( auto is_task_deliver_tool = dynamic_cast<IsTaskDeliverTool*>(node.get()))

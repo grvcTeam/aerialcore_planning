@@ -1,8 +1,8 @@
 task_id = i
 human_target = human_target_1
 distance = 1.5
-number = 2
-waypoints = "0 10 2 0 15 2"
+number = 1
+waypoints = 0 10 2 0 15 2
 tool = hammer
 
 agent_prefix = uav
@@ -11,6 +11,8 @@ x = 3.5
 y = 9
 z = 0.3
 h = 0
+
+agent_debugger = none
 
 .PHONY: launch
 
@@ -24,7 +26,7 @@ gesture_info:
 	@sed -n 8,21p src/gesture_recognition_faker.cpp
 
 launch:
-	@roslaunch human_aware_collaboration_planner simulation.launch
+	@roslaunch human_aware_collaboration_planner simulation.launch number_UAV:=$(number) agent_debugger:=$(agent_debugger)
 
 start:
 	@./tmux_scripts/no_mapping_no_collision_avoidance/start.sh

@@ -51,7 +51,7 @@
                 <SubTree ID="MonitorTree"/>
             </ReactiveSequence>
             <ReactiveSequence>
-                <IsTaskMonitor/>
+                <IsTaskMonitorUGV/>
                 <SubTree ID="MonitorUGVTree"/>
             </ReactiveSequence>
             <ReactiveSequence>
@@ -59,7 +59,7 @@
                 <SubTree ID="InspectTree"/>
             </ReactiveSequence>
             <ReactiveSequence>
-                <IsTaskInspect/>
+                <IsTaskInspectPVArray/>
                 <SubTree ID="InspectPVArrayTree"/>
             </ReactiveSequence>
             <ReactiveSequence>

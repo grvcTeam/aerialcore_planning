@@ -13,11 +13,11 @@
   <arg name="battery_faker" default="true"/>
 
   <arg name="world" default="power_tower"/>
-  <arg name="origin_geo" value="[0, 0, 0]"/>
   <arg name="origin_geo" value="[38.138728, -3.173825, 0]" if="$(eval world=='power_tower')"/>
   <arg name="origin_geo" value="[38.138728, -3.173825, 0]" if="$(eval world=='2towers')"/>
   <arg name="origin_geo" value="[37.564003804467, -6.003676484441573, 65.36515808105469]" if="$(eval world=='burguillos')"/>
   <arg name="origin_geo" value="[38.54177309396464, -7.962942076064321, 227.61875915527344]" if="$(eval world=='pv_farm')"/>
+  <arg name="origin_geo" value="[0, 0, 0]" if="$(eval origin_geo=='')"/>
 
   <group ns="$(arg ns_prefix)$(arg id)/agent_behaviour_manager">
 
