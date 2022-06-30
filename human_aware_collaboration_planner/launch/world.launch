@@ -43,9 +43,4 @@
 		<rosparam param="sim_origin">[38.54177309396464, -7.962942076064321, 227.61875915527344]</rosparam>
   </node>
 
-  <param name="agriculture_geom2" command="$(find xacro)/xacro --inorder '$(find durable_gazebo_simulation)/urdf/evora_farm.urdf.xacro'"/>
-  <node name="agriculture_world_spawner" pkg="gazebo_ros" type="spawn_model" 
-    args="-urdf -model agriculture_geom2 -param agriculture_geom2 -x -82.6 -y 110.5 -z -2 -Y 0"
-    if="$(eval world=='mrs_pv_farm')"/>
-
 </launch>

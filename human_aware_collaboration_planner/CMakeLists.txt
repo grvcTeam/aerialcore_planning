@@ -126,6 +126,11 @@ target_link_libraries(battery_faker yaml-cpp ${PROJECT_NAME} ${catkin_LIBRARIES}
 add_dependencies(battery_faker ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 set_target_properties(battery_faker PROPERTIES COMPILE_FLAGS "-g")
 
+add_executable(ist_ugv_faker src/ist_ugv_faker.cpp)
+target_link_libraries(ist_ugv_faker yaml-cpp ${PROJECT_NAME} ${catkin_LIBRARIES})
+add_dependencies(ist_ugv_faker ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+set_target_properties(ist_ugv_faker PROPERTIES COMPILE_FLAGS "-g")
+
 # 9. Tests to build (catkin_add_gtest())
 
 # 10. Install rules (install())

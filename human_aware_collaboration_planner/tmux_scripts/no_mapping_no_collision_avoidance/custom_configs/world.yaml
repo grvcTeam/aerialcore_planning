@@ -5,10 +5,10 @@
 utm_origin_units: 1 # 0 - UTM, 1 - Latitude Longitude
 utm_origin_x: 465710.758973
 utm_origin_y: 5249465.43086
-utm_origin_lat: 47.397743
-utm_origin_lon: 8.545594
-#utm_origin_lat: 38.54177309396464
-#utm_origin_lon: -7.962942076064321
+#utm_origin_lat: 47.397743
+#utm_origin_lon: 8.545594
+utm_origin_lat: 38.54177309396464
+utm_origin_lon: -7.962942076064321
 # Altitude: 227.61875915527344
 
 init_gps_origin_local: false # origin of gps_origin will be in the position of UAV at odometry launch

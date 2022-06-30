@@ -7,7 +7,8 @@ windows:
       layout: tiled
       panes:
         - roscore
-        - waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_name:=grass_plane
+        - waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_file:='$(find aerialcore_simulation)/worlds/evora_solar_panel_farm.world'
+          #- waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_name:=grass_plane
         #- waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_file:='$(find grvc_gazebo_worlds)/worlds/evora_solar_panel_farm.world'
         #- waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_file:='$(find aerialcore_simulation)/worlds/power_towers_danube_wires_rescaled_jeff_autospawn.world'
         #- waitForOdometry; gz camera -c gzclient_camera -f ${UAV_NAME}; history -s gz camera -c gzclient_camera -f ${UAV_NAME}; exit
@@ -23,7 +24,7 @@ windows:
   - spawn:
       layout: tiled
       panes:
-        - waitForSimulation; rosservice call /mrs_drone_spawner/spawn "${UAV_ID} ${UAV_TYPE} --enable-rangefinder --pos 0 0 1 0"; exit 
+        - waitForSimulation; rosservice call /mrs_drone_spawner/spawn "1 ${UAV_TYPE} --enable-rangefinder --pos-file `pwd`/pos.yaml"; exit 
   - planner/agent:
       layout: even-vertical
       panes:
