@@ -30,9 +30,9 @@ class ISTugvFaker{
     ros::Rate pose_rate_;
 
   public:
-    ISTugvFaker(std::string name) : pose_rate_(1),
-      mobile_station_as_(nh_, name, boost::bind(&ISTugvFaker::mobileStationCB, this, _1), false),
-      closer_inspection_as_(nh_, name, boost::bind(&ISTugvFaker::closerInspectionCB, this, _1), false) {
+    ISTugvFaker() : pose_rate_(1),
+      mobile_station_as_(nh_, "/jackal0/cooperation_use/request_mobile_charging_station", boost::bind(&ISTugvFaker::mobileStationCB, this, _1), false),
+      closer_inspection_as_(nh_, "/atrvjr/cooperation_use/do_closer_inspection", boost::bind(&ISTugvFaker::closerInspectionCB, this, _1), false) {
         mobile_station_as_.start();
         closer_inspection_as_.start();
 
@@ -76,7 +76,8 @@ class ISTugvFaker{
 int main(int argc, char** argv){
   ros::init(argc, argv, "ist_ugv_faker");
 
-  ISTugvFaker ist_ugv_faker("ist_ugv_faker");
+  ISTugvFaker ist_ugv_faker;
+  ROS_INFO("Ending");
 
   return 0;
 }
