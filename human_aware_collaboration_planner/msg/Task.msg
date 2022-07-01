@@ -1,5 +1,7 @@
 #type M/m   ->  Monitor
+#type F/f   ->  MonitorUGV
 #type I/i   ->  Inspect
+#type A/a   ->  InspectPVArray
 #type D/d   ->  Deliver
 #type R/r   ->  Recharge
 #type W/w   ->  Wait

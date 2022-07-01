@@ -43,8 +43,8 @@ class ISTugvFaker{
         atrvjr_pose_.pose.position.longitude = -7.962942076064321;
         atrvjr_pose_.pose.position.altitude = 227.61875915527344;
 
-        jackal_pose_.pose.position.latitude = 38.54094889488317;
-        jackal_pose_.pose.position.longitude = -7.96107416997165;
+        jackal_pose_.pose.position.latitude = 38.54030189108661;
+        jackal_pose_.pose.position.longitude = -7.961658935157954;
         jackal_pose_.pose.position.altitude = 227.61875915527344;
 
         pose_rate_.reset();

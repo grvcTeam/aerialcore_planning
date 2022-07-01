@@ -1793,6 +1793,10 @@ BT::NodeStatus IsAgentNearChargingStation::tick(){
     for(auto& charging_station : agent_->known_positions_["charging_stations"])
       if(classes::distance2D(agent_->position_, charging_station.second) < 0.5)
         return BT::NodeStatus::SUCCESS;
+
+    if(classes::distance2D(agent_->position_, agent_->jackal_pose_) < 0.5)
+      return BT::NodeStatus::SUCCESS;
+
     return BT::NodeStatus::FAILURE;
   }
 
@@ -1803,6 +1807,10 @@ BT::NodeStatus IsAgentNearChargingStation::tick(){
     ROS_WARN("[IsAgentNearChargingStation] First task of the queue isn't type Recharge");
     return BT::NodeStatus::FAILURE;
   }
+
+  if(classes::distance2D(agent_->position_, agent_->jackal_pose_) < 0.5)
+    return BT::NodeStatus::SUCCESS;
+
   assigned_charging_station = task->getChargingStation();
 
   if(assigned_charging_station.getID().empty())
@@ -2426,9 +2434,11 @@ void AgentNode::newTaskList(const human_aware_collaboration_planner::NewTaskList
           break;
         case 'I':
         case 'i':
+          task = new classes::Inspect(task_msg.id, task_msg.inspect.waypoints, task_msg.inspect.agent_list);
+          break;
         case 'A':
         case 'a':
-          task = new classes::Inspect(task_msg.id, task_msg.inspect.waypoints, task_msg.inspect.agent_list);
+          task = new classes::InspectPVArray(task_msg.id, task_msg.inspect.waypoints, task_msg.inspect.agent_list);
           break;
         case 'D':
         case 'd':

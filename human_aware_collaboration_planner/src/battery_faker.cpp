@@ -165,7 +165,7 @@ class BatteryFaker{
           break;
       }
       battery_pub_.publish(battery_);
-      ROS_INFO_STREAM("Mode: " << mode_ << "\tUAV State: " << state_ << "\tPercentage: " << battery_.percentage);
+      //ROS_INFO_STREAM("Mode: " << mode_ << "\tUAV State: " << state_ << "\tPercentage: " << battery_.percentage);
     }
     void readConfigFile(std::string config_file){
       YAML::Node yaml_config = YAML::LoadFile(config_file);

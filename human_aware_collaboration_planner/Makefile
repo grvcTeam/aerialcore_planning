@@ -4,6 +4,9 @@ distance = 1.5
 number = 1
 waypoints = 0 10 2 0 15 2
 tool = hammer
+ugv = jackal
+height = 4
+geo_wp = -106.313 -68.833 2 -5.20867 -67.5882 2
 
 agent_prefix = uav
 agent_id = 1
@@ -13,6 +16,7 @@ z = 0.3
 h = 0
 
 agent_debugger = none
+planner_debugger = none
 
 .PHONY: launch
 
@@ -26,7 +30,7 @@ gesture_info:
 	@sed -n 8,21p src/gesture_recognition_faker.cpp
 
 launch:
-	@roslaunch human_aware_collaboration_planner simulation.launch number_UAV:=$(number) agent_debugger:=$(agent_debugger)
+	@roslaunch human_aware_collaboration_planner simulation.launch number_UAV:=$(number) planner_debugger:=$(planner_debugger) agent_debugger:=$(agent_debugger)
 
 start:
 	@./tmux_scripts/no_mapping_no_collision_avoidance/start.sh
@@ -34,8 +38,14 @@ start:
 monitor:
 	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_$(task_id) M $(human_target) $(distance) $(number)
 
+monitorUGV:
+	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_$(task_id) F $(ugv) $(height)
+
 inspect:
 	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_$(task_id) I $(waypoints)
+
+inspectPVArray:
+	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_$(task_id) A $(geo_wp)
 
 deliver:
 	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_$(task_id) D $(tool) $(human_target)

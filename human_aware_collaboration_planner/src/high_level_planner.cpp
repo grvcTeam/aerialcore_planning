@@ -1439,14 +1439,12 @@ void Planner::performTaskAllocation(){
          */
 
         number_of_waypoints = inspect_waypoints.size();
-        if(number_of_waypoints <= 3)
+        if(number_of_waypoints <= 3 || pending_tasks_[task]->getType() == 'A')
           agents_to_select = 1;
         else if(number_of_waypoints <= 6)
           agents_to_select = 2;
         else
           agents_to_select = 3;
-        if(pending_tasks_[task]->getType() == 'A')
-          agents_to_select = 1;
 
         number_of_idle_agents = idle_inspect_agents.size();
         if(number_of_idle_agents < agents_to_select)
