@@ -2111,7 +2111,7 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   ros::param::param<std::string>("~battery_topic", battery_topic_, "/" + beacon_.id + "/battery_fake");
 
   std::vector<double> origin_geo_aux(3, 0.0);
-  ros::param::get("~origin_geo", origin_geo_aux);
+  ros::param::get("/gazebo_world/sim_origin", origin_geo_aux);
   origin_geo_.latitude  = origin_geo_aux[0];
   origin_geo_.longitude = origin_geo_aux[1];
   origin_geo_.altitude  = origin_geo_aux[2];
