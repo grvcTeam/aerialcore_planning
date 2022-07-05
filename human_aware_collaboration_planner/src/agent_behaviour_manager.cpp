@@ -802,6 +802,7 @@ BT::NodeStatus MonitorUGV::tick(){
     ROS_WARN("[MonitorUGV] First task of the queue isn't type MonitorUGV");
     return BT::NodeStatus::FAILURE;
   }
+  float height = task->getHeight();
 
   actionlib::SimpleActionClient<human_aware_collaboration_planner::TaskResultAction> 
     task_result_ac_("/" + agent_->beacon_.id + "/task_result", true);
@@ -810,19 +811,18 @@ BT::NodeStatus MonitorUGV::tick(){
   ROS_INFO("[MonitorUGV] Calling Lower-level controllers..."); 
   while(!isHaltRequested())
   {
-    if(agent_->go_to_waypoint(agent_->atrvjr_pose_.getX(), agent_->atrvjr_pose_.getY(), task->getHeight(), false))
-    {
-      while(!agent_->checkIfGoToServiceSucceeded(agent_->atrvjr_pose_.getX(), agent_->atrvjr_pose_.getY(), task->getHeight()))
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-    else
+    //ROS_INFO_STREAM("Trying to reach point: " << agent_->atrvjr_pose_);
+    if(!agent_->go_to_waypoint(agent_->atrvjr_pose_.getX(), agent_->atrvjr_pose_.getY(), height, false))
     {
       if(isHaltRequested())
+      {
+        //ROS_WARN("[MonitorUGV] Halted");
         break;
+      }
       ROS_ERROR("[MonitorUGV] Failed to call service go_to_waypoint");
       return BT::NodeStatus::FAILURE;
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   }
 
   task_result_ac_.waitForServer(ros::Duration(1.0));

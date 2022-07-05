@@ -54,13 +54,13 @@ battery:
 	@rostopic echo /$(agent_prefix)$(agent_id)/battery_fake
 
 battery_off:
-	@rostopic pub /$(agent_prefx)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl 2 0.2 0.01 0.01
+	@rostopic pub /$(agent_prefix)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl 2 0.2 0.01 0.01
 
 battery_ok:
-	@rostopic pub /$(agent_prefx)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl 2 1 0.01 0.01
+	@rostopic pub /$(agent_prefix)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl 2 1 0.01 0.01
 
 battery_static:
-	@rostopic pub /$(agent_prefix)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl 0 1 0.01 0.01
+	@rostopic pub /$(agent_prefix)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl 0 0.9 0.01 0.01
 
 mission_over:
 	@rostopic pub /mission_over human_aware_collaboration_planner/MissionOver "value: true"

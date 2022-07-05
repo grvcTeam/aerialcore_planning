@@ -1,6 +1,6 @@
 name: simulation
 root: ./
-pre_window: export UAV_NAME="uav1"; export UAV_ID="1"; export UAV_TYPE=t650; export RUN_TYPE=simulation; export WORLD_NAME=simulation_large_safety_area; export SENSORS="garmin_down"; export ODOMETRY_TYPE="gps"; xdotool key shift+F10 r 2
+pre_window: export UAV_NAME="uav1"; export UAV_ID="1"; export UAV_TYPE=t650; export RUN_TYPE=simulation; export WORLD_FILE=./custom_configs/world.yaml; export WORLD_NAME=simulation_large_safety_area; export SENSORS="garmin_down"; export ODOMETRY_TYPE="gps"; xdotool key shift+F10 r 2
 startup_window: status
 windows:
   - core/gz:
@@ -29,10 +29,10 @@ windows:
       layout: even-vertical
       panes:
         #- waitForSimulation; roslaunch human_aware_collaboration_planner simulation.launch number_UAV:=1 low_level_interface:=MRS agent_debugger:=none planner_debugger:=none world:=none
-        - waitForRos; roslaunch human_aware_collaboration_planner planner.launch low_level_interface:=MRS planner_debugger:=none
-        - waitForRos; roslaunch human_aware_collaboration_planner agent.launch id:=1 type:=PhysicalACW low_level_interface:=MRS agent_debugger:=none
-        - waitForRos; roslaunch human_aware_collaboration_planner battery_faker.launch id:=1 low_level_interface:=MRS
-        - waitForSimulation; rosrun groot Groot &; roscd human_aware_collaboration_planner
+        #- waitForRos; roslaunch human_aware_collaboration_planner planner.launch low_level_interface:=MRS planner_debugger:=none
+        #- waitForRos; roslaunch human_aware_collaboration_planner agent.launch id:=1 type:=PhysicalACW low_level_interface:=MRS agent_debugger:=none
+        #- waitForRos; roslaunch human_aware_collaboration_planner battery_faker.launch id:=1 low_level_interface:=MRS
+        #- waitForSimulation; rosrun groot Groot &; roscd human_aware_collaboration_planner
   - layout:
       layout: tiled
       panes:
