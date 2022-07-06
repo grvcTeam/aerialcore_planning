@@ -30,8 +30,10 @@ windows:
       panes:
         #- waitForSimulation; roslaunch human_aware_collaboration_planner simulation.launch number_UAV:=1 low_level_interface:=MRS agent_debugger:=none planner_debugger:=none world:=none
         #- waitForRos; roslaunch human_aware_collaboration_planner planner.launch low_level_interface:=MRS planner_debugger:=none
+        #- waitForRos; roslaunch ~/autonomous_landing_workspace/src/autonomous_landing_uav/transforms.launch
         #- waitForRos; roslaunch human_aware_collaboration_planner agent.launch id:=1 type:=PhysicalACW low_level_interface:=MRS agent_debugger:=none
         #- waitForRos; roslaunch human_aware_collaboration_planner battery_faker.launch id:=1 low_level_interface:=MRS
+        #- waitForRos; rosrun human_aware_collaboration_planner ist_ugv_faker
         #- waitForSimulation; rosrun groot Groot &; roscd human_aware_collaboration_planner
   - layout:
       layout: tiled
