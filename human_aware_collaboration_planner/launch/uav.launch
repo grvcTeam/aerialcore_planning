@@ -37,6 +37,8 @@
     <arg name="max_orientation_error" default="0.01"/>
 
     <arg name="battery_faker" default="false"/>
+    <arg name="ist_ugv_faker" default="false"/>
+    <arg name="autonomous_landing" default="false"/>
 
     <arg name="world" default="power_tower"/>
 
@@ -109,6 +111,7 @@
       <arg name="pose_frame_id" value="$(arg pose_frame_id)"/>
       <arg name="config_file" value="$(arg config_file)"/>
       <arg name="battery_faker" value="$(arg battery_faker)"/>
+      <arg name="autonomous_landing" value="$(arg autonomous_landing)"/>
       <arg name="world" value="$(arg world)"/>
     </include>
 
@@ -119,6 +122,8 @@
       <arg name="low_level_interface" value="$(arg low_level_interface)"/>
       <arg name="config_file" value="$(arg config_file)"/>
       <arg name="battery_faker" value="$(arg battery_faker)"/>
+      <arg name="ist_ugv_faker" value="$(arg ist_ugv_faker)"/>
+      <arg name="autonomous_landing" value="$(arg autonomous_landing)"/>
     </include>
 
 </launch>

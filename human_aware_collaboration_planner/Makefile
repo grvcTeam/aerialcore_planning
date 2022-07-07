@@ -165,3 +165,9 @@ mrs_goto_pathfinder:
 
 mrs_goto_direct:
 	@rostopic pub /$(agent_prefix)$(agent_id)/mrs_actionlib_interface/goal mrs_actionlib_interface/commandActionGoal "{header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: ''}, goal_id: {stamp: {secs: 0, nsecs: 0}, id: ''}, goal: {command: 3, goto_x: $x, goto_y: $y, goto_z: $z, goto_hdg: $h}}"
+	
+autonomous_landing_node:
+	@roslaunch ~/autonomous_landing_workspace/src/autonomous_landing_uav/transforms.launch
+
+autonomous_landing_start:
+	@rostopic pub --once /start_landing std_msgs/String "data: ''"

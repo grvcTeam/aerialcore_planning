@@ -11,13 +11,9 @@
   <arg name="pose_frame_id" default="map"/>
   <arg name="config_file" default="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
   <arg name="battery_faker" default="true"/>
+  <arg name="autonomous_landing" default="false"/>
 
   <arg name="world" default="power_tower"/>
-  <arg name="origin_geo" value="[38.138728, -3.173825, 0]" if="$(eval world=='power_tower')"/>
-  <arg name="origin_geo" value="[38.138728, -3.173825, 0]" if="$(eval world=='2towers')"/>
-  <arg name="origin_geo" value="[37.564003804467, -6.003676484441573, 65.36515808105469]" if="$(eval world=='burguillos')"/>
-  <arg name="origin_geo" value="[38.54177309396464, -7.962942076064321, 227.61875915527344]" if="$(eval world=='pv_farm')"/>
-  <arg name="origin_geo" value="[0, 0, 0]" if="$(eval origin_geo=='')"/>
 
   <group ns="$(arg ns_prefix)$(arg id)/agent_behaviour_manager">
 
@@ -45,7 +41,7 @@
     <param name="type" value="$(arg type)"/>
     <param name="pose_frame_id" value="$(arg pose_frame_id)"/>
     <param name="config_file" value="$(arg config_file)"/>
-    <rosparam param="origin_geo" subst_value="True">$(arg origin_geo)</rosparam>
+    <param name="autonomous_landing" value="$(arg autonomous_landing)"/>
   </node>
 
   <node pkg="human_aware_collaboration_planner" type="agent_behaviour_manager" name="agent_behaviour_manager" 
@@ -57,6 +53,7 @@
     <param name="type" value="$(arg type)"/>
     <param name="pose_frame_id" value="$(arg pose_frame_id)"/>
     <param name="config_file" value="$(arg config_file)"/>
+    <param name="autonomous_landing" value="$(arg autonomous_landing)"/>
   </node>
 
   <node pkg="human_aware_collaboration_planner" type="agent_behaviour_manager" name="agent_behaviour_manager" 
@@ -66,6 +63,7 @@
     <param name="type" value="$(arg type)"/>
     <param name="pose_frame_id" value="$(arg pose_frame_id)"/>
     <param name="config_file" value="$(arg config_file)"/>
+    <param name="autonomous_landing" value="$(arg autonomous_landing)"/>
   </node>
 
 </launch>
