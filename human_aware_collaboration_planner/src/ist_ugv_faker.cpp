@@ -30,7 +30,7 @@ class ISTugvFaker{
     ros::Rate pose_rate_;
 
   public:
-    ISTugvFaker() : pose_rate_(1),
+    ISTugvFaker() : pose_rate_(0.2),
       mobile_station_as_(nh_, "/jackal0/cooperation_use/request_mobile_charging_station", boost::bind(&ISTugvFaker::mobileStationCB, this, _1), false),
       closer_inspection_as_(nh_, "/atrvjr/cooperation_use/do_closer_inspection", boost::bind(&ISTugvFaker::closerInspectionCB, this, _1), false) {
         mobile_station_as_.start();

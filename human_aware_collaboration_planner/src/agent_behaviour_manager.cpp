@@ -27,6 +27,8 @@ BT::NodeStatus GoNearChargingStation::tick(){
   float distance = -1;
   float tmp_distance;
 
+  std::string aux = "";
+
   /***************************************** TODO: TO BE IMPROVED ***************************************************/
   //Find closest station (sustituido por estacion fija hasta que se una con los lower-level controllers)
   /*distance = -1;
@@ -82,7 +84,10 @@ BT::NodeStatus GoNearChargingStation::tick(){
   {
     ist_use_collaboration_msgs::RequestMobileChargingStationResultConstPtr result = request_charging_ac_.getResult();
     if(result->success)
+    {
       assigned_charging_station = agent_->jackal_pose_;
+      aux = "mobile ";
+    }
   }
 
   /*************************************************************************************************************/
@@ -118,8 +123,9 @@ BT::NodeStatus GoNearChargingStation::tick(){
         //Go to recharging station
         if(isHaltRequested())
           return BT::NodeStatus::IDLE;
-        ROS_INFO("[GoNearChargingStation] Moving to recharging station (%.1f,%.1f)[%s]",
-            assigned_charging_station.getX(), assigned_charging_station.getY(), agent_->pose_frame_id_.c_str());
+        ROS_INFO_STREAM("[GoNearChargingStation] Moving to " << aux << "recharging station (" <<
+            assigned_charging_station.getX() << ", " << assigned_charging_station.getY() << ")[" <<
+            agent_->pose_frame_id_.c_str() << "]");
         if(agent_->go_to_waypoint(assigned_charging_station.getX(), assigned_charging_station.getY(),
               assigned_charging_station.getZ() + 1, false))
         {
@@ -2547,11 +2553,15 @@ bool AgentNode::checkBeaconTimeout(ros::Time now){
 void AgentNode::atrvjrPositionCallback(const geographic_msgs::GeoPoseStamped& geo_pose){ 
   geometry_msgs::Point32 pose = geographic_to_cartesian(geo_pose.pose.position, origin_geo_);
   atrvjr_pose_ = classes::Position(pose.x, pose.y, 3); //As UGV are at ground level, z id fiex at 3m for goto purposes
+  //ROS_INFO_STREAM("[atrvjrPositionCallback] GeoPose: (" << geo_pose.pose.position.latitude << ", " <<
+      //geo_pose.pose.position.longitude << ")\tXYPose: (" << atrvjr_pose_.getX() << ", " << atrvjr_pose_.getY() << ")");
   return;
 }
 void AgentNode::jackalPositionCallback(const geographic_msgs::GeoPoseStamped& geo_pose){ 
   geometry_msgs::Point32 pose = geographic_to_cartesian(geo_pose.pose.position, origin_geo_);
   jackal_pose_ = classes::Position(pose.x, pose.y, 3); //As UGV are at ground level, z id fiex at 3m for goto purposes
+  //ROS_INFO_STREAM("[jackalPositionCallback] GeoPose: (" << geo_pose.pose.position.latitude << ", " <<
+      //geo_pose.pose.position.longitude << ")\tXYPose: (" << jackal_pose_.getX() << ", " << jackal_pose_.getY() << ")");
   return;
 }
 // UAL/MRS Service calls
