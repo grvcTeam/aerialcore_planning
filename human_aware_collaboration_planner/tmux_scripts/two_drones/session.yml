@@ -1,0 +1,48 @@
+name: simulation
+root: ./
+pre_window: export UAV_NAME="uav1"; export UAV_ID="1"; export UAV_TYPE=t650; export RUN_TYPE=simulation; export WORLD_FILE=./custom_configs/world.yaml; export WORLD_NAME=simulation_large_safety_area; export SENSORS="garmin_down"; export ODOMETRY_TYPE="gps"; xdotool key shift+F10 r 2
+startup_window: status
+windows:
+  - core/gz:
+      layout: tiled
+      panes:
+        - roscore
+        #- waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_name:=grass_plane
+        #- waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_file:='$(find grvc_gazebo_worlds)/worlds/evora_solar_panel_farm.world'
+        - waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_file:='$(find aerialcore_simulation)/worlds/evora_solar_panel_farm.world'
+        #- waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_file:='$(find aerialcore_simulation)/worlds/power_towers_danube_wires_rescaled_jeff_autospawn.world'
+        #- waitForOdometry; gz camera -c gzclient_camera -f ${UAV_NAME}; history -s gz camera -c gzclient_camera -f ${UAV_NAME}; exit
+        - waitForControl; rosrun rviz rviz -d ./rviz.rviz
+        - export UAV_NAME="uav1"; export UAV_ID="1"; waitForControl; roslaunch mrs_rviz_plugins load_robot.launch
+        - export UAV_NAME="uav2"; export UAV_ID="2"; waitForControl; roslaunch mrs_rviz_plugins load_robot.launch
+  - status: 
+      layout: even-vertical
+      panes:
+        - export UAV_NAME="uav1"; export UAV_ID="1"; waitForSimulation; roslaunch mrs_uav_status status.launch
+        - export UAV_NAME="uav2"; export UAV_ID="2"; waitForSimulation; roslaunch mrs_uav_status status.launch
+        - roscd human_aware_collaboration_planner
+  - control: 
+      layout: even-vertical
+      panes:
+        - export UAV_NAME="uav1"; export UAV_ID="1"; waitForOdometry; roslaunch mrs_uav_general core.launch config_odometry:=./custom_configs/odometry.yaml
+        - export UAV_NAME="uav2"; export UAV_ID="2"; waitForOdometry; roslaunch mrs_uav_general core.launch config_odometry:=./custom_configs/odometry.yaml
+        - export UAV_NAME="uav1"; export UAV_ID="1"; waitForOdometry; roslaunch mrs_actionlib_interface uav.launch
+        - export UAV_NAME="uav2"; export UAV_ID="2"; waitForOdometry; roslaunch mrs_actionlib_interface uav.launch
+  - spawn:
+      layout: tiled
+      panes:
+        - waitForSimulation; rosservice call /mrs_drone_spawner/spawn "1 2 ${UAV_TYPE} --enable-rangefinder --pos-file `pwd`/pos.yaml"; exit 
+  - planner/agent:
+      layout: even-vertical
+      panes:
+        #- waitForSimulation; roslaunch human_aware_collaboration_planner simulation.launch number_UAV:=1 low_level_interface:=MRS agent_debugger:=none planner_debugger:=none world:=none
+        - waitForRos; roslaunch human_aware_collaboration_planner planner.launch low_level_interface:=MRS planner_debugger:=none
+        - export UAV_NAME="uav1"; export UAV_ID="1"; waitForRos; roslaunch human_aware_collaboration_planner agent.launch id:=1 type:=PhysicalACW low_level_interface:=MRS agent_debugger:=none
+        - export UAV_NAME="uav2"; export UAV_ID="2"; waitForRos; roslaunch human_aware_collaboration_planner agent.launch id:=2 type:=InspectionACW low_level_interface:=MRS agent_debugger:=none
+        - export UAV_NAME="uav1"; export UAV_ID="1"; waitForRos; roslaunch human_aware_collaboration_planner battery_faker.launch id:=1 low_level_interface:=MRS
+        - export UAV_NAME="uav2"; export UAV_ID="2"; waitForRos; roslaunch human_aware_collaboration_planner battery_faker.launch id:=2 low_level_interface:=MRS
+        - waitForSimulation; rosrun groot Groot &; roscd human_aware_collaboration_planner
+  - layout:
+      layout: tiled
+      panes:
+        - waitForControl; sleep 3; ~/.i3/layout_manager.sh ./layout.json; exit

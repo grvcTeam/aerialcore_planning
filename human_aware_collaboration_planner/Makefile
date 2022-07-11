@@ -1,16 +1,22 @@
 task_id = i
 human_target = human_target_1
 distance = 1.5
-number = 2
-waypoint = "0 10 2 0 15 2"
+number = 1
+waypoints = 0 10 2 0 15 2
 tool = hammer
+ugv = jackal
+height = 4
+geo_wp = -106.313 -68.833 2 -5.20867 -67.5882 2
 
 agent_prefix = uav
 agent_id = 1
-spawn_x = 3.5
-spawn_y = 9
-spawn_z = 0.3
-spawn_heading = 0
+x = 0
+y = 0
+z = 0.3
+h = 0
+
+agent_debugger = none
+planner_debugger = none
 
 .PHONY: launch
 
@@ -24,13 +30,22 @@ gesture_info:
 	@sed -n 8,21p src/gesture_recognition_faker.cpp
 
 launch:
-	@roslaunch human_aware_collaboration_planner simulation.launch
+	@roslaunch human_aware_collaboration_planner simulation.launch number_UAV:=$(number) planner_debugger:=$(planner_debugger) agent_debugger:=$(agent_debugger)
+
+start:
+	@./tmux_scripts/no_mapping_no_collision_avoidance/start.sh
 
 monitor:
 	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_$(task_id) M $(human_target) $(distance) $(number)
 
+monitorUGV:
+	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_$(task_id) F $(ugv) $(height)
+
 inspect:
-	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_$(task_id) I 0 7 3 7 7 3 7 14 3 7 21 3 0 21 3 -7 21 3 -7 14 3 -7 7 3
+	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_$(task_id) I $(waypoints)
+
+inspectPVArray:
+	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_$(task_id) A $(geo_wp)
 
 deliver:
 	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_$(task_id) D $(tool) $(human_target)
@@ -39,19 +54,13 @@ battery:
 	@rostopic echo /$(agent_prefix)$(agent_id)/battery_fake
 
 battery_off:
-	@rostopic pub /$(agent_prefx)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl "2" "0.2" "0.01" "0.01"
+	@rostopic pub /$(agent_prefix)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl 2 0.2 0.01 0.01
 
 battery_ok:
-	@rostopic pub /$(agent_prefx)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl "2" "1" "0.01" "0.01"
+	@rostopic pub /$(agent_prefix)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl 2 1 0.01 0.01
 
 battery_static:
-	@rostopic pub /$(agent_prefix)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl "0" "1" "0.01" "0.01"
-
-pose:
-	@rostopic echo /$(agent_prefix)$(agent_id)/ual/pose
-
-state:
-	@rostopic echo /$(agent_prefix)$(agent_id)/ual/state
+	@rostopic pub /$(agent_prefix)$(agent_id)/battery_fake/control human_aware_collaboration_planner/BatteryControl 0 0.9 0.01 0.01
 
 mission_over:
 	@rostopic pub /mission_over human_aware_collaboration_planner/MissionOver "value: true"
@@ -143,4 +152,22 @@ phase_2_unforeseen_event_9:
 	@rostopic pub /mission_over human_aware_collaboration_planner/MissionOver "value: true"
 
 mrs_drone_spawn:
-	@rosservice call /mrs_drone_spawner/spawn "$(agent_id) --f550 --enable-rangefinder --pos $(spawn_x) $(spawn_y) $(spawn_z) $(spawn_heading)"
+	@rosservice call /mrs_drone_spawner/spawn "$(agent_id) --f550 --enable-rangefinder --pos $(x) $(y) $(z) $(h)"
+
+mrs_takeoff:
+	@rostopic pub /$(agent_prefix)$(agent_id)/mrs_actionlib_interface/goal mrs_actionlib_interface/commandActionGoal "{header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: ''}, goal_id: {stamp: {secs: 0, nsecs: 0}, id: ''}, goal: {command: 0, goto_x: 0.0, goto_y: 0.0, goto_z: 0.0, goto_hdg: 0.0}}"
+
+mrs_land:
+	@rostopic pub /$(agent_prefix)$(agent_id)/mrs_actionlib_interface/goal mrs_actionlib_interface/commandActionGoal "{header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: ''}, goal_id: {stamp: {secs: 0, nsecs: 0}, id: ''}, goal: {command: 1, goto_x: 0.0, goto_y: 0.0, goto_z: 0.0, goto_hdg: 0.0}}"
+
+mrs_goto_pathfinder:
+	@rostopic pub /$(agent_prefix)$(agent_id)/mrs_actionlib_interface/goal mrs_actionlib_interface/commandActionGoal "{header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: ''}, goal_id: {stamp: {secs: 0, nsecs: 0}, id: ''}, goal: {command: 2, goto_x: $x, goto_y: $y, goto_z: $z, goto_hdg: $h}}"
+
+mrs_goto_direct:
+	@rostopic pub /$(agent_prefix)$(agent_id)/mrs_actionlib_interface/goal mrs_actionlib_interface/commandActionGoal "{header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: ''}, goal_id: {stamp: {secs: 0, nsecs: 0}, id: ''}, goal: {command: 3, goto_x: $x, goto_y: $y, goto_z: $z, goto_hdg: $h}}"
+	
+autonomous_landing_node:
+	@roslaunch ~/autonomous_landing_workspace/src/autonomous_landing_uav/transforms.launch
+
+autonomous_landing_start:
+	@rostopic pub --once /start_landing std_msgs/String "data: ''"

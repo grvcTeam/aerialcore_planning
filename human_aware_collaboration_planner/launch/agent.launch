@@ -2,54 +2,68 @@
 
   <!-- Launch Agent Node -->
   <!-- Low Level Interface: UAL, MRS -->
+  <!-- Worlds: none, empty, power_tower, 2towers, burguillos, mrs, pv_farm, mrs_pv_farm -->
   <arg name="agent_debugger" default="none"/>
   <arg name="id" default="0"/>
-  <arg name="ns_prefix" default="uav_"/>
+  <arg name="ns_prefix" default="uav"/>
   <arg name="low_level_interface" default="UAL"/>
   <arg name="type" default="ACW"/>
   <arg name="pose_frame_id" default="map"/>
   <arg name="config_file" default="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
   <arg name="battery_faker" default="true"/>
+  <arg name="autonomous_landing" default="false"/>
 
-  <group if="$(eval low_level_interface == 'UAL')">
-    <param name="pose_topic" value="/$(arg ns_prefix)$(arg id)/ual/pose"/>
-    <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/ual/state"/>
-    <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/mavros/battery" if="$(eval battery_faker == 'false')"/>
-    <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/battery_fake" if="$(eval battery_faker == 'true')"/>
-  </group>
+  <arg name="world" default="power_tower"/>
 
-  <group if="$(eval low_level_interface == 'MRS')">
-    <param name="pose_topic" value="/$(arg ns_prefix)$(arg id)/mrs/pose"/>
-    <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/mrs/state"/>
-    <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/mavros/battery" if="$(eval battery_faker == 'false')"/>
-    <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/battery_fake" if="$(eval battery_faker == 'true')"/>
+  <group ns="$(arg ns_prefix)$(arg id)/agent_behaviour_manager">
+
+    <param name="low_level_interface" value="$(arg low_level_interface)"/>
+    <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/mavros/battery" unless="$(eval battery_faker)"/>
+    <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/battery_fake" if="$(eval battery_faker)"/>
+
+    <group if="$(eval low_level_interface == 'UAL')">
+      <param name="pose_topic" value="/$(arg ns_prefix)$(arg id)/ual/pose"/>
+      <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/ual/state"/>
+    </group>
+
+    <group if="$(eval low_level_interface == 'MRS')">
+      <param name="pose_topic" value="/$(arg ns_prefix)$(arg id)/mrs_uav_status/uav_status"/>
+      <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/mrs_actionlib_interface/state"/>
+    </group>
+
   </group>
 
   <node pkg="human_aware_collaboration_planner" type="agent_behaviour_manager" name="agent_behaviour_manager" 
     output="screen" ns="$(arg ns_prefix)$(arg id)" launch-prefix="xterm -e gdb -ex 'set print thread-events off' -ex run --args" 
     if="$(eval agent_debugger=='gdb')">
-    <param name="id" value="$(arg ns_prefix)$(arg id)"/>
+    <param name="id" type="str" value="$(arg id)"/>
+    <param name="ns_prefix" value="$(arg ns_prefix)"/>
     <param name="type" value="$(arg type)"/>
     <param name="pose_frame_id" value="$(arg pose_frame_id)"/>
     <param name="config_file" value="$(arg config_file)"/>
+    <param name="autonomous_landing" value="$(arg autonomous_landing)"/>
   </node>
 
   <node pkg="human_aware_collaboration_planner" type="agent_behaviour_manager" name="agent_behaviour_manager" 
     output="screen" ns="$(arg ns_prefix)$(arg id)" 
     launch-prefix="valgrind -v --leak-check=full --show-leak-kinds=all --track-origins=yes --log-file=/home/baldman/valgrind_agent_$(arg id).log" 
     if="$(eval agent_debugger=='valgrind')">
-    <param name="id" value="$(arg ns_prefix)$(arg id)"/>
+    <param name="id" type="str" value="$(arg id)"/>
+    <param name="ns_prefix" value="$(arg ns_prefix)"/>
     <param name="type" value="$(arg type)"/>
     <param name="pose_frame_id" value="$(arg pose_frame_id)"/>
     <param name="config_file" value="$(arg config_file)"/>
+    <param name="autonomous_landing" value="$(arg autonomous_landing)"/>
   </node>
 
   <node pkg="human_aware_collaboration_planner" type="agent_behaviour_manager" name="agent_behaviour_manager" 
     output="screen" ns="$(arg ns_prefix)$(arg id)" if="$(eval agent_debugger=='none')">
-    <param name="id" value="$(arg ns_prefix)$(arg id)"/>
+    <param name="id" type="str" value="$(arg id)"/>
+    <param name="ns_prefix" value="$(arg ns_prefix)"/>
     <param name="type" value="$(arg type)"/>
     <param name="pose_frame_id" value="$(arg pose_frame_id)"/>
     <param name="config_file" value="$(arg config_file)"/>
+    <param name="autonomous_landing" value="$(arg autonomous_landing)"/>
   </node>
 
 </launch>

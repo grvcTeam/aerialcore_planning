@@ -1,6 +1,6 @@
 <launch>
 
-    <arg name="ns_prefix" default="uav_"/>
+    <arg name="ns_prefix" default="uav"/>
     <arg name="id" default="0"/>
 
     <arg name="ual_server" default="on"/>

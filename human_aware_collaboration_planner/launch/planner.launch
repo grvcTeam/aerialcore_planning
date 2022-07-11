@@ -6,16 +6,16 @@
     <arg name="low_level_interface" default="UAL"/>
     <arg name="battery_faker" default="true"/>
 
+    <param name="low_level_interface" value="$(arg low_level_interface)"/>
+    <param name="battery_topic" value="/mavros/battery" unless="$(eval battery_faker)"/>
+    <param name="battery_topic" value="/battery_fake" if="$(eval battery_faker)"/>
+
     <group if="$(eval low_level_interface == 'UAL')">
       <param name="pose_topic" value="/ual/pose"/>
-      <param name="battery_topic" value="/mavros/battery" if="$(eval battery_faker == 'false')"/>
-      <param name="battery_topic" value="/battery_fake" if="$(eval battery_faker == 'true')"/>
     </group>
 
     <group if="$(eval low_level_interface == 'MRS')">
-      <param name="pose_topic" value="/mrs/pose"/>
-      <param name="battery_topic" value="/mavros/battery" if="$(eval battery_faker == 'false')"/>
-      <param name="battery_topic" value="/battery_fake" if="$(eval battery_faker == 'true')"/>
+      <param name="pose_topic" value="/mrs_uav_status/uav_status"/>
     </group>
 
     <!-- Launch Planner Node (there's only one node of this type for the whole simulation and it's outside any ns)-->

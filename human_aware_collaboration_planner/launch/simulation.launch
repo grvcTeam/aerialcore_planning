@@ -1,18 +1,18 @@
 <launch>
     <!-- Mode: sitl, serial, custom -->
-    <!-- Worlds: empty, power_tower, 2towers, burguillos, mrs, pv_farm -->
+    <!-- Worlds: none, empty, power_tower, 2towers, burguillos, mrs, pv_farm, mrs_pv_farm -->
     <!-- Debuggers: gdb, valgrind, none -->
     <!-- Low Level Interface: UAL, MRS -->
-    <arg name="number_UAV" default="3"/>
+    <arg name="number_UAV" default="1"/>
     <arg name="mode" default="sitl"/>
-    <arg name="world" default="power_tower"/>
+    <arg name="world" default="pv_farm"/>
     <arg name="ual_backend" default="light"/>
     <arg name="planner_debugger" default="none"/>
     <arg name="agent_debugger" default="none"/>
 
     <arg name="config_file" default="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
 
-    <arg name="ns_prefix" default="uav_"/>
+    <arg name="ns_prefix" default="uav"/>
     <arg name="ual_server" default="on"/>
     <arg name="low_level_interface" default="UAL"/>
 
@@ -30,6 +30,8 @@
     <arg name="max_orientation_error" default="0.01"/>
 
     <arg name="battery_faker" default="true"/>
+    <arg name="ist_ugv_faker" default="false"/>
+    <arg name="autonomous_landing" default="false"/>
 
 
     <!-- Launch Gazebo simulation -->
@@ -52,8 +54,8 @@
       <arg name="robot_model" value="mbzirc"/>
       <arg name="material" value="Red"/>
       <arg name="camera" value="false"/>
-      <arg name="x" value="-10"/>
-      <arg name="y" value="10"/>
+      <arg name="x" value="-5"/>
+      <arg name="y" value="-72"/>
       <arg name="z" value="0"/>
       <arg name="yaw" value="0"/>
 
@@ -78,6 +80,10 @@
       <arg name="config_file" value="$(arg config_file)"/>
 
       <arg name="battery_faker" value="$(arg battery_faker)"/>
+      <arg name="ist_ugv_faker" value="$(arg ist_ugv_faker)"/>
+      <arg name="autonomous_landing" value="$(arg autonomous_landing)"/>
+
+      <arg name="world" value="$(arg world)"/>
     </include>
 
     <!-- Launch UAV 2 nodes -->
@@ -87,8 +93,8 @@
       <arg name="robot_model" value="mbzirc"/>
       <arg name="material" value="Green"/>
       <arg name="camera" value="false"/>
-      <arg name="x" value="0"/>
-      <arg name="y" value="20"/>
+      <arg name="x" value="-5"/>
+      <arg name="y" value="-76"/>
       <arg name="z" value="0"/>
       <arg name="yaw" value="0"/>
 
@@ -113,6 +119,10 @@
       <arg name="config_file" value="$(arg config_file)"/>
 
       <arg name="battery_faker" value="$(arg battery_faker)"/>
+      <arg name="ist_ugv_faker" value="$(arg ist_ugv_faker)"/>
+      <arg name="autonomous_landing" value="$(arg autonomous_landing)"/>
+
+      <arg name="world" value="$(arg world)"/>
     </include>
 
     <!-- Launch UAV 3 nodes -->
@@ -122,8 +132,8 @@
       <arg name="robot_model" value="mbzirc"/>
       <arg name="material" value="Blue"/>
       <arg name="camera" value="false"/>
-      <arg name="x" value="10"/>
-      <arg name="y" value="10"/>
+      <arg name="x" value="-5"/>
+      <arg name="y" value="-80"/>
       <arg name="z" value="0"/>
       <arg name="yaw" value="0"/>
 
@@ -148,6 +158,10 @@
       <arg name="config_file" value="$(arg config_file)"/>
 
       <arg name="battery_faker" value="$(arg battery_faker)"/>
+      <arg name="ist_ugv_faker" value="$(arg ist_ugv_faker)"/>
+      <arg name="autonomous_landing" value="$(arg autonomous_landing)"/>
+
+      <arg name="world" value="$(arg world)"/>
     </include>
 
     <!-- Launch UAV 4 nodes -->
@@ -183,6 +197,10 @@
       <arg name="config_file" value="$(arg config_file)"/>
 
       <arg name="battery_faker" value="$(arg battery_faker)"/>
+      <arg name="ist_ugv_faker" value="$(arg ist_ugv_faker)"/>
+      <arg name="autonomous_landing" value="$(arg autonomous_landing)"/>
+
+      <arg name="world" value="$(arg world)"/>
     </include>
 
     <!-- Launch UAV 5 nodes -->
@@ -218,6 +236,10 @@
       <arg name="config_file" value="$(arg config_file)"/>
 
       <arg name="battery_faker" value="$(arg battery_faker)"/>
+      <arg name="ist_ugv_faker" value="$(arg ist_ugv_faker)"/>
+      <arg name="autonomous_landing" value="$(arg autonomous_landing)"/>
+
+      <arg name="world" value="$(arg world)"/>
     </include>
 
 </launch>

@@ -14,11 +14,16 @@ find_package(catkin REQUIRED COMPONENTS
   genmsg
   geometry_msgs
   actionlib_msgs
+  #mrs_msgs
+  #mrs_lib
   actionlib
   behaviortree_cpp_v3
   uav_abstraction_layer
-  #mrs_actionlib_interface
+  mrs_actionlib_interface
+  #roscpp
+  mavros_msgs
   #YAML_CPP
+  ist_use_collaboration_msgs
 )
 
 # 4. Enable Python module suport (catkin_python_setup())
@@ -30,6 +35,7 @@ add_message_files(
   PlannerBeacon.msg
   Waypoint.msg
   MonitorParams.msg
+  MonitorUGVParams.msg
   InspectParams.msg
   DeliverToolParams.msg
   RechargeParams.msg
@@ -61,15 +67,17 @@ generate_messages(
   std_msgs
   geometry_msgs
   actionlib_msgs
+  #mrs_msgs
+  mrs_actionlib_interface
+  ist_use_collaboration_msgs
 )
 
 # 7. Specify package build info export (catkin_package())
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES ${PROJECT_NAME}
-  CATKIN_DEPENDS behaviortree_cpp_v3
-  CATKIN_DEPENDS message_runtime
-  #CATKIN_DEPENDS mrs_actionlib_interface
+  #LIBRARIES ${PROJECT_NAME} #MrsActionlibInterface
+  CATKIN_DEPENDS behaviortree_cpp_v3 message_runtime mrs_actionlib_interface ist_use_collaboration_msgs uav_abstraction_layer
+  #CATKIN_DEPENDS behaviortree_cpp_v3 message_runtime mrs_actionlib_interface roscpp mrs_lib mrs_msgs
 )
 
 include_directories(
@@ -116,6 +124,12 @@ set_target_properties(agent_behaviour_manager PROPERTIES COMPILE_FLAGS "-g")
 add_executable(battery_faker src/battery_faker.cpp)
 target_link_libraries(battery_faker yaml-cpp ${PROJECT_NAME} ${catkin_LIBRARIES})
 add_dependencies(battery_faker ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+set_target_properties(battery_faker PROPERTIES COMPILE_FLAGS "-g")
+
+add_executable(ist_ugv_faker src/ist_ugv_faker.cpp)
+target_link_libraries(ist_ugv_faker yaml-cpp ${PROJECT_NAME} ${catkin_LIBRARIES})
+add_dependencies(ist_ugv_faker ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+set_target_properties(ist_ugv_faker PROPERTIES COMPILE_FLAGS "-g")
 
 # 9. Tests to build (catkin_add_gtest())
 

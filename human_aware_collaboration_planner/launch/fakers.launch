@@ -2,17 +2,24 @@
 
   <!-- Low Level Interface: UAL, MRS -->
   <arg name="id" default="0"/>
-  <arg name="ns_prefix" default="uav_"/>
+  <arg name="ns_prefix" default="uav"/>
   <arg name="low_level_interface" default="UAL"/>
   <arg name="config_file" default="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
 
   <arg name="battery_faker" default="false"/>
+  <arg name="ist_ugv_faker" default="false"/>
+  <arg name="autonomous_landing" default="false"/>
 
   <!-- Launch Battery Faker Node for robot -->
   <include file="$(find human_aware_collaboration_planner)/launch/battery_faker.launch" if="$(arg battery_faker)">
     <arg name="id" value="$(arg id)"/>
     <arg name="ns_prefix" value="$(arg ns_prefix)"/>
+    <arg name="low_level_interface" value="$(arg low_level_interface)"/>
     <arg name="config_file" value="$(arg config_file)"/>
   </include>
+
+  <node pkg="human_aware_collaboration_planner" type="ist_ugv_faker" name="ist_ugv_faker" output="screen" if="$(arg ist_ugv_faker)"/>
+
+  <include file="$(find ~/autonomous_landing_workspace/src/autonomous_landing_uav/transforms.launch" if="$(arg autonomous_landing)"/>
 
 </launch>

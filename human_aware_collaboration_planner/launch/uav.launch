@@ -2,6 +2,7 @@
     <!-- Mode: sitl, serial, custom -->
     <!-- Debuggers: gdb, valgrind, none -->
     <!-- Low Level Interface: UAL, MRS -->
+    <!-- Worlds: none, empty, power_tower, 2towers, burguillos, mrs, pv_farm, mrs_pv_farm -->
     <arg name="mode" default="sitl"/>
     <arg name="agent_debugger" default="none"/>
 
@@ -17,7 +18,7 @@
     <arg name="z" default="0"/>
     <arg name="yaw" default="0"/>
 
-    <arg name="ns_prefix" default="uav_"/>
+    <arg name="ns_prefix" default="uav"/>
     <arg name="low_level_interface" default="UAL"/>
     <arg name="ual_server" default="on"/>
 
@@ -36,6 +37,10 @@
     <arg name="max_orientation_error" default="0.01"/>
 
     <arg name="battery_faker" default="false"/>
+    <arg name="ist_ugv_faker" default="false"/>
+    <arg name="autonomous_landing" default="false"/>
+
+    <arg name="world" default="power_tower"/>
 
 
     <!-- Launch UAL -->
@@ -67,7 +72,7 @@
       <arg name="max_orientation_error" value="$(arg max_orientation_error)"/>
     </include>
 
-    <!-- Launch MRS -->
+    <!-- Launch MRS >
     <include file="$(find human_aware_collaboration_planner)/launch/mrs.launch" if="$(eval low_level_interface=='MRS')">
       <arg name="id" value="$(arg id)"/>
       <arg name="robot_model" value="$(arg robot_model)"/>
@@ -94,7 +99,7 @@
       <arg name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
       <arg name="max_position_error" value="$(arg max_position_error)"/>
       <arg name="max_orientation_error" value="$(arg max_orientation_error)"/>
-    </include>
+    </include-->
 
     <!-- Launch agent_behavior_manager -->
     <include file="$(find human_aware_collaboration_planner)/launch/agent.launch">
@@ -106,6 +111,8 @@
       <arg name="pose_frame_id" value="$(arg pose_frame_id)"/>
       <arg name="config_file" value="$(arg config_file)"/>
       <arg name="battery_faker" value="$(arg battery_faker)"/>
+      <arg name="autonomous_landing" value="$(arg autonomous_landing)"/>
+      <arg name="world" value="$(arg world)"/>
     </include>
 
     <!-- Launch fakers -->
@@ -115,6 +122,8 @@
       <arg name="low_level_interface" value="$(arg low_level_interface)"/>
       <arg name="config_file" value="$(arg config_file)"/>
       <arg name="battery_faker" value="$(arg battery_faker)"/>
+      <arg name="ist_ugv_faker" value="$(arg ist_ugv_faker)"/>
+      <arg name="autonomous_landing" value="$(arg autonomous_landing)"/>
     </include>
 
 </launch>

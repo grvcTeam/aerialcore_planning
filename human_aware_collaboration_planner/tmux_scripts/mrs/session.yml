@@ -1,0 +1,24 @@
+name: simulation
+root: ./
+pre_window: export UAV_NAME="uav1"; export UAV_ID="1"; export UAV_TYPE=t650; export RUN_TYPE=simulation; export WORLD_FILE=./custom_configs/world.yaml; export WORLD_NAME=simulation_large_safety_area; export SENSORS="garmin_down"; export ODOMETRY_TYPE="gps"; xdotool key shift+F10 r 2
+startup_window: status
+windows:
+  - core/gz:
+      layout: tiled
+      panes:
+        - roscore
+        - waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_file:='$(find aerialcore_simulation)/worlds/evora_solar_panel_farm.world'
+          #- waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_name:=grass_plane
+        #- waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_file:='$(find grvc_gazebo_worlds)/worlds/evora_solar_panel_farm.world'
+        #- waitForRos; roslaunch mrs_simulation simulation.launch gui:=true world_file:='$(find aerialcore_simulation)/worlds/power_towers_danube_wires_rescaled_jeff_autospawn.world'
+  - control: 
+      layout: even-vertical
+      panes:
+        - waitForSimulation; roslaunch mrs_uav_status status.launch
+        - waitForOdometry; roslaunch mrs_uav_general core.launch config_odometry:=./custom_configs/odometry.yaml
+        - waitForOdometry; roslaunch mrs_actionlib_interface uav.launch
+        - roscd human_aware_collaboration_planner
+  - spawn:
+      layout: tiled
+      panes:
+        - waitForSimulation; rosservice call /mrs_drone_spawner/spawn "1 ${UAV_TYPE} --enable-rangefinder --pos-file `pwd`/pos.yaml"; exit 

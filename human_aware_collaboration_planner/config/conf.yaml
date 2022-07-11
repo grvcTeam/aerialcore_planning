@@ -17,18 +17,18 @@ positions:
     
   charging_stations:
     charging_station_1:
-      x: -10.0
-      y: 10.0
+      x: -5.0
+      y: -72.0
       z: 0.0
     
     charging_station_2:
-      x: 0.0
-      y: 20.0
+      x: -5.0
+      y: -76.0
       z: 0.0
 
     charging_station_3:
-      x: 10.0
-      y: 10.0
+      x: -5.0
+      y: -80.0
       z: 0.0
     
     charging_station_4:
@@ -43,18 +43,18 @@ positions:
     
   stations:
     station_1:
-      x: -5.0
-      y: 5.0
+      x: -9.0
+      y: -72.0
       z: 0.0
     
     station_2:
-      x: 0.0
-      y: 15.0
+      x: -9.0
+      y: -76.0
       z: 0.0
 
     station_3:
-      x: 5.0
-      y: 10.0
+      x: -9.0
+      y: -80.0
       z: 0.0
 
     station_4:

@@ -1,11 +1,34 @@
 <launch>
 
   <arg name="id" default="0"/>
-  <arg name="ns_prefix" default="uav_"/>
+  <arg name="ns_prefix" default="uav"/>
+  <arg name="low_level_interface" default="UAL"/>
   <arg name="config_file" default="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
+  <arg name="debugger" default="none"/>
 
-  <!-- Launch Battery Faker Node for robot id = "uav_i" (ns = $(id))-->
-  <node pkg="human_aware_collaboration_planner" type="battery_faker" name="battery_faker" ns="$(arg ns_prefix)$(arg id)">
+  <group ns="$(arg ns_prefix)$(arg id)/battery_faker">
+    <param name="low_level_interface" value="$(arg low_level_interface)"/>
+
+    <group if="$(eval low_level_interface == 'UAL')">
+      <param name="pose_topic" value="/$(arg ns_prefix)$(arg id)/ual/pose"/>
+      <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/ual/state"/>
+    </group>
+
+    <group if="$(eval low_level_interface == 'MRS')">
+      <param name="pose_topic" value="/$(arg ns_prefix)$(arg id)/mrs_uav_status/uav_status"/>
+      <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/mrs_actionlib_interface/state"/>
+    </group>
+  </group>
+
+  <node pkg="human_aware_collaboration_planner" type="battery_faker" name="battery_faker" ns="$(arg ns_prefix)$(arg id)"
+    output="screen" if="$(eval debugger=='none')">
+    <param name="id" value="$(arg ns_prefix)$(arg id)"/>
+    <param name="config_file" value="$(arg config_file)"/>
+  </node>
+
+  <node pkg="human_aware_collaboration_planner" type="battery_faker" name="battery_faker" ns="$(arg ns_prefix)$(arg id)"
+    output="screen" launch-prefix="xterm -e gdb -ex 'set print thread-events off' -ex run --args" 
+    if="$(eval debugger=='gdb')">
     <param name="id" value="$(arg ns_prefix)$(arg id)"/>
     <param name="config_file" value="$(arg config_file)"/>
   </node>

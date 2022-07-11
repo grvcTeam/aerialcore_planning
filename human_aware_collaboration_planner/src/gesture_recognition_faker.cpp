@@ -54,8 +54,33 @@ int main(int argc, char **argv)
           error = 0;
         }
         break;
+      case 'F':
+      case 'f':
+        if (argc == 5)
+        {
+          goal.task.monitor_ugv.ugv_id = argv[3];
+          goal.task.monitor_ugv.height = atof(argv[4]);
+          error = 0;
+        }
+        break;
       case 'I':
       case 'i':
+        i = 3;
+        while(i + 2 < argc)
+        {
+          human_aware_collaboration_planner::Waypoint waypoint;
+          waypoint.x = atof(argv[i]);
+          waypoint.y = atof(argv[i+1]);
+          waypoint.z = atof(argv[i+2]);
+
+          goal.task.inspect.waypoints.push_back(waypoint);
+          i += 3;
+        }
+        if(goal.task.inspect.waypoints.size())
+          error = 0;
+        break;
+      case 'A':
+      case 'a':
         i = 3;
         while(i + 2 < argc)
         {

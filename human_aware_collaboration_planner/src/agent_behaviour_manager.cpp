@@ -9,8 +9,8 @@ static const char* behaviour_tree_xml = R"(
  )";
 
 //Behavior Tree Nodes declaration ***********************************************************************************
-//******************************* Actions
-//GoNearChargingStation
+//******************************* Actions {
+//GoNearChargingStation {
 GoNearChargingStation::GoNearChargingStation(const std::string& name, const BT::NodeConfiguration& config) :
   BT::AsyncActionNode(name, config) {}
 GoNearChargingStation::~GoNearChargingStation(){halt();}
@@ -27,6 +27,8 @@ BT::NodeStatus GoNearChargingStation::tick(){
   float distance = -1;
   float tmp_distance;
 
+  std::string aux = "";
+
   /***************************************** TODO: TO BE IMPROVED ***************************************************/
   //Find closest station (sustituido por estacion fija hasta que se una con los lower-level controllers)
   /*distance = -1;
@@ -40,10 +42,8 @@ BT::NodeStatus GoNearChargingStation::tick(){
     }
   }*/
 
-  //While programig a shared resource with the charging stations, this will be where the Agent goes to recharge
-  unsigned id;
-  sscanf(agent_->beacon_.id.c_str(), "uav_%u", &id);
-  nearest_station = "charging_station_" + std::to_string(id);
+  //TODO: While programig a shared resource with the charging stations, this will be where the Agent goes to recharge
+  nearest_station = "charging_station_" + agent_->id_;
 
   //Emergency Recharging
   if(agent_->task_queue_.empty())
@@ -68,6 +68,28 @@ BT::NodeStatus GoNearChargingStation::tick(){
       assigned_charging_station = task->getChargingStation();
     }
   }
+  /*************************************************************************************************************/
+
+  /************************** IST Collaboration: Mobile Charging Station ***************************************/
+  actionlib::SimpleActionClient<ist_use_collaboration_msgs::RequestMobileChargingStationAction> 
+    request_charging_ac_("/jackal0/cooperation_use/request_mobile_charging_station", true);
+  ist_use_collaboration_msgs::RequestMobileChargingStationGoal goal;
+  request_charging_ac_.waitForServer(ros::Duration(1.0));
+  goal.requester_id = agent_->id_;
+  request_charging_ac_.sendGoal(goal);
+
+  //Wait for result. Maximum 5 seconds. If timeout, recharge on a fixed platform.
+  //If result, read result. If true, change assigned_charging_station_, if false, land on a fixed platform.
+  if(request_charging_ac_.waitForResult(ros::Duration(5.0)))
+  {
+    ist_use_collaboration_msgs::RequestMobileChargingStationResultConstPtr result = request_charging_ac_.getResult();
+    if(result->success)
+    {
+      assigned_charging_station = agent_->jackal_pose_;
+      aux = "mobile ";
+    }
+  }
+
   /*************************************************************************************************************/
 
   while(!isHaltRequested())
@@ -101,13 +123,14 @@ BT::NodeStatus GoNearChargingStation::tick(){
         //Go to recharging station
         if(isHaltRequested())
           return BT::NodeStatus::IDLE;
-        ROS_INFO("[GoNearChargingStation] Moving to recharging station (%.1f,%.1f)[%s]",
-            assigned_charging_station.getX(), assigned_charging_station.getY(), agent_->pose_frame_id_.c_str());
+        ROS_INFO_STREAM("[GoNearChargingStation] Moving to " << aux << "recharging station (" <<
+            assigned_charging_station.getX() << ", " << assigned_charging_station.getY() << ")[" <<
+            agent_->pose_frame_id_.c_str() << "]");
         if(agent_->go_to_waypoint(assigned_charging_station.getX(), assigned_charging_station.getY(),
-              assigned_charging_station.getZ() + 0.4, false))
+              assigned_charging_station.getZ() + 1, false))
         {
-          while(!agent_->checkIfUALGoToServiceSucceeded(assigned_charging_station.getX(),
-                assigned_charging_station.getY(), assigned_charging_station.getZ() + 0.4))
+          while(!agent_->checkIfGoToServiceSucceeded(assigned_charging_station.getX(),
+                assigned_charging_station.getY(), assigned_charging_station.getZ() + 1))
           {
             if(isHaltRequested())
               return BT::NodeStatus::IDLE;
@@ -141,8 +164,9 @@ void GoNearChargingStation::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//Recharge
+//Recharge {
 Recharge::Recharge(const std::string& name, const BT::NodeConfiguration& config) : BT::AsyncActionNode(name, config) {}
 Recharge::~Recharge(){halt();}
 void Recharge::init(AgentNode* agent){agent_ = agent;}
@@ -298,8 +322,9 @@ void Recharge::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//BackToStation
+//BackToStation {
 BackToStation::BackToStation(const std::string& name, const BT::NodeConfiguration& config) : BT::AsyncActionNode(name,
     config) {}
 BackToStation::~BackToStation(){halt();}
@@ -318,16 +343,14 @@ BT::NodeStatus BackToStation::tick(){
   float tmp_distance;
 
   //TODO: BackToStation. search instead for the closest free station
-  unsigned id;
-  sscanf(agent_->beacon_.id.c_str(), "uav_%u", &id);
-  nearest_station = "station_" + std::to_string(id);
+  nearest_station = "station_" + agent_->id_;
 
   while(!isHaltRequested())
   {
     //If Agent is already in station. Land if needed and back_to_station
     for(auto& station : agent_->known_positions_["stations"])
     {
-      if(classes::distance(agent_->position_, station.second) < 0.2)
+      if(classes::distance2D(agent_->position_, station.second) < 0.5)
         flag = 1;
     }
     if(flag)
@@ -419,7 +442,7 @@ BT::NodeStatus BackToStation::tick(){
           //UAL goto service call
           if(!agent_->go_to_waypoint(agent_->known_positions_["stations"][nearest_station].getX(),
                 agent_->known_positions_["stations"][nearest_station].getY(),
-                agent_->known_positions_["stations"][nearest_station].getZ() + 0.4, false))
+                agent_->known_positions_["stations"][nearest_station].getZ() + 1, false))
           {
             if(isHaltRequested())
               return BT::NodeStatus::IDLE;
@@ -429,9 +452,9 @@ BT::NodeStatus BackToStation::tick(){
           //UAL goto service result waiting loop
           else
           {
-            while(!agent_->checkIfUALGoToServiceSucceeded(agent_->known_positions_["stations"][nearest_station].getX(),
+            while(!agent_->checkIfGoToServiceSucceeded(agent_->known_positions_["stations"][nearest_station].getX(),
                   agent_->known_positions_["stations"][nearest_station].getY(),
-                  agent_->known_positions_["stations"][nearest_station].getZ() + 0.4))
+                  agent_->known_positions_["stations"][nearest_station].getZ() + 1))
             {
               if(isHaltRequested())
                 return BT::NodeStatus::IDLE;
@@ -477,8 +500,9 @@ void BackToStation::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//GoNearHumanTarget
+//GoNearHumanTarget {
 GoNearHumanTarget::GoNearHumanTarget(const std::string& name, const BT::NodeConfiguration& config) :
   BT::AsyncActionNode(name, config) {}
 GoNearHumanTarget::~GoNearHumanTarget(){halt();}
@@ -518,7 +542,7 @@ BT::NodeStatus GoNearHumanTarget::tick(){
   }
 
   classes::Position human_position = task->getHumanPosition();
-  classes::Position near_human_pose = classes::close_pose_2D(agent_->position_, human_position, distance);
+  classes::Position near_human_pose = classes::closePose2D(agent_->position_, human_position, distance);
 
   while(!isHaltRequested())
   {
@@ -550,7 +574,7 @@ BT::NodeStatus GoNearHumanTarget::tick(){
         ROS_INFO("[GoNearHumanTarget] Moving near HT...");
         if(agent_->go_to_waypoint(near_human_pose.getX(), near_human_pose.getY(), near_human_pose.getZ(), false))
         {
-          while(!agent_->checkIfUALGoToServiceSucceeded(near_human_pose.getX(), near_human_pose.getY(),
+          while(!agent_->checkIfGoToServiceSucceeded(near_human_pose.getX(), near_human_pose.getY(),
                 near_human_pose.getZ()))
           {
             if(isHaltRequested())
@@ -583,8 +607,9 @@ void GoNearHumanTarget::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//MonitorHumanTarget
+//MonitorHumanTarget {
 MonitorHumanTarget::MonitorHumanTarget(const std::string& name, const BT::NodeConfiguration& config) :
   BT::AsyncActionNode(name, config) {}
 MonitorHumanTarget::~MonitorHumanTarget(){halt();}
@@ -646,8 +671,187 @@ void MonitorHumanTarget::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//GoNearWP
+//GoNearUGV {
+GoNearUGV::GoNearUGV(const std::string& name, const BT::NodeConfiguration& config) :
+  BT::AsyncActionNode(name, config) {}
+GoNearUGV::~GoNearUGV(){halt();}
+void GoNearUGV::init(AgentNode* agent){agent_ = agent;}
+BT::PortsList GoNearUGV::providedPorts() {return{};}
+BT::NodeStatus GoNearUGV::tick(){
+  if(!agent_->stop(false))
+    ROS_ERROR("Failed to call stop");
+
+  classes::Task* task;
+  if(agent_->task_queue_.empty())
+  {
+    if(isHaltRequested())
+      return BT::NodeStatus::IDLE;
+    ROS_WARN("[GoNearUGV] Task queue is empty");
+    return BT::NodeStatus::FAILURE;
+  }
+  task = agent_->task_queue_.front();
+
+  float height;
+  switch(task->getType())
+  {
+    case 'F':
+    case 'f':
+      height = task->getHeight();
+      break;
+    default:
+      if(isHaltRequested())
+        return BT::NodeStatus::IDLE;
+      ROS_WARN("[GoNearUGV] First task of the queue isn't type MonitorUGV");
+      return BT::NodeStatus::FAILURE;
+      break;
+  }
+
+
+
+  while(!isHaltRequested())
+  {
+    switch(agent_->state_)
+    {
+      case 2: //LANDED_ARMED
+        if(isHaltRequested())
+          return BT::NodeStatus::IDLE;
+        if(!agent_->take_off(3, false))
+        {
+          if(isHaltRequested())
+            return BT::NodeStatus::IDLE;
+          ROS_ERROR("[GoNearUGV] Failed to call service take_off");
+          return BT::NodeStatus::FAILURE;
+        }
+        else
+        {
+          while(agent_->state_ != 4)
+          {
+            if(isHaltRequested())
+              return BT::NodeStatus::IDLE;
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          }
+        }
+        break;
+      case 4: //FLYING_AUTO
+        if(isHaltRequested())
+          return BT::NodeStatus::IDLE;
+        ROS_INFO("[GoNearUGV] Moving near HT...");
+        if(agent_->go_to_waypoint(agent_->atrvjr_pose_.getX(), agent_->atrvjr_pose_.getY(), height, false))
+        {
+          while(!agent_->checkIfGoToServiceSucceeded(agent_->atrvjr_pose_.getX(), agent_->atrvjr_pose_.getY(), height))
+          {
+            if(isHaltRequested())
+              return BT::NodeStatus::IDLE;
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          }
+          if(classes::distance2D(agent_->atrvjr_pose_, agent_->position_) < 1.5)
+          {
+            ROS_INFO("[GoNearUGV] Returning SUCCESS...");
+            return BT::NodeStatus::SUCCESS;
+          }
+        }
+        else
+        {
+          if(isHaltRequested())
+            return BT::NodeStatus::IDLE;
+          ROS_ERROR("[GoNearUGV] Failed to call service go_to_waypoint");
+          return BT::NodeStatus::FAILURE;
+        }
+        break;
+      case 0: //UNINITIALIZED
+      case 1: //LANDED_DISARMED
+      case 3: //TAKING_OFF
+      case 5: //FLIYING_MANUAL
+      case 6: //LANDING
+      default:
+        break;
+    }
+  }
+  return BT::NodeStatus::IDLE;
+}
+void GoNearUGV::halt(){
+  ROS_INFO("[GoNearUGV] halt requested");
+  //Do some cleanup if necessary
+  
+  BT::AsyncActionNode::halt();
+}
+// }
+
+//MonitorUGV {
+MonitorUGV::MonitorUGV(const std::string& name, const BT::NodeConfiguration& config) :
+  BT::AsyncActionNode(name, config) {}
+MonitorUGV::~MonitorUGV(){halt();}
+void MonitorUGV::init(AgentNode* agent){agent_ = agent;}
+BT::PortsList MonitorUGV::providedPorts() {return{};}
+BT::NodeStatus MonitorUGV::tick(){
+  if(!agent_->stop(false))
+    ROS_ERROR("Failed to call stop");
+
+  classes::Task* task;
+  if(agent_->task_queue_.empty())
+  {
+    if(isHaltRequested())
+      return BT::NodeStatus::IDLE;
+    ROS_WARN("[MonitorUGV] Task queue is empty");
+    return BT::NodeStatus::FAILURE;
+  }
+  task = agent_->task_queue_.front();
+
+  std::string task_id = task->getID();
+
+  if(task->getType() != 'F')
+  {
+    if(isHaltRequested())
+      return BT::NodeStatus::IDLE;
+    ROS_WARN("[MonitorUGV] First task of the queue isn't type MonitorUGV");
+    return BT::NodeStatus::FAILURE;
+  }
+  float height = task->getHeight();
+
+  actionlib::SimpleActionClient<human_aware_collaboration_planner::TaskResultAction> 
+    task_result_ac_("/" + agent_->beacon_.id + "/task_result", true);
+  human_aware_collaboration_planner::TaskResultGoal goal;
+
+  ROS_INFO("[MonitorUGV] Calling Lower-level controllers..."); 
+  while(!isHaltRequested())
+  {
+    //ROS_INFO_STREAM("Trying to reach point: " << agent_->atrvjr_pose_);
+    if(!agent_->go_to_waypoint(agent_->atrvjr_pose_.getX(), agent_->atrvjr_pose_.getY(), height, false))
+    {
+      if(isHaltRequested())
+      {
+        //ROS_WARN("[MonitorUGV] Halted");
+        break;
+      }
+      ROS_ERROR("[MonitorUGV] Failed to call service go_to_waypoint");
+      return BT::NodeStatus::FAILURE;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  }
+
+  task_result_ac_.waitForServer(ros::Duration(1.0));
+  goal.task.id = task_id;
+  goal.task.type = 'F';
+  goal.result = isHaltRequested() ? 0 : 1; 
+  task_result_ac_.sendGoal(goal);
+  if(goal.result)
+      agent_->removeTaskFromQueue(task_id, 'F');
+  ROS_INFO("[MonitorUGV] MONITOR UGV TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+  agent_->infoQueue();
+  
+  return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+}
+void MonitorUGV::halt(){
+  ROS_INFO("[MonitorUGV] halt requested");
+  //Do some cleanup if necessary
+  
+  BT::AsyncActionNode::halt();
+}
+// }
+
+//GoNearWP {
 GoNearWP::GoNearWP(const std::string& name, const BT::NodeConfiguration& config) : BT::AsyncActionNode(name, config) {}
 GoNearWP::~GoNearWP(){halt();}
 void GoNearWP::init(AgentNode* agent){agent_ = agent;}
@@ -668,27 +872,37 @@ BT::NodeStatus GoNearWP::tick(){
 
   human_aware_collaboration_planner::Waypoint nearest_wp;
 
-  if(task->getType() != 'I')
+  if(task->getType() != 'I' && task->getType() != 'A')
   {
     if(isHaltRequested())
       return BT::NodeStatus::IDLE;
-    ROS_WARN("[GoNearWP] First task of the queue isn't type Inspect");
+    ROS_WARN("[GoNearWP] First task of the queue isn't type Inspect or InspectPVArray");
     return BT::NodeStatus::FAILURE;
   }
 
-  //Find the closest WP from the list
-  float distance = -1;
-  float tmp_distance;
-  for(auto& waypoint : task->getInspectWaypoints())
+  if(task->getType() == 'I')
   {
-    tmp_distance = classes::distance(agent_->position_, waypoint);
-    if(distance == -1 || tmp_distance < distance)
+    //Find the closest WP from the list
+    float distance = -1;
+    float tmp_distance;
+    for(auto& waypoint : task->getInspectWaypoints())
     {
-      distance = tmp_distance;
-      nearest_wp = waypoint;
+      tmp_distance = classes::distance(agent_->position_, waypoint);
+      if(distance == -1 || tmp_distance < distance)
+      {
+        distance = tmp_distance;
+        nearest_wp = waypoint;
+      }
     }
   }
-  classes::Position near_waypoint = classes::close_pose_2D(agent_->position_, nearest_wp, 1.5);
+
+  if(task->getType() == 'A')
+  {
+    auto waypoint = task->getInspectWaypoints();
+    nearest_wp = waypoint[0];
+  }
+
+  classes::Position near_waypoint = classes::closePose2D(agent_->position_, nearest_wp, 1.5);
 
   while(!isHaltRequested())
   {
@@ -720,7 +934,7 @@ BT::NodeStatus GoNearWP::tick(){
         ROS_INFO("[GoNearWP] Moving near WP...");
         if(agent_->go_to_waypoint(near_waypoint.getX(), near_waypoint.getY(), near_waypoint.getZ(), false))
         {
-          while(!agent_->checkIfUALGoToServiceSucceeded(near_waypoint.getX(), near_waypoint.getY(),
+          while(!agent_->checkIfGoToServiceSucceeded(near_waypoint.getX(), near_waypoint.getY(),
                 near_waypoint.getZ()))
           {
             if(isHaltRequested())
@@ -756,8 +970,9 @@ void GoNearWP::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//TakeImage
+//TakeImage {
 TakeImage::TakeImage(const std::string& name, const BT::NodeConfiguration& config) : BT::AsyncActionNode(name, config) {}
 TakeImage::~TakeImage(){halt();}
 void TakeImage::init(AgentNode* agent){agent_ = agent;}
@@ -819,8 +1034,295 @@ void TakeImage::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//GoNearStation
+//InspectPVArray {
+InspectPVArray::InspectPVArray(const std::string& name, const BT::NodeConfiguration& config) : BT::AsyncActionNode(name, config) {}
+InspectPVArray::~InspectPVArray(){halt();}
+void InspectPVArray::init(AgentNode* agent){agent_ = agent;}
+BT::PortsList InspectPVArray::providedPorts() {return{};}
+BT::NodeStatus InspectPVArray::tick(){
+  if(!agent_->stop(false))
+    ROS_ERROR("Failed to call stop");
+
+  classes::Task* task;
+  if(agent_->task_queue_.empty())
+  {
+    if(isHaltRequested())
+      return BT::NodeStatus::IDLE;
+    ROS_WARN("[InspectPVArray] Task queue is empty");
+    return BT::NodeStatus::FAILURE;
+  }
+  task = agent_->task_queue_.front();
+
+  std::string task_id = task->getID();
+
+  if(task->getType() != 'A')
+  {
+    if(isHaltRequested())
+      return BT::NodeStatus::IDLE;
+    ROS_WARN("[InspectPVArray] First task of the queue isn't type Inspect PV Array");
+    return BT::NodeStatus::FAILURE;
+  }
+
+  actionlib::SimpleActionClient<human_aware_collaboration_planner::TaskResultAction> 
+    task_result_ac_("/" + agent_->beacon_.id + "/task_result", true);
+  human_aware_collaboration_planner::TaskResultGoal goal;
+
+  //TODO: Calling Inspection lower level controllers (faked) 
+  ROS_INFO("[InspectPVArray] Calling Lower-level controllers...");
+  //********************************************* FAKED *************************************************************
+  auto wp = task->getInspectWaypoints();
+
+  while(!isHaltRequested())
+  {
+    switch(agent_->state_)
+    {
+      case 2: //LANDED_ARMED
+        if(isHaltRequested())
+        {
+          task_result_ac_.waitForServer(ros::Duration(1.0));
+          goal.task.id = task_id;
+          goal.task.type = 'A';
+          goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
+          task_result_ac_.sendGoal(goal);
+          if(goal.result)
+            agent_->removeTaskFromQueue(task_id, 'A');
+          ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+          agent_->infoQueue();
+          return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+        }
+        if(!agent_->take_off(3, false))
+        {
+          if(isHaltRequested())
+          {
+            task_result_ac_.waitForServer(ros::Duration(1.0));
+            goal.task.id = task_id;
+            goal.task.type = 'A';
+            goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
+            task_result_ac_.sendGoal(goal);
+            if(goal.result)
+              agent_->removeTaskFromQueue(task_id, 'A');
+            ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+            agent_->infoQueue();
+            return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+          }
+          ROS_ERROR("[InspectPVArray] Failed to call service take_off");
+          task_result_ac_.waitForServer(ros::Duration(1.0));
+          goal.task.id = task_id;
+          goal.task.type = 'A';
+          goal.result = 0; //TODO: Change with the result of Lower-level controllers
+          task_result_ac_.sendGoal(goal);
+          if(goal.result)
+            agent_->removeTaskFromQueue(task_id, 'A');
+          ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+          agent_->infoQueue();
+          return BT::NodeStatus::FAILURE;
+        }
+        else
+        {
+          while(agent_->state_ != 4)
+          {
+            if(isHaltRequested())
+            {
+              task_result_ac_.waitForServer(ros::Duration(1.0));
+              goal.task.id = task_id;
+              goal.task.type = 'A';
+              goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
+              task_result_ac_.sendGoal(goal);
+              if(goal.result)
+                agent_->removeTaskFromQueue(task_id, 'A');
+              ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+              agent_->infoQueue();
+              return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          }
+        }
+        break;
+      case 4: //FLYING_AUTO
+        if(isHaltRequested())
+        {
+          task_result_ac_.waitForServer(ros::Duration(1.0));
+          goal.task.id = task_id;
+          goal.task.type = 'A';
+          goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
+          task_result_ac_.sendGoal(goal);
+          if(goal.result)
+            agent_->removeTaskFromQueue(task_id, 'A');
+          ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+          agent_->infoQueue();
+          return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+        }
+        ROS_INFO("[InspectPVArray] Moving to the beggining...");
+        if(agent_->go_to_waypoint(wp[0].x, wp[0].y, wp[0].z, false))
+        {
+          while(!agent_->checkIfGoToServiceSucceeded(wp[0].x, wp[0].y, wp[0].z))
+          {
+            if(isHaltRequested())
+            {
+              task_result_ac_.waitForServer(ros::Duration(1.0));
+              goal.task.id = task_id;
+              goal.task.type = 'A';
+              goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
+              task_result_ac_.sendGoal(goal);
+              if(goal.result)
+                agent_->removeTaskFromQueue(task_id, 'A');
+              ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+              agent_->infoQueue();
+              return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          }
+          ROS_INFO("[InspectPVArray] Moving to the end...");
+          if(agent_->go_to_waypoint(wp[1].x, wp[1].y, wp[1].z, false))
+          {
+            while(!agent_->checkIfGoToServiceSucceeded(wp[1].x, wp[1].y, wp[1].z))
+            {
+              if(isHaltRequested())
+              {
+                task_result_ac_.waitForServer(ros::Duration(1.0));
+                goal.task.id = task_id;
+                goal.task.type = 'A';
+                goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
+                task_result_ac_.sendGoal(goal);
+                if(goal.result)
+                  agent_->removeTaskFromQueue(task_id, 'A');
+                ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+                agent_->infoQueue();
+                return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+              }
+              std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            ROS_INFO("[InspectPVArray] Returning SUCCESS...");
+            task_result_ac_.waitForServer(ros::Duration(1.0));
+            goal.task.id = task_id;
+            goal.task.type = 'A';
+            goal.result = 1; //TODO: Change with the result of Lower-level controllers
+            //Solar Panel 3_4
+            geometry_msgs::Point target_xyz;
+            target_xyz.x = -36.6343;
+            target_xyz.y =  62.293;
+            geographic_msgs::GeoPose target_gps;
+            target_gps.position.latitude  = -7.96213167462045;
+            target_gps.position.longitude = 38.54156780106911;
+            goal.do_closer_inspection.xyz_coordinates.push_back(target_xyz);
+            goal.do_closer_inspection.gps_coordinates.push_back(target_gps);
+            task_result_ac_.sendGoal(goal);
+            if(goal.result)
+              agent_->removeTaskFromQueue(task_id, 'A');
+            ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+            agent_->infoQueue();
+            return BT::NodeStatus::SUCCESS;
+          }
+          else
+          {
+            if(isHaltRequested())
+            {
+              task_result_ac_.waitForServer(ros::Duration(1.0));
+              goal.task.id = task_id;
+              goal.task.type = 'A';
+              goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
+              task_result_ac_.sendGoal(goal);
+              if(goal.result)
+                agent_->removeTaskFromQueue(task_id, 'A');
+              ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+              agent_->infoQueue();
+              return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+            }
+            ROS_ERROR("[InspectPVArray] Failed to call service go_to_waypoint");
+            task_result_ac_.waitForServer(ros::Duration(1.0));
+            goal.task.id = task_id;
+            goal.task.type = 'A';
+            goal.result = 0; //TODO: Change with the result of Lower-level controllers
+            task_result_ac_.sendGoal(goal);
+            if(goal.result)
+              agent_->removeTaskFromQueue(task_id, 'A');
+            ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+            agent_->infoQueue();
+            return BT::NodeStatus::FAILURE;
+          }
+          ROS_INFO("[InspectPVArray] Returning SUCCESS...");
+          task_result_ac_.waitForServer(ros::Duration(1.0));
+          goal.task.id = task_id;
+          goal.task.type = 'A';
+          goal.result = 1; //TODO: Change with the result of Lower-level controllers
+          //Solar Panel 3_4
+          geometry_msgs::Point target_xyz;
+          target_xyz.x = -36.6343;
+          target_xyz.y =  62.293;
+          geographic_msgs::GeoPose target_gps;
+          target_gps.position.latitude  = -7.96213167462045;
+          target_gps.position.longitude = 38.54156780106911;
+          goal.do_closer_inspection.xyz_coordinates.push_back(target_xyz);
+          goal.do_closer_inspection.gps_coordinates.push_back(target_gps);
+          task_result_ac_.sendGoal(goal);
+          if(goal.result)
+            agent_->removeTaskFromQueue(task_id, 'A');
+          ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+          agent_->infoQueue();
+          return BT::NodeStatus::SUCCESS;
+        }
+        else
+        {
+          if(isHaltRequested())
+          {
+            task_result_ac_.waitForServer(ros::Duration(1.0));
+            goal.task.id = task_id;
+            goal.task.type = 'A';
+            goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
+            task_result_ac_.sendGoal(goal);
+            if(goal.result)
+              agent_->removeTaskFromQueue(task_id, 'A');
+            ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+            agent_->infoQueue();
+            return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+          }
+          ROS_ERROR("[InspectPVArray] Failed to call service go_to_waypoint");
+          task_result_ac_.waitForServer(ros::Duration(1.0));
+          goal.task.id = task_id;
+          goal.task.type = 'A';
+          goal.result = 0; //TODO: Change with the result of Lower-level controllers
+          task_result_ac_.sendGoal(goal);
+          if(goal.result)
+            agent_->removeTaskFromQueue(task_id, 'A');
+          ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+          agent_->infoQueue();
+          return BT::NodeStatus::FAILURE;
+        }
+        break;
+      case 0: //UNINITIALIZED
+      case 1: //LANDED_DISARMED
+      case 3: //TAKING_OFF
+      case 5: //FLIYING_MANUAL
+      case 6: //LANDING
+      default:
+        break;
+    }
+  }
+
+  task_result_ac_.waitForServer(ros::Duration(1.0));
+  goal.task.id = task_id;
+  goal.task.type = 'A';
+  goal.result = isHaltRequested() ? 0 : 1; //TODO: Change with the result of Lower-level controllers
+  task_result_ac_.sendGoal(goal);
+  if(goal.result)
+      agent_->removeTaskFromQueue(task_id, 'A');
+  ROS_INFO("[InspectPVArray] INSPECT PV ARRAY TASK FINISHED (%s)", goal.result ? "SUCCESS" : "FAILURE");
+  agent_->infoQueue();
+
+  return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
+  //*****************************************************************************************************************
+}
+void InspectPVArray::halt(){
+  ROS_INFO("[InspectPVArray] halt requested");
+  //Do some cleanup if necessary
+  
+  BT::AsyncActionNode::halt();
+}
+// }
+
+//GoNearStation {
 GoNearStation::GoNearStation(const std::string& name, const BT::NodeConfiguration& config) : BT::AsyncActionNode(name,
     config) {}
 GoNearStation::~GoNearStation(){halt();}
@@ -857,7 +1359,7 @@ BT::NodeStatus GoNearStation::tick(){
 
     tool_position = task->getToolPosition();
   }
-  near_tool_pose = classes::close_pose_2D(agent_->position_, tool_position, 1.5);
+  near_tool_pose = classes::closePose2D(agent_->position_, tool_position, 1.5);
 
   while(!isHaltRequested())
   {
@@ -889,7 +1391,7 @@ BT::NodeStatus GoNearStation::tick(){
         ROS_INFO("[GoNearStation] Moving near Tool...");
         if(agent_->go_to_waypoint(near_tool_pose.getX(), near_tool_pose.getY(), near_tool_pose.getZ(), false))
         {
-          while(!agent_->checkIfUALGoToServiceSucceeded(near_tool_pose.getX(), near_tool_pose.getY(),
+          while(!agent_->checkIfGoToServiceSucceeded(near_tool_pose.getX(), near_tool_pose.getY(),
                 near_tool_pose.getZ()))
           {
             if(isHaltRequested())
@@ -915,7 +1417,6 @@ BT::NodeStatus GoNearStation::tick(){
       default:
         break;
     }
-    //MAYBE PUT SOME SLEEP TIME HERE ********************************************************************************
   }
   return BT::NodeStatus::IDLE;
 }
@@ -925,8 +1426,9 @@ void GoNearStation::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//PickTool
+//PickTool {
 PickTool::PickTool(const std::string& name, const BT::NodeConfiguration& config) : BT::AsyncActionNode(name, config) {}
 PickTool::~PickTool(){halt();}
 void PickTool::init(AgentNode* agent){agent_ = agent;}
@@ -975,8 +1477,9 @@ void PickTool::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//DropTool
+//DropTool {
 DropTool::DropTool(const std::string& name, const BT::NodeConfiguration& config) : BT::AsyncActionNode(name, config) {}
 DropTool::~DropTool(){halt();}
 void DropTool::init(AgentNode* agent){agent_ = agent;}
@@ -1005,8 +1508,9 @@ void DropTool::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
 
-//DeliverTool
+//DeliverTool {
 DeliverTool::DeliverTool(const std::string& name, const BT::NodeConfiguration& config) : BT::AsyncActionNode(name,
     config) {}
 DeliverTool::~DeliverTool(){halt();}
@@ -1072,9 +1576,11 @@ void DeliverTool::halt(){
   
   BT::AsyncActionNode::halt();
 }
+// }
+// }
 
-//******************************* Conditions
-//MissionOver
+//******************************* Conditions {
+//MissionOver {
 MissionOver::MissionOver(const std::string& name) : BT::ConditionNode(name, {}) {}
 void MissionOver::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus MissionOver::tick(){
@@ -1083,8 +1589,9 @@ BT::NodeStatus MissionOver::tick(){
   else
     return BT::NodeStatus::FAILURE;
 }
+// }
 
-//Idle
+//Idle {
 Idle::Idle(const std::string& name) : BT::ConditionNode(name, {}) {}
 void Idle::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus Idle::tick(){
@@ -1105,8 +1612,9 @@ BT::NodeStatus Idle::tick(){
       break;
   }
 }
+// }
 
-//IsBatteryEnough
+//IsBatteryEnough {
 IsBatteryEnough::IsBatteryEnough(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsBatteryEnough::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsBatteryEnough::tick(){
@@ -1115,8 +1623,9 @@ BT::NodeStatus IsBatteryEnough::tick(){
   else
     return BT::NodeStatus::FAILURE;
 }
+// }
 
-//IsBatteryFull
+//IsBatteryFull {
 IsBatteryFull::IsBatteryFull(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsBatteryFull::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsBatteryFull::tick(){
@@ -1125,8 +1634,9 @@ BT::NodeStatus IsBatteryFull::tick(){
   else
     return BT::NodeStatus::FAILURE;
 }
+// }
 
-//IsTaskRecharge
+//IsTaskRecharge {
 IsTaskRecharge::IsTaskRecharge(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsTaskRecharge::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsTaskRecharge::tick(){
@@ -1149,8 +1659,9 @@ BT::NodeStatus IsTaskRecharge::tick(){
       break;
   }
 }
+// }
 
-//IsTaskMonitor
+//IsTaskMonitor {
 IsTaskMonitor::IsTaskMonitor(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsTaskMonitor::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsTaskMonitor::tick(){
@@ -1173,8 +1684,34 @@ BT::NodeStatus IsTaskMonitor::tick(){
       break;
   }
 }
+// }
 
-//IsTaskInspect
+//IsTaskMonitorUGV {
+IsTaskMonitorUGV::IsTaskMonitorUGV(const std::string& name) : BT::ConditionNode(name, {}) {}
+void IsTaskMonitorUGV::init(AgentNode* agent){agent_ = agent;}
+BT::NodeStatus IsTaskMonitorUGV::tick(){
+  classes::Task* task;
+  if(agent_->task_queue_.empty())
+  {
+    ROS_WARN("[IsTaskMonitorUGV] Task queue is empty");
+    return BT::NodeStatus::FAILURE;
+  }
+  task = agent_->task_queue_.front();
+
+  switch(task->getType())
+  {
+    case 'F':
+    case 'f':
+      return BT::NodeStatus::SUCCESS;
+      break;
+    default:
+      return BT::NodeStatus::FAILURE;
+      break;
+  }
+}
+// }
+
+//IsTaskInspect {
 IsTaskInspect::IsTaskInspect(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsTaskInspect::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsTaskInspect::tick(){
@@ -1197,8 +1734,34 @@ BT::NodeStatus IsTaskInspect::tick(){
       break;
   }
 }
+// }
 
-//IsTaskDeliverTool
+//IsTaskInspectPVArray {
+IsTaskInspectPVArray::IsTaskInspectPVArray(const std::string& name) : BT::ConditionNode(name, {}) {}
+void IsTaskInspectPVArray::init(AgentNode* agent){agent_ = agent;}
+BT::NodeStatus IsTaskInspectPVArray::tick(){
+  classes::Task* task;
+  if(agent_->task_queue_.empty())
+  {
+    ROS_WARN("[IsTaskInspectPVArray] Task queue is empty");
+    return BT::NodeStatus::FAILURE;
+  }
+  task = agent_->task_queue_.front();
+
+  switch(task->getType())
+  {
+    case 'A':
+    case 'a':
+      return BT::NodeStatus::SUCCESS;
+      break;
+    default:
+      return BT::NodeStatus::FAILURE;
+      break;
+  }
+}
+// }
+
+//IsTaskDeliverTool {
 IsTaskDeliverTool::IsTaskDeliverTool(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsTaskDeliverTool::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsTaskDeliverTool::tick(){
@@ -1221,8 +1784,9 @@ BT::NodeStatus IsTaskDeliverTool::tick(){
       break;
   }
 }
+// }
 
-//IsAgentNearChargingStation
+//IsAgentNearChargingStation {
 IsAgentNearChargingStation::IsAgentNearChargingStation(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsAgentNearChargingStation::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsAgentNearChargingStation::tick(){
@@ -1233,8 +1797,12 @@ BT::NodeStatus IsAgentNearChargingStation::tick(){
   if(agent_->task_queue_.empty())
   {
     for(auto& charging_station : agent_->known_positions_["charging_stations"])
-      if(classes::distance(agent_->position_, charging_station.second) < 0.5)
+      if(classes::distance2D(agent_->position_, charging_station.second) < 0.5)
         return BT::NodeStatus::SUCCESS;
+
+    if(classes::distance2D(agent_->position_, agent_->jackal_pose_) < 0.5)
+      return BT::NodeStatus::SUCCESS;
+
     return BT::NodeStatus::FAILURE;
   }
 
@@ -1245,13 +1813,17 @@ BT::NodeStatus IsAgentNearChargingStation::tick(){
     ROS_WARN("[IsAgentNearChargingStation] First task of the queue isn't type Recharge");
     return BT::NodeStatus::FAILURE;
   }
+
+  if(classes::distance2D(agent_->position_, agent_->jackal_pose_) < 0.5)
+    return BT::NodeStatus::SUCCESS;
+
   assigned_charging_station = task->getChargingStation();
 
   if(assigned_charging_station.getID().empty())
   {
     for(auto& charging_station : agent_->known_positions_["charging_stations"])
     {
-      if(classes::distance(agent_->position_, charging_station.second) < 0.5)
+      if(classes::distance2D(agent_->position_, charging_station.second) < 0.5)
       {
         //Assign and reserve this charging station for this Agent (to be improved)
         task->setChargingStation(&(charging_station.second));
@@ -1262,15 +1834,16 @@ BT::NodeStatus IsAgentNearChargingStation::tick(){
   }
   else
   {
-    if(classes::distance(agent_->position_, assigned_charging_station) < 0.5)
+    if(classes::distance2D(agent_->position_, assigned_charging_station) < 0.5)
       return BT::NodeStatus::SUCCESS;
     return BT::NodeStatus::FAILURE;
   }
 
   return BT::NodeStatus::FAILURE;
 }
+// }
 
-//IsAgentNearHumanTarget
+//IsAgentNearHumanTarget {
 IsAgentNearHumanTarget::IsAgentNearHumanTarget(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsAgentNearHumanTarget::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsAgentNearHumanTarget::tick(){
@@ -1303,8 +1876,36 @@ BT::NodeStatus IsAgentNearHumanTarget::tick(){
   }
   return BT::NodeStatus::FAILURE;
 }
+// }
 
-//IsAgentNearWP
+//IsAgentNearUGV {
+IsAgentNearUGV::IsAgentNearUGV(const std::string& name) : BT::ConditionNode(name, {}) {}
+void IsAgentNearUGV::init(AgentNode* agent){agent_ = agent;}
+BT::NodeStatus IsAgentNearUGV::tick(){
+  classes::Task* task;
+  if(agent_->task_queue_.empty())
+  {
+    ROS_WARN("[IsAgentNearUGV] Task queue is empty");
+    return BT::NodeStatus::FAILURE;
+  }
+  task = agent_->task_queue_.front();
+
+  switch(task->getType())
+  {
+    case 'F':
+    case 'f':
+      if(classes::distance2D(agent_->atrvjr_pose_, agent_->position_) < 1.5)
+        return BT::NodeStatus::SUCCESS;
+      break;
+    default:
+      ROS_WARN("[IsAgentNearUGV] First task of the queue isn't type MonitorUGV");
+      break;
+  }
+  return BT::NodeStatus::FAILURE;
+}
+// }
+
+//IsAgentNearWP {
 IsAgentNearWP::IsAgentNearWP(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsAgentNearWP::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsAgentNearWP::tick(){
@@ -1316,21 +1917,31 @@ BT::NodeStatus IsAgentNearWP::tick(){
   }
   task = agent_->task_queue_.front();
 
-  if(task->getType() != 'I')
+  if(task->getType() != 'I' && task->getType() != 'A')
   {
-    ROS_WARN("[IsAgentNearWP] First task of the queue isn't type Inspect");
+    ROS_WARN("[IsAgentNearWP] First task of the queue isn't type Inspect or InspectPVArray");
     return BT::NodeStatus::FAILURE;
   }
 
-  for(auto& waypoint : task->getInspectWaypoints())
+  if(task->getType() == 'I')
   {
-    if(classes::distance(agent_->position_, waypoint) < 2)
+    for(auto& waypoint : task->getInspectWaypoints())
+    {
+      if(classes::distance(agent_->position_, waypoint) < 2)
+        return BT::NodeStatus::SUCCESS;
+    }
+  }
+  if(task->getType() == 'A')
+  {
+    auto waypoint = task->getInspectWaypoints();
+    if(classes::distance(agent_->position_, waypoint[0]) < 2)
       return BT::NodeStatus::SUCCESS;
   }
   return BT::NodeStatus::FAILURE;
 }
+// }
 
-//NeedToDropTheTool
+//NeedToDropTheTool {
 NeedToDropTheTool::NeedToDropTheTool(const std::string& name) : BT::ConditionNode(name, {}) {}
 void NeedToDropTheTool::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus NeedToDropTheTool::tick(){
@@ -1352,8 +1963,9 @@ BT::NodeStatus NeedToDropTheTool::tick(){
   else
     return BT::NodeStatus::SUCCESS;
 }
+// }
 
-//HasAgentTheTool
+//HasAgentTheTool {
 HasAgentTheTool::HasAgentTheTool(const std::string& name) : BT::ConditionNode(name, {}) {}
 void HasAgentTheTool::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus HasAgentTheTool::tick(){
@@ -1383,8 +1995,9 @@ BT::NodeStatus HasAgentTheTool::tick(){
     return BT::NodeStatus::FAILURE;
   }
 }
+// }
 
-//IsAgentNearStation
+//IsAgentNearStation {
 IsAgentNearStation::IsAgentNearStation(const std::string& name) : BT::ConditionNode(name, {}) {}
 void IsAgentNearStation::init(AgentNode* agent){agent_ = agent;}
 BT::NodeStatus IsAgentNearStation::tick(){
@@ -1416,9 +2029,11 @@ BT::NodeStatus IsAgentNearStation::tick(){
   else
     return BT::NodeStatus::FAILURE;
 }
+// }
+// }
 
-//******************************* Decorators
-//ForceRunnigNode
+//******************************* Decorators {
+//ForceRunnigNode {
 ForceRunningNode::ForceRunningNode(const std::string& name) : BT::DecoratorNode(name, {} ){
   setRegistrationID("ForceRunning");
 }
@@ -1439,6 +2054,8 @@ BT::NodeStatus ForceRunningNode::tick(){
   }
   return status();
 }
+// }
+// }
 
 //Behavior Tree Nodes registration function *************************************************************************
 inline void RegisterNodes(BT::BehaviorTreeFactory& factory){
@@ -1447,9 +2064,12 @@ inline void RegisterNodes(BT::BehaviorTreeFactory& factory){
   factory.registerNodeType<Recharge>("Recharge");
   factory.registerNodeType<BackToStation>("BackToStation");
   factory.registerNodeType<GoNearHumanTarget>("GoNearHumanTarget");
+  factory.registerNodeType<GoNearUGV>("GoNearUGV");
   factory.registerNodeType<MonitorHumanTarget>("MonitorHumanTarget");
+  factory.registerNodeType<MonitorUGV>("MonitorUGV");
   factory.registerNodeType<GoNearWP>("GoNearWP");
   factory.registerNodeType<TakeImage>("TakeImage");
+  factory.registerNodeType<InspectPVArray>("InspectPVArray");
   factory.registerNodeType<GoNearStation>("GoNearStation");
   factory.registerNodeType<PickTool>("PickTool");
   factory.registerNodeType<DropTool>("DropTool");
@@ -1462,10 +2082,13 @@ inline void RegisterNodes(BT::BehaviorTreeFactory& factory){
   factory.registerNodeType<IsBatteryFull>("IsBatteryFull");
   factory.registerNodeType<IsTaskRecharge>("IsTaskRecharge");
   factory.registerNodeType<IsTaskMonitor>("IsTaskMonitor");
+  factory.registerNodeType<IsTaskMonitorUGV>("IsTaskMonitorUGV");
   factory.registerNodeType<IsTaskInspect>("IsTaskInspect");
+  factory.registerNodeType<IsTaskInspectPVArray>("IsTaskInspectPVArray");
   factory.registerNodeType<IsTaskDeliverTool>("IsTaskDeliverTool");
   factory.registerNodeType<IsAgentNearChargingStation>("IsAgentNearChargingStation");
   factory.registerNodeType<IsAgentNearHumanTarget>("IsAgentNearHumanTarget");
+  factory.registerNodeType<IsAgentNearUGV>("IsAgentNearUGV");
   factory.registerNodeType<IsAgentNearWP>("IsAgentNearWP");
   factory.registerNodeType<NeedToDropTheTool>("NeedToDropTheTool");
   factory.registerNodeType<HasAgentTheTool>("HasAgentTheTool");
@@ -1477,28 +2100,54 @@ inline void RegisterNodes(BT::BehaviorTreeFactory& factory){
 
 //AgentNode definition **********************************************************************************************
 AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : battery_enough_(true), loop_rate_(1),
-  ntl_as_(nh_, "task_list", boost::bind(&AgentNode::newTaskList, this, _1), false), tool_flag_("none"), timeout_(false),
-  battery_ac_("/" + beacon.id + "/battery_enough", true), beacon_(beacon), mission_over_(false), state_(0), battery_(0) 
+  tool_flag_("none"), timeout_(false), beacon_(beacon), mission_over_(false), state_(0), battery_(0),
+  ntl_as_(nh_, "task_list", boost::bind(&AgentNode::newTaskList, this, _1), false),
+  battery_ac_("/" + beacon.id + "/battery_enough", true), 
+  mrs_ac_("/" + beacon.id + "/mrs_actionlib_interface", true)
 {
   //Start the server to receive tasks list through actions
   ntl_as_.start();
 
+  ros::param::param<std::string>("~id", id_, "0");
+  ros::param::param<std::string>("~ns_prefix", ns_prefix_, "uav");
   ros::param::param<std::string>("~pose_frame_id", pose_frame_id_, "map");
+  ros::param::param<std::string>("~low_level_interface", low_level_interface_, "UAL");
   ros::param::param<std::string>("~pose_topic", pose_topic_, "/" + beacon_.id + "/ual/pose");
   ros::param::param<std::string>("~state_topic", state_topic_, "/" + beacon_.id + "/ual/state");
   ros::param::param<std::string>("~battery_topic", battery_topic_, "/" + beacon_.id + "/battery_fake");
 
+  std::vector<double> origin_geo_aux(3, 0.0);
+  ros::param::get("/gazebo_world/sim_origin", origin_geo_aux);
+  origin_geo_.latitude  = origin_geo_aux[0];
+  origin_geo_.longitude = origin_geo_aux[1];
+  origin_geo_.altitude  = origin_geo_aux[2];
+
   //Load of config file
   std::string path = ros::package::getPath("human_aware_collaboration_planner");
+  //std::string path_evora = ros::package::getPath("ist_use_collaboration_msgs");
   ros::param::param<std::string>("~config_file", config_file_, path + "/config/conf.yaml");
+  //ros::param::param<std::string>("~config_file_evora", config_file_evora_, path_evora + "/config/placemarks.yaml");
   readConfigFile(config_file_);
+  //readEvoraConfigFile(config_file_evora_);
 
   beacon_pub_ = nh_.advertise<human_aware_collaboration_planner::AgentBeacon>("/agent_beacon", 1);
-  position_sub_ = nh_.subscribe(pose_topic_, 1, &AgentNode::positionCallback, this);
-  state_sub_ = nh_.subscribe(state_topic_, 1, &AgentNode::stateCallback, this);
   battery_sub_ = nh_.subscribe(battery_topic_, 1, &AgentNode::batteryCallback, this);
   mission_over_sub_ = nh_.subscribe("/mission_over", 1, &AgentNode::missionOverCallback, this);
-  planner_beacon_sub_ = nh_.subscribe("/planner_beacon", 100, &AgentNode::beaconCallback, this);
+  planner_beacon_sub_ = nh_.subscribe("/planner_beacon", 1, &AgentNode::beaconCallback, this);
+
+  if(low_level_interface_ == "UAL")
+  {
+    position_sub_ = nh_.subscribe(pose_topic_, 1, &AgentNode::positionCallbackUAL, this);
+    state_sub_ = nh_.subscribe(state_topic_, 1, &AgentNode::stateCallbackUAL, this);
+  }
+  else if(low_level_interface_ == "MRS")
+  {
+    position_sub_ = nh_.subscribe(pose_topic_, 1, &AgentNode::positionCallbackMRS, this);
+    state_sub_ = nh_.subscribe(state_topic_, 1, &AgentNode::stateCallbackMRS, this);
+  }
+  //UGVs position callbacks
+  atrvjr_geopose_sub_ = nh_.subscribe("/atrvjr/geopose", 1, &AgentNode::atrvjrPositionCallback, this);
+  jackal_geopose_sub_ = nh_.subscribe("/jackal0/geopose", 1, &AgentNode::jackalPositionCallback, this);
 
   //Behavior Tree declaration
   BT::NodeStatus status = BT::NodeStatus::RUNNING;
@@ -1516,10 +2165,13 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
     else if( auto back_to_station = dynamic_cast<BackToStation*>(node.get())) {back_to_station->init(this);}
     else if( auto go_near_human_target = dynamic_cast<GoNearHumanTarget*>(node.get()))
     {go_near_human_target->init(this);}
+    else if( auto go_near_ugv = dynamic_cast<GoNearUGV*>(node.get())) {go_near_ugv->init(this);}
     else if( auto monitor_human_target = dynamic_cast<MonitorHumanTarget*>(node.get()))
     {monitor_human_target->init(this);}
+    else if( auto monitor_ugv = dynamic_cast<MonitorUGV*>(node.get())) {monitor_ugv->init(this);}
     else if( auto go_near_wp = dynamic_cast<GoNearWP*>(node.get())) {go_near_wp->init(this);}
     else if( auto take_image = dynamic_cast<TakeImage*>(node.get())) {take_image->init(this);}
+    else if( auto inspect_pv_array = dynamic_cast<InspectPVArray*>(node.get())) {inspect_pv_array->init(this);}
     else if( auto go_near_station = dynamic_cast<GoNearStation*>(node.get())) {go_near_station->init(this);}
     else if( auto pick_tool = dynamic_cast<PickTool*>(node.get())) {pick_tool->init(this);}
     else if( auto drop_tool = dynamic_cast<DropTool*>(node.get())) {drop_tool->init(this);}
@@ -1530,13 +2182,16 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
     else if( auto is_battery_full = dynamic_cast<IsBatteryFull*>(node.get())) {is_battery_full->init(this);}
     else if( auto is_task_recharge = dynamic_cast<IsTaskRecharge*>(node.get())) {is_task_recharge->init(this);}
     else if( auto is_task_monitor = dynamic_cast<IsTaskMonitor*>(node.get())) {is_task_monitor->init(this);}
+    else if( auto is_task_monitor_ugv = dynamic_cast<IsTaskMonitorUGV*>(node.get())) {is_task_monitor_ugv->init(this);}
     else if( auto is_task_inspect = dynamic_cast<IsTaskInspect*>(node.get())) {is_task_inspect->init(this);}
+    else if( auto is_task_inspect_pv_array = dynamic_cast<IsTaskInspectPVArray*>(node.get())) {is_task_inspect_pv_array->init(this);}
     else if( auto is_task_deliver_tool = dynamic_cast<IsTaskDeliverTool*>(node.get()))
     {is_task_deliver_tool->init(this);}
     else if( auto is_agent_near_charging_station = dynamic_cast<IsAgentNearChargingStation*>(node.get()))
     {is_agent_near_charging_station->init(this);}
     else if( auto is_agent_near_human_target = dynamic_cast<IsAgentNearHumanTarget*>(node.get()))
     {is_agent_near_human_target->init(this);}
+    else if( auto is_agent_near_ugv = dynamic_cast<IsAgentNearUGV*>(node.get())){is_agent_near_ugv->init(this);}
     else if( auto is_agent_near_wp = dynamic_cast<IsAgentNearWP*>(node.get())) {is_agent_near_wp->init(this);}
     else if( auto need_to_drop_the_tool = dynamic_cast<NeedToDropTheTool*>(node.get()))
     {need_to_drop_the_tool->init(this);}
@@ -1549,13 +2204,12 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   ss << "bt_trace_" << beacon.id << ".fbl";
   BT::FileLogger logger_file(tree, ss.str().c_str());
   //BT::printTreeRecursively(tree.rootNode());
-  unsigned aux;
-  sscanf(beacon.id.c_str(), "uav_%u", &aux);
-  BT::PublisherZMQ publisher_zmq(tree, 25, 1666+aux*2, 1667+aux*2);
+  BT::PublisherZMQ publisher_zmq(tree, 25, 1666 + (std::stoi(id_) - 1) * 2, 1667 + (std::stoi(id_) - 1) * 2);
 
   //Waiting for the Agent to initialize
+  ROS_INFO("[AgentNode] Waiting for %s to initialize. State: %i", beacon.id.c_str(), state_);
   loop_rate_.reset();
-  while(!state_)
+  while(!state_ && ros::ok())
   {
     ros::spinOnce();
     loop_rate_.sleep();
@@ -1564,7 +2218,7 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
 
   //Behavior tree execution
   loop_rate_.reset();
-  while(ros::ok() && status == BT::NodeStatus::RUNNING)
+  while(status == BT::NodeStatus::RUNNING && ros::ok())
   {
     //Agent only send beacons when it receibes beacons from Planner to avoid problems with the communication working 
     //only in one dirction. If Planner cant see Agent but this can see Planner, Planner sends an empty task list to the
@@ -1612,6 +2266,8 @@ void AgentNode::readConfigFile(std::string config_file){
           tool.second['z'].as<float>());
     }
   }
+}
+void AgentNode::readEvoraConfigFile(std::string config_file){
 }
 void AgentNode::isBatteryEnough(){
   bool previous_state = battery_enough_;
@@ -1693,7 +2349,9 @@ void AgentNode::infoQueue(){
     task_type = tmp->getType();
     ROS_INFO_STREAM("" << tmp->getID() << ": " << (
           task_type == 'M' ? "Monitor" : 
+          task_type == 'F' ? "MonitorUGV" : 
           task_type == 'I' ? "Inspect" : 
+          task_type == 'A' ? "InspectPVArray" : 
           task_type == 'D' ? "DeliverTool" :
           task_type == 'R' ? "Recharge" :
           task_type == 'W' ? "Wait" :
@@ -1731,7 +2389,9 @@ void AgentNode::taskQueueManager(){
   goal.task.type = current_task->getType();
   ROS_INFO_STREAM("[taskQueueManager] " << goal.task.id << ": " << (
           goal.task.type == 'M' ? "Monitor" : 
+          goal.task.type == 'F' ? "MonitorUGV" : 
           goal.task.type == 'I' ? "Inspect" : 
+          goal.task.type == 'A' ? "InspectPVArray" : 
           goal.task.type == 'D' ? "DeliverTool" :
           goal.task.type == 'R' ? "Recharge" :
           goal.task.type == 'W' ? "Wait" :
@@ -1774,9 +2434,17 @@ void AgentNode::newTaskList(const human_aware_collaboration_planner::NewTaskList
           task = new classes::Monitor(task_msg.id, &(human_targets_[task_msg.monitor.human_target_id]), 
               task_msg.monitor.distance, task_msg.monitor.number, task_msg.monitor.agent_list);
           break;
+        case 'F':
+        case 'f':
+          task = new classes::MonitorUGV(task_msg.id, task_msg.monitor_ugv.ugv_id, task_msg.monitor_ugv.height);
+          break;
         case 'I':
         case 'i':
           task = new classes::Inspect(task_msg.id, task_msg.inspect.waypoints, task_msg.inspect.agent_list);
+          break;
+        case 'A':
+        case 'a':
+          task = new classes::InspectPVArray(task_msg.id, task_msg.inspect.waypoints, task_msg.inspect.agent_list);
           break;
         case 'D':
         case 'd':
@@ -1812,19 +2480,57 @@ void AgentNode::newTaskList(const human_aware_collaboration_planner::NewTaskList
     infoQueue();
   }
 }
-void AgentNode::positionCallback(const geometry_msgs::PoseStamped& pose){
+void AgentNode::positionCallbackUAL(const geometry_msgs::PoseStamped& pose){
   //TODO: Comment the following when lower level controller for travelling are integrated
-  unsigned offset;
-  sscanf(beacon_.id.c_str(), "uav_%u", &offset);
   //This correction is needed becouse of the UAL/Land service
-  if(pose.pose.position.z - offset < 0.5)
+  if(pose.pose.position.z - std::stoi(id_) < 0.5)
     position_.update(pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);
   else
-    position_.update(pose.pose.position.x, pose.pose.position.y, pose.pose.position.z - offset);
+    position_.update(pose.pose.position.x, pose.pose.position.y, pose.pose.position.z - std::stoi(id_));
   //position_.update(pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);
 }
+void AgentNode::positionCallbackMRS(const mrs_msgs::UavStatus& pose){
+  //TODO: Comment the following when lower level controller for travelling are integrated
+  //This correction is needed becouse of the UAL/Land service
+  if(pose.odom_z - std::stoi(id_) < 0.5)
+    position_.update(pose.odom_x, pose.odom_y, pose.odom_z);
+  else
+    position_.update(pose.odom_x, pose.odom_y, pose.odom_z - std::stoi(id_));
+  //position_.update(pose.odom_x, pose.odom_y, pose.odom_z);
+}
 void AgentNode::batteryCallback(const sensor_msgs::BatteryState& battery){battery_ = battery.percentage;}
-void AgentNode::stateCallback(const uav_abstraction_layer::State& state){state_ = state.state;}
+void AgentNode::stateCallbackUAL(const uav_abstraction_layer::State& state){state_ = state.state;}
+void AgentNode::stateCallbackMRS(const mrs_actionlib_interface::State& state){
+  /* UAL States                 MRS States
+   *********************        *********************
+   * UNINITIALIZED   = 0        * LANDED          = 0
+   * LANDED_DISARMED = 1        * TAKEOFF_LANDING = 1
+   * LANDED_ARMED    = 2        * IDLE_FLYING     = 2
+   * TAKING_OFF      = 3        * GOTO_PATHFINDER = 3
+   * FLYING_AUTO     = 4        * GOTO_DIRECT     = 4
+   * FLYING_MANUAL   = 5        * UNKNOWN         = 5 
+   * LANDING         = 6        * 
+   *********************        *********************/
+
+  switch(state.state){
+    case 0:
+      state_ = 2; //state_ = 1;
+      break;
+    case 1:
+      state_ = 6; //state_ = 3;
+      break;
+    case 2:
+    case 3:
+    case 4:
+      state_ = 4;
+      break;
+    case 5:
+    default:
+      state_ = 0; //state_ = 5;
+      break;
+  }
+  return;
+}
 void AgentNode::missionOverCallback(const human_aware_collaboration_planner::MissionOver& value){
   mission_over_ = value.value;
 }
@@ -1844,79 +2550,163 @@ bool AgentNode::checkBeaconTimeout(ros::Time now){
   }
   return timeout_;
 }
-//UAL Service calls
+void AgentNode::atrvjrPositionCallback(const geographic_msgs::GeoPoseStamped& geo_pose){ 
+  geometry_msgs::Point32 pose = geographic_to_cartesian(geo_pose.pose.position, origin_geo_);
+  atrvjr_pose_ = classes::Position(pose.x, pose.y, 3); //As UGV are at ground level, z id fiex at 3m for goto purposes
+  //ROS_INFO_STREAM("[atrvjrPositionCallback] GeoPose: (" << geo_pose.pose.position.latitude << ", " <<
+      //geo_pose.pose.position.longitude << ")\tXYPose: (" << atrvjr_pose_.getX() << ", " << atrvjr_pose_.getY() << ")");
+  return;
+}
+void AgentNode::jackalPositionCallback(const geographic_msgs::GeoPoseStamped& geo_pose){ 
+  geometry_msgs::Point32 pose = geographic_to_cartesian(geo_pose.pose.position, origin_geo_);
+  jackal_pose_ = classes::Position(pose.x, pose.y, 3); //As UGV are at ground level, z id fiex at 3m for goto purposes
+  //ROS_INFO_STREAM("[jackalPositionCallback] GeoPose: (" << geo_pose.pose.position.latitude << ", " <<
+      //geo_pose.pose.position.longitude << ")\tXYPose: (" << jackal_pose_.getX() << ", " << jackal_pose_.getY() << ")");
+  return;
+}
+// UAL/MRS Service calls
 bool AgentNode::land(bool blocking){
-  ros::ServiceClient land_client = nh_.serviceClient<uav_abstraction_layer::Land>("/" + beacon_.id + "/ual/land");
-  uav_abstraction_layer::Land land_srv;
-  land_srv.request.blocking = blocking;
-  if(land_client.call(land_srv))
+  if(low_level_interface_ == "UAL")
+  {
+    ros::ServiceClient land_client = nh_.serviceClient<uav_abstraction_layer::Land>("/" + beacon_.id + "/ual/land");
+    uav_abstraction_layer::Land land_srv;
+    land_srv.request.blocking = blocking;
+    if(land_client.call(land_srv))
+      return true;
+    return false;
+  }
+  if(low_level_interface_ == "MRS")
+  {
+    mrs_ac_.waitForServer(ros::Duration(1.0));
+    mrs_actionlib_interface::commandGoal goal;
+    goal.command = 1;
+    ROS_INFO("[land] Calling mrs_actionlib_interface action command LAND");
+    mrs_ac_.sendGoal(goal);
     return true;
+  }
   return false;
 }
 bool AgentNode::take_off(float height, bool blocking){
-  //TODO: Comment the following two lines when lower level controller for travelling are integrated
-  unsigned offset;
-  sscanf(beacon_.id.c_str(), "uav_%u", &offset);
-
-  ros::ServiceClient take_off_client = nh_.serviceClient<uav_abstraction_layer::TakeOff>("/" + beacon_.id +
-      "/ual/take_off");
-  uav_abstraction_layer::TakeOff take_off_srv;
-  take_off_srv.request.height = height + offset;
-  //take_off_srv.request.height = height;
-  take_off_srv.request.blocking = blocking;
-  if(take_off_client.call(take_off_srv))
+  if(low_level_interface_ == "UAL")
+  {
+    ros::ServiceClient take_off_client = nh_.serviceClient<uav_abstraction_layer::TakeOff>("/" + beacon_.id +
+        "/ual/take_off");
+    uav_abstraction_layer::TakeOff take_off_srv;
+    //TODO: Change the following two lines when lower level controller for travelling are integrated
+    take_off_srv.request.height = height + std::stoi(id_);
+    //take_off_srv.request.height = height;
+    take_off_srv.request.blocking = blocking;
+    if(take_off_client.call(take_off_srv))
+      return true;
+    return false;
+  }
+  if(low_level_interface_ == "MRS")
+  {
+    mrs_ac_.waitForServer(ros::Duration(1.0));
+    mrs_actionlib_interface::commandGoal goal;
+    goal.command = 0;
+    ROS_INFO("[take_off] Calling mrs_actionlib_interface action command TAKEOFF");
+    mrs_ac_.sendGoal(goal);
+    /*
+    //TODO: Delete the following ten lines when lower level controller for travelling are integrated
+    //Goto command to change the height because it's not an option in takeoff command with the MRS System
+    if(mrs_ac_.waitForResult(ros::Duration(10.0)))
+    {
+      goal.command = 3;
+      goal.goto_x = position_.getX();
+      goal.goto_y = position_.getY();
+      goal.goto_z = height + std::stoi(id_);
+      goal.goto_hdg = 0;
+      mrs_ac_.sendGoal(goal);
+      return true;
+    }
+    */
     return true;
+  }
   return false;
 }
 bool AgentNode::go_to_waypoint(float x, float y, float z, bool blocking){
-  //TODO: Comment the following two lines when lower level controller for travelling are integrated
-  unsigned offset;
-  sscanf(beacon_.id.c_str(), "uav_%u", &offset);
-  //ROS_INFO("[go_to_waypoint] Moving to (%.1f,%.1f,%.1f)[%s]", x, y, z + offset, pose_frame_id_.c_str());
-
-  ros::ServiceClient go_to_wp_client = nh_.serviceClient<uav_abstraction_layer::GoToWaypoint>("/" + beacon_.id +
-      "/ual/go_to_waypoint");
-  uav_abstraction_layer::GoToWaypoint go_to_wp_srv;
-  go_to_wp_srv.request.waypoint.header.frame_id = pose_frame_id_;
-  go_to_wp_srv.request.waypoint.pose.position.x = x;
-  go_to_wp_srv.request.waypoint.pose.position.y = y;
-  if(z < 1)
-    go_to_wp_srv.request.waypoint.pose.position.z = z;
-  else
-    go_to_wp_srv.request.waypoint.pose.position.z = z + offset;
-  //go_to_wp_srv.request.waypoint.pose.position.z = z;
-  go_to_wp_srv.request.blocking = blocking;
-  if(go_to_wp_client.call(go_to_wp_srv))
+  if(low_level_interface_ == "UAL")
+  {
+    ros::ServiceClient go_to_wp_client = nh_.serviceClient<uav_abstraction_layer::GoToWaypoint>("/" + beacon_.id +
+        "/ual/go_to_waypoint");
+    uav_abstraction_layer::GoToWaypoint go_to_wp_srv;
+    go_to_wp_srv.request.waypoint.header.frame_id = pose_frame_id_;
+    go_to_wp_srv.request.waypoint.pose.position.x = x;
+    go_to_wp_srv.request.waypoint.pose.position.y = y;
+    //TODO: Change the following four lines when lower level controller for travelling are integrated
+    if(z < 1)
+      go_to_wp_srv.request.waypoint.pose.position.z = z;
+    else
+      go_to_wp_srv.request.waypoint.pose.position.z = z + std::stoi(id_);
+    //go_to_wp_srv.request.waypoint.pose.position.z = z;
+    go_to_wp_srv.request.blocking = blocking;
+    if(go_to_wp_client.call(go_to_wp_srv))
+      return true;
+    return false;
+  }
+  if(low_level_interface_ == "MRS")
+  {
+    mrs_ac_.waitForServer(ros::Duration(1.0));
+    mrs_actionlib_interface::commandGoal goal;
+    goal.command = 3;
+    goal.goto_x = x;
+    goal.goto_y = y;
+    //TODO: Change the following four lines when lower level controller for travelling are integrated
+    if(z < 1)
+      goal.goto_z = z;
+    else
+      goal.goto_z = z + std::stoi(id_);
+    //goal.goto_z = z;
+    goal.goto_hdg = 0;
+    ROS_INFO("[go_to_waypoint] Calling mrs_actionlib_interface action command GOTO");
+    mrs_ac_.sendGoal(goal);
     return true;
+  }
   return false;
 }
 bool AgentNode::stop(bool blocking){
   if(state_ == 4)
   {
-    //TODO: Comment the following two lines when lower level controller for travelling are integrated
-    unsigned offset;
-    sscanf(beacon_.id.c_str(), "uav_%u", &offset);
-
-    ros::ServiceClient stop_client = nh_.serviceClient<uav_abstraction_layer::GoToWaypoint>("/" + beacon_.id +
-        "/ual/go_to_waypoint");
-    uav_abstraction_layer::GoToWaypoint stop_srv;
-    stop_srv.request.waypoint.header.frame_id = pose_frame_id_;
-    stop_srv.request.waypoint.pose.position.x = position_.getX();
-    stop_srv.request.waypoint.pose.position.y = position_.getY();
-    if(position_.getZ() < 1)
-      stop_srv.request.waypoint.pose.position.z = position_.getZ();
-    else
-      stop_srv.request.waypoint.pose.position.z = position_.getZ() + offset;
-    //stop_srv.request.waypoint.pose.position.z = position_.getZ();
-    stop_srv.request.blocking = blocking;
-    //ROS_INFO("[stop] Moving to (%.1f,%.1f,%.1f)[%s]", stop_srv.request.waypoint.pose.position.x,
-    //    stop_srv.request.waypoint.pose.position.y, stop_srv.request.waypoint.pose.position.z, pose_frame_id_.c_str());
-    if(!stop_client.call(stop_srv))
-      return false;
+    if(low_level_interface_ == "UAL")
+    {
+      ros::ServiceClient stop_client = nh_.serviceClient<uav_abstraction_layer::GoToWaypoint>("/" + beacon_.id +
+          "/ual/go_to_waypoint");
+      uav_abstraction_layer::GoToWaypoint stop_srv;
+      stop_srv.request.waypoint.header.frame_id = pose_frame_id_;
+      stop_srv.request.waypoint.pose.position.x = position_.getX();
+      stop_srv.request.waypoint.pose.position.y = position_.getY();
+      //TODO: Change the following four lines when lower level controller for travelling are integrated
+      if(position_.getZ() < 1)
+        stop_srv.request.waypoint.pose.position.z = position_.getZ();
+      else
+        stop_srv.request.waypoint.pose.position.z = position_.getZ() + std::stoi(id_);
+      //stop_srv.request.waypoint.pose.position.z = position_.getZ();
+      stop_srv.request.blocking = blocking;
+      if(!stop_client.call(stop_srv))
+        return false;
+    }
+    if(low_level_interface_ == "MRS")
+    {
+      mrs_ac_.waitForServer(ros::Duration(1.0));
+      mrs_actionlib_interface::commandGoal goal;
+      goal.command = 3;
+      goal.goto_x = position_.getX();
+      goal.goto_y = position_.getY();
+      //TODO: Change the following four lines when lower level controller for travelling are integrated
+      if(position_.getZ() < 1)
+        goal.goto_z = position_.getZ();
+      else
+        goal.goto_z = position_.getZ() + std::stoi(id_);
+      //goal.goto_z = position_.getZ();
+      goal.goto_hdg = 0;
+      mrs_ac_.sendGoal(goal);
+      return true;
+    }
   }
   return true;
 }
-bool AgentNode::checkIfUALGoToServiceSucceeded(float x, float y, float z){
+bool AgentNode::checkIfGoToServiceSucceeded(float x, float y, float z){
   classes::Position position(x, y, z);
   if(classes::distance(position, position_) < 0.1)
     return true;
@@ -1926,11 +2716,15 @@ bool AgentNode::checkIfUALGoToServiceSucceeded(float x, float y, float z){
 int main(int argc, char **argv){
   ros::init(argc, argv, "agent_behaviour_manager");
 
+  std::string id;
+  std::string ns_prefix;
   human_aware_collaboration_planner::AgentBeacon beacon;
 
   //Read AgentBeacon parameters and send AgentBeacon to planner
-  ros::param::param<std::string>("~id", beacon.id, "i");
+  ros::param::param<std::string>("~id", id, "0");
+  ros::param::param<std::string>("~ns_prefix", ns_prefix, "uav");
   ros::param::param<std::string>("~type", beacon.type, "ACW");
+  beacon.id = ns_prefix + id;
 
   AgentNode agent(beacon);
 

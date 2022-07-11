@@ -51,8 +51,16 @@
                 <SubTree ID="MonitorTree"/>
             </ReactiveSequence>
             <ReactiveSequence>
+                <IsTaskMonitorUGV/>
+                <SubTree ID="MonitorUGVTree"/>
+            </ReactiveSequence>
+            <ReactiveSequence>
                 <IsTaskInspect/>
                 <SubTree ID="InspectTree"/>
+            </ReactiveSequence>
+            <ReactiveSequence>
+                <IsTaskInspectPVArray/>
+                <SubTree ID="InspectPVArrayTree"/>
             </ReactiveSequence>
             <ReactiveSequence>
                 <IsTaskDeliverTool/>
@@ -75,6 +83,16 @@
         </Sequence>
     </BehaviorTree>
 
+    <BehaviorTree ID="MonitorUGVTree">
+        <Sequence>
+            <Fallback>
+                <IsAgentNearUGV/>
+                <GoNearUGV/>
+            </Fallback>
+            <MonitorUGV/>
+        </Sequence>
+    </BehaviorTree>
+
     <BehaviorTree ID="InspectTree">
         <Sequence>
             <Fallback>
@@ -82,6 +100,16 @@
                 <GoNearWP/>
             </Fallback>
             <TakeImage/>
+        </Sequence>
+    </BehaviorTree>
+
+    <BehaviorTree ID="InspectPVArrayTree">
+        <Sequence>
+            <Fallback>
+                <IsAgentNearWP/>
+                <GoNearWP/>
+            </Fallback>
+            <InspectPVArray/>
         </Sequence>
     </BehaviorTree>
 

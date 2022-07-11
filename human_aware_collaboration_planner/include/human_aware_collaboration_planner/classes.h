@@ -11,8 +11,7 @@
 #include <actionlib/server/simple_action_server.h>
 #include "human_aware_collaboration_planner/Waypoint.h"
 
-namespace classes
-{
+namespace classes {
 //Forward declarations
 class BT;
 class Position;
@@ -22,16 +21,17 @@ class Task;
 class Monitor;
 class Inspect;
 class DeliverTool;
+class InspectPVArray;
 class Recharge;
 class Agent;
 
-class Position
-{
+class Position {
   friend class HumanTarget;
   friend class Tool;
   friend class Monitor;
   friend class Inspect;
   friend class DeliverTool;
+	friend class InspectPVArray;
 	friend class Recharge;
   
   protected:
@@ -47,29 +47,41 @@ class Position
 		friend float distance(Position&, Position&);
 		friend float distance(Position&, human_aware_collaboration_planner::Waypoint&);
 		friend float distance(human_aware_collaboration_planner::Waypoint&, Position&);
-		friend Position close_pose(Position&, Position&, float);
-		friend Position close_pose(Position&, human_aware_collaboration_planner::Waypoint&, float);
-		friend Position close_pose_2D(Position&, Position&, float);
-		friend Position close_pose_2D(Position&, human_aware_collaboration_planner::Waypoint&, float);
+		friend float distance2D(Position&, Position&);
+		friend float distance2D(Position&, human_aware_collaboration_planner::Waypoint&);
+		friend float distance2D(human_aware_collaboration_planner::Waypoint&, Position&);
+		friend Position closePose(Position&, Position&, float);
+		friend Position closePose(Position&, human_aware_collaboration_planner::Waypoint&, float);
+		friend Position closePose2D(Position&, Position&, float);
+		friend Position closePose2D(Position&, human_aware_collaboration_planner::Waypoint&, float);
 		//Getters
 		std::string getID();
 		float getX();
 		float getY();
 		float getZ();
+    void print(std::ostream& os) const;
 };
+
+std::ostream& operator << (std::ostream& os, const Position& p) {
+	p.print(os);
+	return os;
+}
 		
 float distance(Position&, Position&);
 float distance(Position&, human_aware_collaboration_planner::Waypoint&);
 float distance(human_aware_collaboration_planner::Waypoint&, Position&);
 float distance(human_aware_collaboration_planner::Waypoint&, human_aware_collaboration_planner::Waypoint&);
-Position close_pose(Position& orig, Position& dest, float dist);
-Position close_pose(Position&, human_aware_collaboration_planner::Waypoint&, float);
-Position close_pose_2D(Position&, Position&, float);
-Position close_pose_2D(Position&, human_aware_collaboration_planner::Waypoint&, float);
+float distance2D(Position&, Position&);
+float distance2D(Position&, human_aware_collaboration_planner::Waypoint&);
+float distance2D(human_aware_collaboration_planner::Waypoint&, Position&);
+float distance2D(human_aware_collaboration_planner::Waypoint&, human_aware_collaboration_planner::Waypoint&);
+Position closePose(Position& orig, Position& dest, float dist);
+Position closePose(Position&, human_aware_collaboration_planner::Waypoint&, float);
+Position closePose2D(Position&, Position&, float);
+Position closePose2D(Position&, human_aware_collaboration_planner::Waypoint&, float);
 human_aware_collaboration_planner::Waypoint central_position(std::vector<human_aware_collaboration_planner::Waypoint>&);
 
-class HumanTarget
-{
+class HumanTarget {
   friend class Monitor;
   friend class DeliverTool;
   
@@ -89,8 +101,7 @@ class HumanTarget
     //void updatePosition();
 };
 
-class Tool
-{
+class Tool {
 	friend class DeliverTool;
 
 	protected:
@@ -111,8 +122,7 @@ class Tool
     //void updatePosition();
 };
 
-class Task
-{
+class Task {
   protected:
     std::string id_;
   public:
@@ -128,6 +138,8 @@ class Task
 		virtual Position getHumanPosition();
 		virtual float getDistance();
 		virtual int getNumber();
+		virtual float getHeight();
+    virtual std::string getUGVID();
 		virtual std::vector<std::string> getAgentList();
 		virtual std::vector<human_aware_collaboration_planner::Waypoint> getInspectWaypoints();
 		virtual Tool getTool();
@@ -149,8 +161,7 @@ class Task
 		virtual void updateParams(classes::Task* task);
 };
 
-class Monitor : public Task
-{
+class Monitor : public Task {
   protected:
     const HumanTarget* human_target_;
 		float distance_;
@@ -178,8 +189,26 @@ class Monitor : public Task
 		void updateParams(classes::Task* task);
 };
 
-class Inspect : public Task
-{
+class MonitorUGV : public Task {
+  protected:
+		std::string ugv_id_;
+		float height_;
+  public:
+    MonitorUGV();
+    MonitorUGV(std::string task_id, std::string ugv_id, float height);
+    MonitorUGV(const MonitorUGV& m);
+    ~MonitorUGV();
+		//Getters
+    std::string getID();
+    char getType();
+    std::string getUGVID();
+		float getHeight();
+    void print(std::ostream& os) const;
+		//Setters
+		void updateParams(classes::Task* task);
+};
+
+class Inspect : public Task {
   protected:
 		std::vector<human_aware_collaboration_planner::Waypoint> waypoints_;
 		std::vector<std::string> agent_list_;
@@ -202,8 +231,30 @@ class Inspect : public Task
 		void updateParams(classes::Task* task);
 };
 
-class DeliverTool : public Task
-{
+class InspectPVArray : public Task {
+  protected:
+		std::vector<human_aware_collaboration_planner::Waypoint> waypoints_;
+		std::vector<std::string> agent_list_;
+  public:
+    InspectPVArray();
+    InspectPVArray(std::string task_id, std::vector<human_aware_collaboration_planner::Waypoint> waypoints);
+    InspectPVArray(std::string task_id, std::vector<human_aware_collaboration_planner::Waypoint> waypoints, 
+				std::vector<std::string> agent_list);
+    InspectPVArray(const InspectPVArray& i);
+    ~InspectPVArray();
+		//Getters
+    std::string getID();
+    char getType();
+		std::vector<human_aware_collaboration_planner::Waypoint> getInspectWaypoints();
+		std::vector<std::string> getAgentList();
+    void print(std::ostream& os) const;
+		//Setters
+		void setWaypoints(std::vector<human_aware_collaboration_planner::Waypoint> waypoints);
+		void setAgentList(std::vector<std::string> agent_list);
+		void updateParams(classes::Task* task);
+};
+
+class DeliverTool : public Task {
   protected:
     const Tool* tool_;
     const HumanTarget* human_target_;
@@ -227,8 +278,7 @@ class DeliverTool : public Task
 		void updateParams(classes::Task* task);
 };
 
-class Recharge : public Task
-{
+class Recharge : public Task {
   protected:
     Position* charging_station_;
 		float initial_percentage_;
@@ -255,8 +305,7 @@ class Recharge : public Task
 		void updateParams(classes::Task* task);
 };
 
-class Wait : public Task
-{
+class Wait : public Task {
   protected:
 
   public:
@@ -270,8 +319,7 @@ class Wait : public Task
 		//Setters
 };
 
-std::ostream& operator << (std::ostream& os, const Task& m)
-{
+std::ostream& operator << (std::ostream& os, const Task& m) {
 	m.print(os);
 	return os;
 }
