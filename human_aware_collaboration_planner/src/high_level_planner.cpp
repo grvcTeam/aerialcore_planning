@@ -6,7 +6,7 @@ Agent::Agent() : id_(), type_(), position_(), battery_(), task_queue_(), positio
   battery_as_(nh_, "/uav0/battery_enough", boost::bind(&Agent::batteryEnoughCB, this, _1), false),
   task_result_as_(nh_, "/uav0/task_result", boost::bind(&Agent::taskResultCB, this, _1), false),
   ntl_ac_("/uav0/task_list", true), battery_enough_(true), planner_(nullptr), last_beacon_time_(), last_beacon_(),
-  low_level_interface_(), pose_topic_(), battery_topic_() {}
+  pose_topic_(), battery_topic_() {}
 
 Agent::Agent(Planner* planner, std::string id, std::string type, ros::Time first_beacon_time,
     human_aware_collaboration_planner::AgentBeacon first_beacon) :
@@ -15,14 +15,10 @@ Agent::Agent(Planner* planner, std::string id, std::string type, ros::Time first
   task_result_as_(nh_, "/" + id + "/task_result", boost::bind(&Agent::taskResultCB, this, _1), false),
   ntl_ac_("/" + id + "/task_list", true), last_beacon_time_(first_beacon_time), last_beacon_(first_beacon)
 {
-  ros::param::param<std::string>("~low_level_interface", low_level_interface_, "UAL");
   ros::param::param<std::string>("~pose_topic", pose_topic_, "/ual/pose");
   ros::param::param<std::string>("~battery_topic", battery_topic_, "/battery_fake");
 
-  if(low_level_interface_ == "UAL")
-    position_sub_ = nh_.subscribe("/" + id + pose_topic_, 1, &Agent::positionCallbackUAL, this);
-  else if(low_level_interface_ == "MRS")
-    position_sub_ = nh_.subscribe("/" + id + pose_topic_, 1, &Agent::positionCallbackMRS, this);
+  position_sub_ = nh_.subscribe("/" + id + pose_topic_, 1, &Agent::positionCallbackUAL, this);
   battery_sub_ = nh_.subscribe("/" + id + battery_topic_, 1, &Agent::batteryCallback, this);
   battery_as_.start();
   task_result_as_.start();
@@ -33,12 +29,9 @@ Agent::Agent(const Agent& a) : id_(a.id_), type_(a.type_), position_(a.position_
   battery_as_(nh_, "/" + a.id_ + "/battery_enough", boost::bind(&Agent::batteryEnoughCB, this, _1), false), 
   task_result_as_(nh_, "/" + a.id_ + "/task_result", boost::bind(&Agent::taskResultCB, this, _1), false),
   ntl_ac_("/" + a.id_ + "/task_list", true), last_beacon_time_(a.last_beacon_time_),
-  low_level_interface_(a.low_level_interface_), pose_topic_(a.pose_topic_), battery_topic_(a.battery_topic_)
+  pose_topic_(a.pose_topic_), battery_topic_(a.battery_topic_)
 {
-  if(low_level_interface_ == "UAL")
-    position_sub_ = nh_.subscribe("/" + a.id_ + a.pose_topic_, 1, &Agent::positionCallbackUAL, this);
-  else if(low_level_interface_ == "MRS")
-    position_sub_ = nh_.subscribe("/" + a.id_ + a.pose_topic_, 1, &Agent::positionCallbackMRS, this);
+  position_sub_ = nh_.subscribe("/" + a.id_ + a.pose_topic_, 1, &Agent::positionCallbackUAL, this);
   battery_sub_ = nh_.subscribe("/" + a.id_ + a.battery_topic_, 1, &Agent::batteryCallback, this);
 
   battery_as_.start();
@@ -772,9 +765,6 @@ void Agent::setLastBeacon(human_aware_collaboration_planner::AgentBeacon last_be
 //class Agent Callbacks
 void Agent::positionCallbackUAL(const geometry_msgs::PoseStamped& pose){
   position_.update(pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);
-}
-void Agent::positionCallbackMRS(const mrs_msgs::UavStatus& pose){
-  position_.update(pose.odom_x, pose.odom_y, pose.odom_z);
 }
 void Agent::batteryCallback(const sensor_msgs::BatteryState& battery){battery_ = battery.percentage;}
 void Agent::batteryEnoughCB(const human_aware_collaboration_planner::BatteryEnoughGoalConstPtr& goal){

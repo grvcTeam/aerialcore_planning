@@ -9,10 +9,7 @@
 #include "human_aware_collaboration_planner/BatteryControl.h"
 
 #include "uav_abstraction_layer/State.h"
-#include "mrs_actionlib_interface/State.h"
-#include "mrs_actionlib_interface/commandAction.h"
 #include "geometry_msgs/PoseStamped.h"
-#include "mrs_msgs/UavStatus.h"
 #include "sensor_msgs/BatteryState.h"
 
 class BatteryFaker{
@@ -26,7 +23,6 @@ class BatteryFaker{
 
     classes::Position position_;
 
-		std::string low_level_interface_;
 		std::string pose_topic_;
 		std::string state_topic_;
     std::string config_file;
@@ -50,11 +46,8 @@ class BatteryFaker{
   public:
     BatteryFaker() : loop_rate_(0.2), mode_(2), battery_increase_(0.01), battery_decrease_(0.01){
       ros::param::param<std::string>("~id", id_, "i");
-      ros::param::param<std::string>("~low_level_interface", low_level_interface_, "UAL");
       ros::param::param<std::string>("~pose_topic", pose_topic_, "/" + id_ + "/ual/pose");
       ros::param::param<std::string>("~state_topic", state_topic_, "/" + id_ + "/ual/state");
-
-      ROS_INFO_STREAM("UAV: " << id_ << "\tLow Level Interface: " << low_level_interface_);
 
       //load of known position and human targets known positions
       std::string path = ros::package::getPath("human_aware_collaboration_planner");
@@ -66,16 +59,9 @@ class BatteryFaker{
       battery_pub_ = nh_.advertise<sensor_msgs::BatteryState>("/" + id_ + "/battery_fake", 1);
 
       control_sub_ = nh_.subscribe("/" + id_ + "/battery_fake/control", 1, &BatteryFaker::controlCallback, this);
-      if(low_level_interface_ == "UAL")
-      {
-        position_sub_ = nh_.subscribe(pose_topic_, 1, &BatteryFaker::positionCallbackUAL, this);
-        state_sub_ = nh_.subscribe(state_topic_, 1, &BatteryFaker::stateCallbackUAL, this);
-      }
-      else if(low_level_interface_ == "MRS")
-      {
-        position_sub_ = nh_.subscribe(pose_topic_, 1, &BatteryFaker::positionCallbackMRS, this);
-        state_sub_ = nh_.subscribe(state_topic_, 1, &BatteryFaker::stateCallbackMRS, this);
-      }
+
+      position_sub_ = nh_.subscribe(pose_topic_, 1, &BatteryFaker::positionCallbackUAL, this);
+      state_sub_ = nh_.subscribe(state_topic_, 1, &BatteryFaker::stateCallbackUAL, this);
 
       ROS_INFO("READY");
       battery_.percentage = 0.9;
@@ -195,41 +181,7 @@ class BatteryFaker{
     void positionCallbackUAL(const geometry_msgs::PoseStamped& pose){
       position_.update(pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);
     }
-    void positionCallbackMRS(const mrs_msgs::UavStatus& pose){
-      position_.update(pose.odom_x, pose.odom_y, pose.odom_z);
-    }
     void stateCallbackUAL(const uav_abstraction_layer::State& state){state_ = state.state;}
-    void stateCallbackMRS(const mrs_actionlib_interface::State& state){
-      /* UAL States                 MRS States
-       *********************        *********************
-       * UNINITIALIZED   = 0        * LANDED          = 0
-       * LANDED_DISARMED = 1        * TAKEOFF_LANDING = 1
-       * LANDED_ARMED    = 2        * IDLE_FLYING     = 2
-       * TAKING_OFF      = 3        * GOTO_PATHFINDER = 3
-       * FLYING_AUTO     = 4        * GOTO_DIRECT     = 4
-       * FLYING_MANUAL   = 5        * UNKNOWN         = 5 
-       * LANDING         = 6        * 
-       *********************        *********************/
-
-      switch(state.state){
-        case 0:
-          state_ = 2; //state_ = 1;
-          break;
-        case 1:
-          state_ = 6; //state_ = 3;
-          break;
-        case 2:
-        case 3:
-        case 4:
-          state_ = 4;
-          break;
-        case 5:
-        default:
-          state_ = 0; //state_ = 5;
-          break;
-      }
-      return;
-    }
 };
 
 int main(int argc, char **argv){

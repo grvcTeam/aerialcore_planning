@@ -27,7 +27,6 @@
 #include "human_aware_collaboration_planner/Task.h"
 
 #include "geometry_msgs/PoseStamped.h"
-#include "mrs_msgs/UavStatus.h"
 #include "sensor_msgs/BatteryState.h"
 
 #include "ist_use_collaboration_msgs/DoCloserInspectionAction.h"
@@ -53,7 +52,6 @@ class Agent{
     //Subscribers
 		ros::Subscriber position_sub_;
 		ros::Subscriber battery_sub_;
-		std::string low_level_interface_;
 		std::string pose_topic_;
 		std::string battery_topic_;
 		classes::Position position_;
@@ -103,7 +101,6 @@ class Agent{
 		void setLastBeacon(human_aware_collaboration_planner::AgentBeacon last_beacon);
 		//Callbacks
     void positionCallbackUAL(const geometry_msgs::PoseStamped& pose);
-    void positionCallbackMRS(const mrs_msgs::UavStatus& pose);
     void batteryCallback(const sensor_msgs::BatteryState& battery);
 		void batteryEnoughCB(const human_aware_collaboration_planner::BatteryEnoughGoalConstPtr& goal);
 		void taskResultCB(const human_aware_collaboration_planner::TaskResultGoalConstPtr& goal);

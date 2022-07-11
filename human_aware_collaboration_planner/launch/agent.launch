@@ -1,12 +1,10 @@
 <launch>
 
   <!-- Launch Agent Node -->
-  <!-- Low Level Interface: UAL, MRS -->
-  <!-- Worlds: none, empty, power_tower, 2towers, burguillos, mrs, pv_farm, mrs_pv_farm -->
+  <!-- Worlds: none, empty, power_tower, 2towers, burguillos, pv_farm -->
   <arg name="agent_debugger" default="none"/>
   <arg name="id" default="0"/>
   <arg name="ns_prefix" default="uav"/>
-  <arg name="low_level_interface" default="UAL"/>
   <arg name="type" default="ACW"/>
   <arg name="pose_frame_id" default="map"/>
   <arg name="config_file" default="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
@@ -17,19 +15,10 @@
 
   <group ns="$(arg ns_prefix)$(arg id)/agent_behaviour_manager">
 
-    <param name="low_level_interface" value="$(arg low_level_interface)"/>
     <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/mavros/battery" unless="$(eval battery_faker)"/>
     <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/battery_fake" if="$(eval battery_faker)"/>
-
-    <group if="$(eval low_level_interface == 'UAL')">
-      <param name="pose_topic" value="/$(arg ns_prefix)$(arg id)/ual/pose"/>
-      <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/ual/state"/>
-    </group>
-
-    <group if="$(eval low_level_interface == 'MRS')">
-      <param name="pose_topic" value="/$(arg ns_prefix)$(arg id)/mrs_uav_status/uav_status"/>
-      <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/mrs_actionlib_interface/state"/>
-    </group>
+    <param name="pose_topic" value="/$(arg ns_prefix)$(arg id)/ual/pose"/>
+    <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/ual/state"/>
 
   </group>
 

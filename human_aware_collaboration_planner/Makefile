@@ -32,9 +32,6 @@ gesture_info:
 launch:
 	@roslaunch human_aware_collaboration_planner simulation.launch number_UAV:=$(number) planner_debugger:=$(planner_debugger) agent_debugger:=$(agent_debugger)
 
-start:
-	@./tmux_scripts/no_mapping_no_collision_avoidance/start.sh
-
 monitor:
 	@rosrun human_aware_collaboration_planner gesture_recognition_faker task_$(task_id) M $(human_target) $(distance) $(number)
 
@@ -151,21 +148,6 @@ phase_2_unforeseen_event_9:
 	@echo "Unforseen event: mission over"
 	@rostopic pub /mission_over human_aware_collaboration_planner/MissionOver "value: true"
 
-mrs_drone_spawn:
-	@rosservice call /mrs_drone_spawner/spawn "$(agent_id) --f550 --enable-rangefinder --pos $(x) $(y) $(z) $(h)"
-
-mrs_takeoff:
-	@rostopic pub /$(agent_prefix)$(agent_id)/mrs_actionlib_interface/goal mrs_actionlib_interface/commandActionGoal "{header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: ''}, goal_id: {stamp: {secs: 0, nsecs: 0}, id: ''}, goal: {command: 0, goto_x: 0.0, goto_y: 0.0, goto_z: 0.0, goto_hdg: 0.0}}"
-
-mrs_land:
-	@rostopic pub /$(agent_prefix)$(agent_id)/mrs_actionlib_interface/goal mrs_actionlib_interface/commandActionGoal "{header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: ''}, goal_id: {stamp: {secs: 0, nsecs: 0}, id: ''}, goal: {command: 1, goto_x: 0.0, goto_y: 0.0, goto_z: 0.0, goto_hdg: 0.0}}"
-
-mrs_goto_pathfinder:
-	@rostopic pub /$(agent_prefix)$(agent_id)/mrs_actionlib_interface/goal mrs_actionlib_interface/commandActionGoal "{header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: ''}, goal_id: {stamp: {secs: 0, nsecs: 0}, id: ''}, goal: {command: 2, goto_x: $x, goto_y: $y, goto_z: $z, goto_hdg: $h}}"
-
-mrs_goto_direct:
-	@rostopic pub /$(agent_prefix)$(agent_id)/mrs_actionlib_interface/goal mrs_actionlib_interface/commandActionGoal "{header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: ''}, goal_id: {stamp: {secs: 0, nsecs: 0}, id: ''}, goal: {command: 3, goto_x: $x, goto_y: $y, goto_z: $z, goto_hdg: $h}}"
-	
 autonomous_landing_node:
 	@roslaunch ~/autonomous_landing_workspace/src/autonomous_landing_uav/transforms.launch
 

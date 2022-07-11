@@ -1,5 +1,5 @@
 <launch>
-  <!-- Worlds: none, empty, power_tower, 2towers, burguillos, mrs, pv_farm, mrs_pv_farm -->
+  <!-- Worlds: none, empty, power_tower, 2towers, burguillos, pv_farm -->
   <arg name="world" default="power_tower"/>
 
   <!-- Launch Gazebo simulation -->
@@ -30,11 +30,6 @@
     -description_package=robots_description">
     <rosparam param="sim_origin">[37.564003804467, -6.003676484441573, 65.36515808105469]</rosparam>
   </node>
-
-  <include file="$(find mrs_simulation)/launch/simulation.launch" if="$(eval world=='mrs')">
-    <arg name="world_file" value="$(find aerialcore_simulation)/worlds/power_towers_danube_wires_rescaled_jeff_autospawn.world"/>
-    <arg name="verbose" value="false"/>
-  </include>
 
   <node pkg="px4_bringup" type="launch_gzworld.py" name="gazebo_world" output="screen" if="$(eval world=='pv_farm')"
     args="-physics=ode -world=$(find grvc_gazebo_worlds)/worlds/evora_solar_panel_farm.world

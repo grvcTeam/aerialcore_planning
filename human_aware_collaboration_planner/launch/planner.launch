@@ -1,22 +1,12 @@
 <launch>
     <!-- Debuggers: gdb, valgrind, none -->
-    <!-- Low Level Interface: UAL, MRS -->
     <arg name="planner_debugger" default="none"/>
     <arg name="config_file" default="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
-    <arg name="low_level_interface" default="UAL"/>
     <arg name="battery_faker" default="true"/>
 
-    <param name="low_level_interface" value="$(arg low_level_interface)"/>
     <param name="battery_topic" value="/mavros/battery" unless="$(eval battery_faker)"/>
     <param name="battery_topic" value="/battery_fake" if="$(eval battery_faker)"/>
-
-    <group if="$(eval low_level_interface == 'UAL')">
-      <param name="pose_topic" value="/ual/pose"/>
-    </group>
-
-    <group if="$(eval low_level_interface == 'MRS')">
-      <param name="pose_topic" value="/mrs_uav_status/uav_status"/>
-    </group>
+    <param name="pose_topic" value="/ual/pose"/>
 
     <!-- Launch Planner Node (there's only one node of this type for the whole simulation and it's outside any ns)-->
     <node pkg="human_aware_collaboration_planner" type="high_level_planner" name="high_level_planner" output="screen" 

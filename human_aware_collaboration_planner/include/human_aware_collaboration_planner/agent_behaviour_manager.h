@@ -30,15 +30,12 @@
 #include "uav_abstraction_layer/TakeOff.h"
 #include "uav_abstraction_layer/GoToWaypoint.h"
 #include "uav_abstraction_layer/State.h"
-#include "mrs_actionlib_interface/State.h"
 
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Point.h"
 #include "geographic_msgs/GeoPoseStamped.h"
 #include "geographic_msgs/GeoPose.h"
 #include "geographic_msgs/GeoPoint.h"
-#include "mrs_msgs/UavStatus.h"
-#include "mrs_actionlib_interface/commandAction.h"
 #include "sensor_msgs/BatteryState.h"
 #include "sensor_msgs/NavSatFix.h"
 
@@ -542,9 +539,6 @@ class AgentNode
     human_aware_collaboration_planner::NewTaskListFeedback ntl_feedback_;
     human_aware_collaboration_planner::NewTaskListResult ntl_result_;
 
-		//Action Client to communicate with the MRS System
-		actionlib::SimpleActionClient<mrs_actionlib_interface::commandAction> mrs_ac_;
-
     //Action Client to Battery Enough
     actionlib::SimpleActionClient<human_aware_collaboration_planner::BatteryEnoughAction> battery_ac_;
 
@@ -574,7 +568,6 @@ class AgentNode
     bool battery_enough_;
 		std::string tool_flag_;
 		std::string pose_frame_id_;
-		std::string low_level_interface_;
 		std::string pose_topic_;
 		std::string state_topic_;
 		std::string battery_topic_;
@@ -604,16 +597,15 @@ class AgentNode
     //New Task List Action callback
     void newTaskList(const human_aware_collaboration_planner::NewTaskListGoalConstPtr& goal);
     void positionCallbackUAL(const geometry_msgs::PoseStamped& pose);
-    void positionCallbackMRS(const mrs_msgs::UavStatus& pose);
     void batteryCallback(const sensor_msgs::BatteryState& battery);
 		void stateCallbackUAL(const uav_abstraction_layer::State& state);
-		void stateCallbackMRS(const mrs_actionlib_interface::State& state);
+	
 		void missionOverCallback(const human_aware_collaboration_planner::MissionOver& value);
 		void beaconCallback(const human_aware_collaboration_planner::PlannerBeacon& beacon);
 		bool checkBeaconTimeout(ros::Time now);
 		void atrvjrPositionCallback(const geographic_msgs::GeoPoseStamped& geo_pose);
 		void jackalPositionCallback(const geographic_msgs::GeoPoseStamped& geo_pose);
-		// UAL/MRS Service calls
+		// UAL Service calls
 		bool land(bool blocking);
 		bool take_off(float height, bool blocking);
 		bool go_to_waypoint(float x, float y, float z, bool blocking);

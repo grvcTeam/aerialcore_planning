@@ -14,12 +14,9 @@ find_package(catkin REQUIRED COMPONENTS
   genmsg
   geometry_msgs
   actionlib_msgs
-  #mrs_msgs
-  #mrs_lib
   actionlib
   behaviortree_cpp_v3
   uav_abstraction_layer
-  #mrs_actionlib_interface
   #roscpp
   mavros_msgs
   #YAML_CPP
@@ -67,17 +64,13 @@ generate_messages(
   std_msgs
   geometry_msgs
   actionlib_msgs
-  #mrs_msgs
-  #mrs_actionlib_interface
   ist_use_collaboration_msgs
 )
 
 # 7. Specify package build info export (catkin_package())
 catkin_package(
   INCLUDE_DIRS include
-  #LIBRARIES ${PROJECT_NAME} #MrsActionlibInterface
   CATKIN_DEPENDS behaviortree_cpp_v3 message_runtime ist_use_collaboration_msgs uav_abstraction_layer
-  #CATKIN_DEPENDS behaviortree_cpp_v3 message_runtime mrs_actionlib_interface roscpp mrs_lib mrs_msgs
 )
 
 include_directories(
