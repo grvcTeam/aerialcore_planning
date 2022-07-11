@@ -19,7 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib
   behaviortree_cpp_v3
   uav_abstraction_layer
-  mrs_actionlib_interface
+  #mrs_actionlib_interface
   #roscpp
   mavros_msgs
   #YAML_CPP
@@ -68,7 +68,7 @@ generate_messages(
   geometry_msgs
   actionlib_msgs
   #mrs_msgs
-  mrs_actionlib_interface
+  #mrs_actionlib_interface
   ist_use_collaboration_msgs
 )
 
@@ -76,7 +76,7 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
   #LIBRARIES ${PROJECT_NAME} #MrsActionlibInterface
-  CATKIN_DEPENDS behaviortree_cpp_v3 message_runtime mrs_actionlib_interface ist_use_collaboration_msgs uav_abstraction_layer
+  CATKIN_DEPENDS behaviortree_cpp_v3 message_runtime ist_use_collaboration_msgs uav_abstraction_layer
   #CATKIN_DEPENDS behaviortree_cpp_v3 message_runtime mrs_actionlib_interface roscpp mrs_lib mrs_msgs
 )
 
