@@ -1,0 +1,16 @@
+name: alvaro_evora_ual_gcs
+root: ./
+
+windows:
+  - multimaster:
+      layout: even-horizontal
+      panes:
+        - roslaunch human_aware_collaboration_planner multimaster.launch
+  - planner:
+      layout: even-horizontal
+      panes: 
+        - sleep 3; roslaunch human_aware_collaboration_planner planner.launch
+  - fakers:
+      layout: even-horizontal
+      panes:
+        - sleep 6; roslaunch human_aware_collaboration_planner fakers.launch
