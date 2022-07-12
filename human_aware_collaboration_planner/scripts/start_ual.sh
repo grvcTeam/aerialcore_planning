@@ -26,17 +26,17 @@ pre_input="mkdir -p $MAIN_DIR/$PROJECT_NAME"
 # 'name' 'command'
 # DO NOT PUT SPACES IN THE NAMES
 input=(
-#   'Roscore' 'roscore
-# '
+  'Multimaster' 'roscore roslaunch human_aware_collaboration_planner multimaster.launch
+'
   'Mavros' 'sleep 1; roslaunch human_aware_collaboration_planner mavros_experiment.launch drone_id:='"$UAV_ID"'
 '
   'UAL' 'sleep 2; roslaunch human_aware_collaboration_planner ual_experiment.launch drone_id:='"$UAV_ID"'
 '
   'Camera' 'sleep 3; roslaunch human_aware_collaboration_planner camera_experiment.launch drone_id:='"$UAV_ID"'
 '
-  'Planner' 'sleep 4; roslaunch human_aware_collaboration_planner planner.launch
-'
   'Agent' 'sleep 6; roslaunch human_aware_collaboration_planner agent.launch id:='"$UAV_ID"'
+'
+  'Battery_faker' 'sleep 8; roslaunch human_aware_collaboration_planner battery_faker.launch id:='"$UAV_ID"'
 '
   'Rosbag' 'sleep 10; roslaunch human_aware_collaboration_planner rosbag_recorder_experiment.launch record_duration:=300
 '
