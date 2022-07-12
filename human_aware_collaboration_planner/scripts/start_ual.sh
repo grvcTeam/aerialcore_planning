@@ -38,7 +38,7 @@ input=(
 '
   'Agent' 'sleep 6; roslaunch human_aware_collaboration_planner agent.launch
 '
-  'Rosbag' 'sleep 10; roslaunch human_aware_collaboration_planner rosbag_recorder_experiment.launch
+  'Rosbag' 'sleep 10; roslaunch human_aware_collaboration_planner rosbag_recorder_experiment.launch record_duration:=300
 '
 )
 
