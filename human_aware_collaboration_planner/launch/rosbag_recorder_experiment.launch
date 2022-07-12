@@ -1,0 +1,7 @@
+<launch>
+    <arg name="id" default="1"/>
+    <arg name="record_duration" default="120"/>
+
+ <node pkg="rosbag" type="record" name="rosbag_record_topics" ns="rosbag_record_drone_$(arg id)"
+       args="record --duration=$(arg record_duration) -o drone_$(arg id)_experiment -e /drone_$(arg id)/mission_status /drone_$(arg id)/follower/trajectory_to_follow /drone_$(arg id)/ual/pose /drone_$(arg id)/ual/velocity /drone_$(arg id)/mission_planner_ros/ref_traj /drone_$(arg id)/absolute_relative_angle /drone_$(arg id)/mission_planner_ros/solved_traj /drone_$(arg id)/absolute_distance_to_inspect /drone_$(arg id)/mission_planner_ros/points_to_inspect_transformed /drone_$(arg id)/cgo3_camera/image_raw/compressed"/>
+</launch>
