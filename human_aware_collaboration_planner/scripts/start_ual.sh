@@ -38,7 +38,7 @@ input=(
 '
   'Battery_faker' 'sleep 8; roslaunch human_aware_collaboration_planner battery_faker.launch id:='"$UAV_ID"'
 '
-  'Rosbag' 'sleep 10; roslaunch human_aware_collaboration_planner rosbag_recorder_experiment.launch record_duration:=300
+  'Rosbag' 'sleep 10; roslaunch human_aware_collaboration_planner rosbag_recorder_experiment.launch record_duration:=300 id:='"$UAV_ID"'
 '
 )
 
