@@ -26,7 +26,7 @@ pre_input="mkdir -p $MAIN_DIR/$PROJECT_NAME"
 # 'name' 'command'
 # DO NOT PUT SPACES IN THE NAMES
 input=(
-  'Multimaster' 'roscore roslaunch human_aware_collaboration_planner multimaster.launch
+  'Multimaster' 'roslaunch human_aware_collaboration_planner multimaster.launch
 '
   'Mavros' 'sleep 1; roslaunch human_aware_collaboration_planner mavros_experiment.launch drone_id:='"$UAV_ID"'
 '
