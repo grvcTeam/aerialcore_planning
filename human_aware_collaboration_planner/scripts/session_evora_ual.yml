@@ -1,0 +1,15 @@
+name: alvaro_evora_ual
+root: ./
+
+windows:
+  - launch_uavs:
+      layout: even-horizontal
+      panes: 
+        - uav1:
+          - sshpass -p grvc ssh uav1@uav1
+          - cd ~
+          - ./start_ual.sh
+        - uav2:
+          - sshpass -p grvc ssh uav2@uav2
+          - cd ~
+          - ./start_ual.sh
