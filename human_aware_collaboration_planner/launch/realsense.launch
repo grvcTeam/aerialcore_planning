@@ -1,0 +1,28 @@
+<launch>
+    <arg name="id" default="1"/>
+    <arg name="namespace" default="uav$(arg id)"/>
+
+    <group ns="$(arg namespace)">
+        
+        <include file="$(find realsense2_camera)/launch/includes/nodelet.launch.xml">
+            <arg name="tf_prefix"   value="uav/camera"/>
+
+        </include>
+
+        <group ns="color/image_raw">
+            <rosparam param="disable_pub_plugins">
+                - 'image_transport/compressedDepth'
+                - 'image_transport/theora'
+            </rosparam>
+        </group>
+
+        <group ns="depth/image_rect_raw">
+            <rosparam param="disable_pub_plugins">
+                - 'image_transport/compressedDepth'
+                - 'image_transport/theora'
+            </rosparam>
+        </group>
+
+    </group>
+
+</launch>
