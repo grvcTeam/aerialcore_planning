@@ -30,9 +30,9 @@ input=(
 '
   'Mavros' 'sleep 1; roslaunch human_aware_collaboration_planner mavros_experiment.launch drone_id:='"$UAV_ID"' rtcm_topic:="/rtcm_stream"
 '
-  'UAL' 'sleep 2; roslaunch human_aware_collaboration_planner ual_experiment.launch drone_id:='"$UAV_ID"'
+  'UAL' 'sleep 2; roslaunch human_aware_collaboration_planner ual_experiment.launch id:='"$UAV_ID"'
 '
-  'Camera' 'sleep 3; roslaunch human_aware_collaboration_planner camera_experiment.launch drone_id:='"$UAV_ID"'
+  'Realsense' 'sleep 3; roslaunch human_aware_collaboration_planner realsense.launch id:='"$UAV_ID"'
 '
   'Agent' 'sleep 6; roslaunch human_aware_collaboration_planner agent.launch id:='"$UAV_ID"'
 '
