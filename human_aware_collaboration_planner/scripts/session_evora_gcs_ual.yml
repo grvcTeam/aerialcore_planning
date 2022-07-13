@@ -10,6 +10,10 @@ windows:
       layout: even-horizontal
       panes: 
         - sleep 3; roslaunch human_aware_collaboration_planner planner.launch
+  - rtk_station:
+      layout: even-horizontal
+      panes: 
+        - sleep 5; roslaunch rtkbasestation rtkbase.launch
   - fakers:
       layout: even-horizontal
       panes:
