@@ -18,3 +18,8 @@ windows:
       layout: even-horizontal
       panes:
         - sleep 6; roslaunch human_aware_collaboration_planner fakers.launch
+  - cameras:
+      layout: even-horizontal
+      panes:
+        - sleep 6; roslaunch human_aware_collaboration_planner camera_experiment.launch id:=2
+        - sleep 6; roslaunch human_aware_collaboration_planner camera_experiment.launch id:=3
