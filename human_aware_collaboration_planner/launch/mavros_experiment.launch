@@ -11,7 +11,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 <launch>
     <!-- Configurable options -->
     <arg name="robot_model" default="typhoon_h480"/>
-    <arg name="drone_id" default="1"/>
+    <arg name="id" default="1"/>
     <arg name="mode" default="sitl"/>
 
     <arg name="description_package" default="robots_description"/>
@@ -22,6 +22,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <arg name="use_mavros" default="true"/>
 
     <!-- Run mavros node -->
-    <node pkg="px4_bringup" type="run_mavros.py" name="run_mavros_$(arg drone_id)" output="screen" ns="drone_$(arg drone_id)" if="$(arg use_mavros)" args="-drone_id=$(arg drone_id) -mode=$(arg mode) -fcu_url=$(arg fcu_url) -gcs_url=$(arg gcs_url) -rtcm_topic=$(arg rtcm_topic)" />
+    <node pkg="px4_bringup" type="run_mavros.py" name="run_mavros_$(arg id)" output="screen" ns="drone_$(arg id)" if="$(arg use_mavros)" args="-id=$(arg id) -mode=$(arg mode) -fcu_url=$(arg fcu_url) -gcs_url=$(arg gcs_url) -rtcm_topic=$(arg rtcm_topic)" />
 
 </launch>

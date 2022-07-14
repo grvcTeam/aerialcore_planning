@@ -2,6 +2,6 @@
     <arg name="id" default="1"/>
     <arg name="record_duration" default="120"/>
 
- <node pkg="rosbag" type="record" name="rosbag_record_topics" ns="rosbag_record_drone_$(arg id)"
-       args="record --duration=$(arg record_duration) -o drone_$(arg id)_experiment -e /drone_$(arg id)/ual/pose /drone_$(arg id)/cgo3_camera/image_raw/compressed"/>
+ <node pkg="rosbag" type="record" name="rosbag_record_topics" ns="rosbag_record_uav$(arg id)"
+       args="record --duration=$(arg record_duration) -o uav$(arg id)_experiment -e /uav$(arg id)/ual/pose /uav$(arg id)/color/image_raw/compressed"/>
 </launch>
