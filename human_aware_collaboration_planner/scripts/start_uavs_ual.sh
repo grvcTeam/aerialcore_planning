@@ -28,7 +28,7 @@ pre_input="mkdir -p $MAIN_DIR/$PROJECT_NAME"
 input=(
   'Multimaster' 'roslaunch human_aware_collaboration_planner multimaster.launch
 '
-  'UAL_MAVROS' 'sleep 1; roslaunch ual_backend_mavros server.launch id:='"$UAV_ID"' rtcm_topic:="/rtcm_stream" ns:=uav'$UAV_ID'
+  'UAL_MAVROS' 'sleep 1; roslaunch ual_backend_mavros server.launch id:='"$UAV_ID"' pose_frame_id:='"map"' rtcm_topic:="/rtcm_stream" ns:=uav'$UAV_ID'
 '
   'Realsense' 'sleep 3; roslaunch human_aware_collaboration_planner realsense.launch id:='"$UAV_ID"'
 '
