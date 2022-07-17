@@ -7,13 +7,13 @@ windows:
       panes: 
         - uav2:
           - sshpass -p grvc ssh uav2@uav2
-          - cd ~
+          - roscd human_aware_collaboration_planner/scripts
           - rm .tmuxinator.yml
-          - ln ~/launch_uavs_ual.yml .tmuxinator.yml
+          - ln start_uavs_ual.yml .tmuxinator.yml
           - tmuxinator
         - uav3:
           - sshpass -p grvc ssh uav3@uav3
-          - cd ~
+          - roscd human_aware_collaboration_planner/scripts
           - rm .tmuxinator.yml
-          - ln ~/launch_uavs_ual.yml .tmuxinator.yml
+          - ln start_uavs_ual.yml .tmuxinator.yml
           - tmuxinator
