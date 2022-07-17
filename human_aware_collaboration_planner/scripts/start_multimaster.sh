@@ -4,4 +4,4 @@ sudo sh -c "echo 0 >/proc/sys/net/ipv4/icmp_echo_ignore_broadcasts"
 sudo service procps restart
 #netstat -g
 
-roslaunch human_aware_collaboration_planner multimaster.launch
+roslaunch human_aware_collaboration_planner multimaster.launch __ns:=uav'"$UAV_ID"'
