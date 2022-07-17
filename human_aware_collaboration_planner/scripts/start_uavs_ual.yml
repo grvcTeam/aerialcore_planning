@@ -1,0 +1,19 @@
+name: alvaro_evora_uavs_ual
+root: ./
+
+windows:
+  - launch_uavs:
+      layout: even-horizontal
+      panes: 
+        - multimaster:
+          - roscd human_aware_collaboration_planner/scripts; ./start_multimaster.sh
+        - mavros_ual:
+          - sleep 2; roslaunch ual_backend_mavros server.launch id:='"$UAV_ID"' pose_frame_id:='"map"' rtcm_topic:="/rtcm_stream" ns:=uav'"$UAV_ID"'
+        - realsense:
+          - sleep 4; roslaunch human_aware_collaboration_planner realsense.launch id:='"$UAV_ID"'
+        - agent:
+          - sleep 6; roslaunch human_aware_collaboration_planner agent.launch id:='"$UAV_ID"'
+        - battery_faker:
+          - sleep 8; roslaunch human_aware_collaboration_planner battery_faker.launch id:='"$UAV_ID"'
+        - rosbag_recorder:
+          - sleep 10; roslaunch human_aware_collaboration_planner rosbag_recorder_experiment.launch record_duration:=360 id:='"$UAV_ID"'

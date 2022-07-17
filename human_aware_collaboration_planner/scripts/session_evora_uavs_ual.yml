@@ -5,11 +5,15 @@ windows:
   - launch_uavs:
       layout: even-horizontal
       panes: 
-        - uav1:
-          - sshpass -p grvc ssh uav1@uav1
-          - cd ~
-          - ./start_uavs_ual.sh
         - uav2:
           - sshpass -p grvc ssh uav2@uav2
           - cd ~
-          - ./start_uavs_ual.sh
+          - rm .tmuxinator.yml
+          - ln ~/launch_uavs_ual.yml .tmuxinator.yml
+          - tmuxinator
+        - uav3:
+          - sshpass -p grvc ssh uav3@uav3
+          - cd ~
+          - rm .tmuxinator.yml
+          - ln ~/launch_uavs_ual.yml .tmuxinator.yml
+          - tmuxinator

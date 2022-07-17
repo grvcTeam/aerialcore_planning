@@ -5,7 +5,7 @@ windows:
   - multimaster:
       layout: even-horizontal
       panes:
-        - roslaunch human_aware_collaboration_planner multimaster.launch
+        - roscd human_aware_collaboration_planner/scripts; ./start_multimaster.sh
   - planner:
       layout: even-horizontal
       panes: 
