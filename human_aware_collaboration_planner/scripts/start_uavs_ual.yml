@@ -8,7 +8,7 @@ windows:
         - multimaster:
           - roscd human_aware_collaboration_planner/scripts; ./start_multimaster.sh
         - mavros_ual:
-          - sleep 16; roslaunch ual_backend_mavros server.launch id:="$UAV_ID" pose_frame_id:="map" rtcm_topic:="/rtcm_stream" ns:=uav"$UAV_ID" x:="$home_x" y:="$home_y"
+          - sleep 16; roslaunch ual_backend_mavros server.launch id:="$UAV_ID" pose_frame_id:="map" rtcm_topic:="/rtcm_stream" ns:=uav"$UAV_ID" x:="$home_x" y:="$home_y" __ns:=uav"$UAV_ID"
         - realsense:
           - sleep 18; roslaunch human_aware_collaboration_planner realsense.launch id:="$UAV_ID"
         - agent:
