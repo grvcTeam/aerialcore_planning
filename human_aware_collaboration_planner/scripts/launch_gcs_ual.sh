@@ -10,7 +10,7 @@ cd "$SCRIPTPATH"
 rm .tmuxinator.yml
 
 # link the session file to .tmuxinator.yml
-ln ~/session_evora_gcs_ual.yml .tmuxinator.yml
+ln session_evora_gcs_ual.yml .tmuxinator.yml
 
 # start tmuxinator
 tmuxinator
