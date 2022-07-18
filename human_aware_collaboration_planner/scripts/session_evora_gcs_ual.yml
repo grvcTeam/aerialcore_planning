@@ -10,14 +10,14 @@ windows:
       layout: even-horizontal
       panes: 
         - sleep 10; roslaunch human_aware_collaboration_planner planner.launch
-  - rtk_station:
-      layout: even-horizontal
-      panes: 
-        - sleep 12; roslaunch rtkbasestation rtkbase.launch
+  # - rtk_station:
+  #     layout: even-horizontal
+  #     panes: 
+  #       - sleep 12; roslaunch rtkbasestation rtkbase.launch
   - fakers:
       layout: even-horizontal
       panes:
-        - sleep 14; roslaunch human_aware_collaboration_planner fakers.launch
+        - sleep 14; roslaunch human_aware_collaboration_planner fakers.launch battery_faker:=true ist_ugv_faker:=true
   - cameras:
       layout: even-horizontal
       panes:

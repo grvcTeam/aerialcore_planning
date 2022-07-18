@@ -40,13 +40,13 @@ class ISTugvFaker{
         jackal_pose_pub_ = nh_.advertise<geographic_msgs::GeoPoseStamped>("/jackal0/geopose", 1);
 
         //Position: solar pannel row 14 column 2
-        atrvjr_pose_.pose.position.latitude = 38.54059468129904;
-        atrvjr_pose_.pose.position.longitude = -7.962595411729742;
+        atrvjr_pose_.pose.position.latitude = 38.54143688611777;
+        atrvjr_pose_.pose.position.longitude = -7.961302628908529;
         atrvjr_pose_.pose.position.altitude = 227.61875915527344;
 
         //Position: corner 4
-        jackal_pose_.pose.position.latitude = 38.54030189108661;
-        jackal_pose_.pose.position.longitude = -7.961658935157954;
+        jackal_pose_.pose.position.latitude = 38.54131475760623;
+        jackal_pose_.pose.position.longitude = -7.961691219061984;
         jackal_pose_.pose.position.altitude = 227.61875915527344;
 
         pose_rate_.reset();

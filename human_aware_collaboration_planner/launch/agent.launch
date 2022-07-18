@@ -10,6 +10,7 @@
   <arg name="config_file" default="$(find human_aware_collaboration_planner)/config/conf.yaml"/>
   <arg name="battery_faker" default="true"/>
   <arg name="autonomous_landing" default="false"/>
+  <arg name="take_off_height" default="10"/>
 
   <arg name="world" default="power_tower"/>
 

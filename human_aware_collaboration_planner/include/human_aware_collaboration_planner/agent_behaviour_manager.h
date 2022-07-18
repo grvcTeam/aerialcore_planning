@@ -558,6 +558,7 @@ class AgentNode
 		bool timeout_;
     classes::Position atrvjr_pose_;
     classes::Position jackal_pose_;
+		int take_off_height_;
 
     // Publishers
     ros::Publisher beacon_pub_;

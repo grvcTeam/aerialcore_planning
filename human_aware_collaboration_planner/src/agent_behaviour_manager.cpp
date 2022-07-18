@@ -101,7 +101,7 @@ BT::NodeStatus GoNearChargingStation::tick(){
           return BT::NodeStatus::IDLE;
         ROS_INFO("[GoNearChargingStation] Calling take_off");
         //UAL take_off service call
-        if(!agent_->take_off(3, false))
+        if(!agent_->take_off(take_off_height_, false))
         {
           if(isHaltRequested())
             return BT::NodeStatus::IDLE;
@@ -401,7 +401,7 @@ BT::NodeStatus BackToStation::tick(){
         case 2: //LANDED_ARMED
           if(isHaltRequested())
             return BT::NodeStatus::IDLE;
-          if(!agent_->take_off(3, false))
+          if(!agent_->take_off(take_off_height_, false))
           {
             if(isHaltRequested())
               return BT::NodeStatus::IDLE;
@@ -551,7 +551,7 @@ BT::NodeStatus GoNearHumanTarget::tick(){
       case 2: //LANDED_ARMED
         if(isHaltRequested())
           return BT::NodeStatus::IDLE;
-        if(!agent_->take_off(3, false))
+        if(!agent_->take_off(take_off_height_, false))
         {
           if(isHaltRequested())
             return BT::NodeStatus::IDLE;
@@ -717,7 +717,7 @@ BT::NodeStatus GoNearUGV::tick(){
       case 2: //LANDED_ARMED
         if(isHaltRequested())
           return BT::NodeStatus::IDLE;
-        if(!agent_->take_off(3, false))
+        if(!agent_->take_off(take_off_height_, false))
         {
           if(isHaltRequested())
             return BT::NodeStatus::IDLE;
@@ -911,7 +911,7 @@ BT::NodeStatus GoNearWP::tick(){
       case 2: //LANDED_ARMED
         if(isHaltRequested())
           return BT::NodeStatus::IDLE;
-        if(!agent_->take_off(3, false))
+        if(!agent_->take_off(take_off_height_, false))
         {
           if(isHaltRequested())
             return BT::NodeStatus::IDLE;
@@ -1092,7 +1092,7 @@ BT::NodeStatus InspectPVArray::tick(){
           agent_->infoQueue();
           return isHaltRequested() ? BT::NodeStatus::IDLE : BT::NodeStatus::SUCCESS;
         }
-        if(!agent_->take_off(3, false))
+        if(!agent_->take_off(take_off_height_, false))
         {
           if(isHaltRequested())
           {
@@ -1208,6 +1208,7 @@ BT::NodeStatus InspectPVArray::tick(){
             target_gps.position.longitude = 38.54156780106911;
             goal.do_closer_inspection.xyz_coordinates.push_back(target_xyz);
             goal.do_closer_inspection.gps_coordinates.push_back(target_gps);
+            //TODO: Rui
             task_result_ac_.sendGoal(goal);
             if(goal.result)
               agent_->removeTaskFromQueue(task_id, 'A');
@@ -1368,7 +1369,7 @@ BT::NodeStatus GoNearStation::tick(){
       case 2: //LANDED_ARMED
         if(isHaltRequested())
           return BT::NodeStatus::IDLE;
-        if(!agent_->take_off(3, false))
+        if(!agent_->take_off(take_off_height_, false))
         {
           if(isHaltRequested())
             return BT::NodeStatus::IDLE;
@@ -2113,6 +2114,7 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   ros::param::param<std::string>("~pose_topic", pose_topic_, "/" + beacon_.id + "/ual/pose");
   ros::param::param<std::string>("~state_topic", state_topic_, "/" + beacon_.id + "/ual/state");
   ros::param::param<std::string>("~battery_topic", battery_topic_, "/" + beacon_.id + "/battery_fake");
+  ros::param::param<int>("~take_off_height", take_off_height_, "10");
 
   std::vector<double> origin_geo_aux(3, 0.0);
   ros::param::get("/gazebo_world/sim_origin", origin_geo_aux);
