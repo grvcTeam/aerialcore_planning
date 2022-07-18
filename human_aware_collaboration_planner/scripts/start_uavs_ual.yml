@@ -8,12 +8,12 @@ windows:
         - multimaster:
           - roscd human_aware_collaboration_planner/scripts; ./start_multimaster.sh
         - mavros_ual:
-          - sleep 16; roslaunch ual_backend_mavros server.launch id:='"$UAV_ID"' pose_frame_id:='"map"' rtcm_topic:="/rtcm_stream" ns:=uav'"$UAV_ID"' x:="'$home_x'" y:="'$home_y'"
+          - sleep 16; roslaunch ual_backend_mavros server.launch id:="$UAV_ID" pose_frame_id:="map" rtcm_topic:="/rtcm_stream" ns:=uav"$UAV_ID" x:="$home_x" y:="$home_y"
         - realsense:
-          - sleep 18; roslaunch human_aware_collaboration_planner realsense.launch id:='"$UAV_ID"'
+          - sleep 18; roslaunch human_aware_collaboration_planner realsense.launch id:="$UAV_ID"
         - agent:
-          - sleep 20; roslaunch human_aware_collaboration_planner agent.launch id:='"$UAV_ID"'
+          - sleep 20; roslaunch human_aware_collaboration_planner agent.launch id:="$UAV_ID"
         - battery_faker:
-          - sleep 22; roslaunch human_aware_collaboration_planner battery_faker.launch id:='"$UAV_ID"'
+          - sleep 22; roslaunch human_aware_collaboration_planner battery_faker.launch id:="$UAV_ID"
         - rosbag_recorder:
-          - sleep 24; roslaunch human_aware_collaboration_planner rosbag_recorder_experiment.launch record_duration:=600 id:='"$UAV_ID"'
+          - sleep 24; roslaunch human_aware_collaboration_planner rosbag_recorder_experiment.launch record_duration:=600 id:="$UAV_ID"
