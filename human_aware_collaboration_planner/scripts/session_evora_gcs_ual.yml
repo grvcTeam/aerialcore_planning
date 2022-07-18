@@ -9,17 +9,17 @@ windows:
   - planner:
       layout: even-horizontal
       panes: 
-        - sleep 3; roslaunch human_aware_collaboration_planner planner.launch
+        - sleep 10; roslaunch human_aware_collaboration_planner planner.launch
   - rtk_station:
       layout: even-horizontal
       panes: 
-        - sleep 5; roslaunch rtkbasestation rtkbase.launch
+        - sleep 12; roslaunch rtkbasestation rtkbase.launch
   - fakers:
       layout: even-horizontal
       panes:
-        - sleep 6; roslaunch human_aware_collaboration_planner fakers.launch
+        - sleep 14; roslaunch human_aware_collaboration_planner fakers.launch
   - cameras:
       layout: even-horizontal
       panes:
-        - sleep 6; roslaunch human_aware_collaboration_planner camera_experiment.launch id:=2
-        - sleep 6; roslaunch human_aware_collaboration_planner camera_experiment.launch id:=3
+        - sleep 16; roslaunch human_aware_collaboration_planner camera_experiment.launch id:=2
+        - sleep 16; roslaunch human_aware_collaboration_planner camera_experiment.launch id:=3
