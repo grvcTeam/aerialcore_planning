@@ -2550,7 +2550,7 @@ bool AgentNode::go_to_waypoint(float x, float y, float z, bool blocking){
     go_to_wp_srv.request.waypoint.pose.position.z = z;
   else
     go_to_wp_srv.request.waypoint.pose.position.z = z + std::stoi(id_);
-  //go_to_wp_srv.request.waypoint.pose.position.z = z;
+  go_to_wp_srv.request.waypoint.pose.position.z = 10;
   go_to_wp_srv.request.blocking = blocking;
   if(go_to_wp_client.call(go_to_wp_srv))
     return true;

@@ -19,22 +19,22 @@ positions:
     charging_station_1:
       x: -5.0
       y: -72.0
-      z: 0.0
+      z: 10.0
     
     charging_station_2:
       x: 7.0
       y: 9.4
-      z: 0.0
+      z: 10.0
 
     charging_station_3:
       x: 7.0
       y: 0.0
-      z: 0.0
+      z: 10.0
     
     charging_station_4:
       x: -10.0
       y: 20.0
-      z: 0.0
+      z: 10.0
     
     charging_station_5:
       x: 10.0
