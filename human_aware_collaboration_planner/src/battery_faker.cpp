@@ -44,7 +44,7 @@ class BatteryFaker{
     //Service Server
 
   public:
-    BatteryFaker() : loop_rate_(0.2), mode_(2), battery_increase_(0.01), battery_decrease_(0.01){
+    BatteryFaker() : loop_rate_(0.2), mode_(0), battery_increase_(0.001), battery_decrease_(0.001){
       ros::param::param<std::string>("~id", id_, "i");
       ros::param::param<std::string>("~pose_topic", pose_topic_, "/" + id_ + "/ual/pose");
       ros::param::param<std::string>("~state_topic", state_topic_, "/" + id_ + "/ual/state");
@@ -64,7 +64,7 @@ class BatteryFaker{
       state_sub_ = nh_.subscribe(state_topic_, 1, &BatteryFaker::stateCallbackUAL, this);
 
       ROS_INFO("READY");
-      battery_.percentage = 0.9;
+      battery_.percentage = 1;
       loop_rate_.reset();
       while(ros::ok())
       {

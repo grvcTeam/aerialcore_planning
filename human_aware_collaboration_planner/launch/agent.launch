@@ -11,6 +11,8 @@
   <arg name="battery_faker" default="true"/>
   <arg name="autonomous_landing" default="false"/>
   <arg name="take_off_height" default="10"/>
+  <arg name="distance_error" default="2"/>
+  <arg name="goto_error" default="1"/>
 
   <arg name="world" default="power_tower"/>
 
@@ -20,6 +22,9 @@
     <param name="battery_topic" value="/$(arg ns_prefix)$(arg id)/battery_fake" if="$(eval battery_faker)"/>
     <param name="pose_topic" value="/$(arg ns_prefix)$(arg id)/ual/pose"/>
     <param name="state_topic" value="/$(arg ns_prefix)$(arg id)/ual/state"/>
+    <param name="take_off_height" value="$(arg take_off_height)"/>
+    <param name="distance_error" value="$(arg distance_error)"/>
+    <param name="goto_error" value="$(arg goto_error)"/>
 
   </group>
 

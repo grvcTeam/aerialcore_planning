@@ -17,7 +17,7 @@ windows:
   - fakers:
       layout: even-horizontal
       panes:
-        - sleep 14; roslaunch human_aware_collaboration_planner fakers.launch battery_faker:=true ist_ugv_faker:=true
+        - sleep 14; roslaunch human_aware_collaboration_planner fakers.launch battery_faker:=true ist_ugv_faker:=false
   - cameras:
       layout: even-horizontal
       panes:

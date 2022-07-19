@@ -5,7 +5,7 @@ number = 1
 waypoints = 0 10 2 0 15 2
 tool = hammer
 ugv = jackal
-height = 4
+height = 10
 geo_wp = 92.6349 -0.073258 10 18.1892 -1.076 10
 
 agent_prefix = uav

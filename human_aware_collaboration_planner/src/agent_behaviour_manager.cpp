@@ -350,7 +350,7 @@ BT::NodeStatus BackToStation::tick(){
     //If Agent is already in station. Land if needed and back_to_station
     for(auto& station : agent_->known_positions_["stations"])
     {
-      if(classes::distance2D(agent_->position_, station.second) < 0.5)
+      if(classes::distance2D(agent_->position_, station.second) < agent_->distance_error_)
         flag = 1;
     }
     if(flag)
@@ -746,7 +746,7 @@ BT::NodeStatus GoNearUGV::tick(){
               return BT::NodeStatus::IDLE;
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
           }
-          if(classes::distance2D(agent_->atrvjr_pose_, agent_->position_) < 1.5)
+          if(classes::distance2D(agent_->atrvjr_pose_, agent_->position_) < agent_->distance_error_)
           {
             ROS_INFO("[GoNearUGV] Returning SUCCESS...");
             return BT::NodeStatus::SUCCESS;
@@ -1798,10 +1798,10 @@ BT::NodeStatus IsAgentNearChargingStation::tick(){
   if(agent_->task_queue_.empty())
   {
     for(auto& charging_station : agent_->known_positions_["charging_stations"])
-      if(classes::distance2D(agent_->position_, charging_station.second) < 0.5)
+      if(classes::distance2D(agent_->position_, charging_station.second) < agent_->distance_error_)
         return BT::NodeStatus::SUCCESS;
 
-    if(classes::distance2D(agent_->position_, agent_->jackal_pose_) < 0.5)
+    if(classes::distance2D(agent_->position_, agent_->jackal_pose_) < agent_->distance_error_)
       return BT::NodeStatus::SUCCESS;
 
     return BT::NodeStatus::FAILURE;
@@ -1815,7 +1815,7 @@ BT::NodeStatus IsAgentNearChargingStation::tick(){
     return BT::NodeStatus::FAILURE;
   }
 
-  if(classes::distance2D(agent_->position_, agent_->jackal_pose_) < 0.5)
+  if(classes::distance2D(agent_->position_, agent_->jackal_pose_) < agent_->distance_error_)
     return BT::NodeStatus::SUCCESS;
 
   assigned_charging_station = task->getChargingStation();
@@ -1824,7 +1824,7 @@ BT::NodeStatus IsAgentNearChargingStation::tick(){
   {
     for(auto& charging_station : agent_->known_positions_["charging_stations"])
     {
-      if(classes::distance2D(agent_->position_, charging_station.second) < 0.5)
+      if(classes::distance2D(agent_->position_, charging_station.second) < agent_->distance_error_)
       {
         //Assign and reserve this charging station for this Agent (to be improved)
         task->setChargingStation(&(charging_station.second));
@@ -1835,7 +1835,7 @@ BT::NodeStatus IsAgentNearChargingStation::tick(){
   }
   else
   {
-    if(classes::distance2D(agent_->position_, assigned_charging_station) < 0.5)
+    if(classes::distance2D(agent_->position_, assigned_charging_station) < agent_->distance_error_)
       return BT::NodeStatus::SUCCESS;
     return BT::NodeStatus::FAILURE;
   }
@@ -1895,7 +1895,7 @@ BT::NodeStatus IsAgentNearUGV::tick(){
   {
     case 'F':
     case 'f':
-      if(classes::distance2D(agent_->atrvjr_pose_, agent_->position_) < 1.5)
+      if(classes::distance2D(agent_->atrvjr_pose_, agent_->position_) < agent_->distance_error_)
         return BT::NodeStatus::SUCCESS;
       break;
     default:
@@ -1928,14 +1928,14 @@ BT::NodeStatus IsAgentNearWP::tick(){
   {
     for(auto& waypoint : task->getInspectWaypoints())
     {
-      if(classes::distance(agent_->position_, waypoint) < 2)
+      if(classes::distance(agent_->position_, waypoint) < agent_->distance_error_)
         return BT::NodeStatus::SUCCESS;
     }
   }
   if(task->getType() == 'A')
   {
     auto waypoint = task->getInspectWaypoints();
-    if(classes::distance(agent_->position_, waypoint[0]) < 2)
+    if(classes::distance(agent_->position_, waypoint[0]) < agent_->distance_error_)
       return BT::NodeStatus::SUCCESS;
   }
   return BT::NodeStatus::FAILURE;
@@ -2025,7 +2025,7 @@ BT::NodeStatus IsAgentNearStation::tick(){
     tool_position = task->getToolPosition();
   }
 
-  if(classes::distance(tool_position, agent_->position_) < 2.5)
+  if(classes::distance(tool_position, agent_->position_) < agent_->distance_error_)
     return BT::NodeStatus::SUCCESS;
   else
     return BT::NodeStatus::FAILURE;
@@ -2114,8 +2114,13 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   ros::param::param<std::string>("~pose_topic", pose_topic_, "/" + beacon_.id + "/ual/pose");
   ros::param::param<std::string>("~state_topic", state_topic_, "/" + beacon_.id + "/ual/state");
   ros::param::param<std::string>("~battery_topic", battery_topic_, "/" + beacon_.id + "/battery_fake");
-  ros::param::param<int>("~take_off_height", take_off_height_, 10);
+  ros::param::param<float>("~take_off_height", take_off_height_, 10);
+  ros::param::param<float>("~distance_error", distance_error_, 2);
+  ros::param::param<float>("~goto_error", goto_error_, 1);
 
+  origin_geo_.latitude  = 38.54130842044177;
+  origin_geo_.longitude = -7.961568610186141;
+  origin_geo_.altitude  = 0;
   std::vector<double> origin_geo_aux(3, 0.0);
   ros::param::get("/gazebo_world/sim_origin", origin_geo_aux);
   origin_geo_.latitude  = origin_geo_aux[0];
@@ -2550,7 +2555,7 @@ bool AgentNode::go_to_waypoint(float x, float y, float z, bool blocking){
     go_to_wp_srv.request.waypoint.pose.position.z = z;
   else
     go_to_wp_srv.request.waypoint.pose.position.z = z + std::stoi(id_);
-  //go_to_wp_srv.request.waypoint.pose.position.z = z;
+  go_to_wp_srv.request.waypoint.pose.position.z = 10;
   go_to_wp_srv.request.blocking = blocking;
   if(go_to_wp_client.call(go_to_wp_srv))
     return true;
@@ -2579,7 +2584,7 @@ bool AgentNode::stop(bool blocking){
 }
 bool AgentNode::checkIfGoToServiceSucceeded(float x, float y, float z){
   classes::Position position(x, y, z);
-  if(classes::distance(position, position_) < 0.1)
+  if(classes::distance(position, position_) < goto_error_)
     return true;
   return false;
 }
