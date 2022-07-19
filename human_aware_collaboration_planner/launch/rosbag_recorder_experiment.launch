@@ -3,5 +3,6 @@
     <arg name="record_duration" default="120"/>
 
  <node pkg="rosbag" type="record" name="rosbag_record_topics" ns="rosbag_record_uav$(arg id)"
-       args="record --duration=$(arg record_duration) -o uav$(arg id)_experiment -e /uav$(arg id)/ual/pose /uav$(arg id)/color/image_raw/compressed"/>
+   args="record --duration=$(arg record_duration) -o uav$(arg id)_experiment -e /atrvjr/geopose /jackal0/geopose /uav$(arg id)/ual/pose /uav$(arg id)/color/image_raw/compressed /uav$(arg id)/battery_fake /clock /incoming_task_action/* "/>
+  
 </launch>
