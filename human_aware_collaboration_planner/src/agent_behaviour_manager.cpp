@@ -2126,6 +2126,7 @@ AgentNode::AgentNode(human_aware_collaboration_planner::AgentBeacon beacon) : ba
   origin_geo_.latitude  = origin_geo_aux[0];
   origin_geo_.longitude = origin_geo_aux[1];
   origin_geo_.altitude  = origin_geo_aux[2];
+  ROS_INFO_STREAM("Origin (lat, lon): (" << origin_geo_.latitude << ", " << origin_geo_.longitude << ")");
 
   //Load of config file
   std::string path = ros::package::getPath("human_aware_collaboration_planner");
@@ -2511,15 +2512,15 @@ bool AgentNode::checkBeaconTimeout(ros::Time now){
 void AgentNode::atrvjrPositionCallback(const geographic_msgs::GeoPoseStamped& geo_pose){ 
   geometry_msgs::Point32 pose = geographic_to_cartesian(geo_pose.pose.position, origin_geo_);
   atrvjr_pose_ = classes::Position(pose.x, pose.y, 3); //As UGV are at ground level, z id fiex at 3m for goto purposes
-  //ROS_INFO_STREAM("[atrvjrPositionCallback] GeoPose: (" << geo_pose.pose.position.latitude << ", " <<
-      //geo_pose.pose.position.longitude << ")\tXYPose: (" << atrvjr_pose_.getX() << ", " << atrvjr_pose_.getY() << ")");
+  ROS_INFO_STREAM("[atrvjrPositionCallback] GeoPose: (" << geo_pose.pose.position.latitude << ", " <<
+      geo_pose.pose.position.longitude << ")\tXYPose: (" << atrvjr_pose_.getX() << ", " << atrvjr_pose_.getY() << ")");
   return;
 }
 void AgentNode::jackalPositionCallback(const geographic_msgs::GeoPoseStamped& geo_pose){ 
   geometry_msgs::Point32 pose = geographic_to_cartesian(geo_pose.pose.position, origin_geo_);
   jackal_pose_ = classes::Position(pose.x, pose.y, 3); //As UGV are at ground level, z id fiex at 3m for goto purposes
-  //ROS_INFO_STREAM("[jackalPositionCallback] GeoPose: (" << geo_pose.pose.position.latitude << ", " <<
-      //geo_pose.pose.position.longitude << ")\tXYPose: (" << jackal_pose_.getX() << ", " << jackal_pose_.getY() << ")");
+  ROS_INFO_STREAM("[jackalPositionCallback] GeoPose: (" << geo_pose.pose.position.latitude << ", " <<
+      geo_pose.pose.position.longitude << ")\tXYPose: (" << jackal_pose_.getX() << ", " << jackal_pose_.getY() << ")");
   return;
 }
 // UAL Service calls
