@@ -737,7 +737,7 @@ BT::NodeStatus GoNearUGV::tick(){
       case 4: //FLYING_AUTO
         if(isHaltRequested())
           return BT::NodeStatus::IDLE;
-        ROS_INFO("[GoNearUGV] Moving near HT...");
+        ROS_INFO("[GoNearUGV] Moving near UGV...");
         if(agent_->go_to_waypoint(agent_->atrvjr_pose_.getX(), agent_->atrvjr_pose_.getY(), height, false))
         {
           while(!agent_->checkIfGoToServiceSucceeded(agent_->atrvjr_pose_.getX(), agent_->atrvjr_pose_.getY(), height))
@@ -2512,15 +2512,15 @@ bool AgentNode::checkBeaconTimeout(ros::Time now){
 void AgentNode::atrvjrPositionCallback(const geographic_msgs::GeoPoseStamped& geo_pose){ 
   geometry_msgs::Point32 pose = geographic_to_cartesian(geo_pose.pose.position, origin_geo_);
   atrvjr_pose_ = classes::Position(pose.x, pose.y, 3); //As UGV are at ground level, z id fiex at 3m for goto purposes
-  ROS_INFO_STREAM("[atrvjrPositionCallback] GeoPose: (" << geo_pose.pose.position.latitude << ", " <<
-      geo_pose.pose.position.longitude << ")\tXYPose: (" << atrvjr_pose_.getX() << ", " << atrvjr_pose_.getY() << ")");
+  //ROS_INFO_STREAM("[atrvjrPositionCallback] GeoPose: (" << geo_pose.pose.position.latitude << ", " <<
+      //geo_pose.pose.position.longitude << ")\tXYPose: (" << atrvjr_pose_.getX() << ", " << atrvjr_pose_.getY() << ")");
   return;
 }
 void AgentNode::jackalPositionCallback(const geographic_msgs::GeoPoseStamped& geo_pose){ 
   geometry_msgs::Point32 pose = geographic_to_cartesian(geo_pose.pose.position, origin_geo_);
   jackal_pose_ = classes::Position(pose.x, pose.y, 3); //As UGV are at ground level, z id fiex at 3m for goto purposes
-  ROS_INFO_STREAM("[jackalPositionCallback] GeoPose: (" << geo_pose.pose.position.latitude << ", " <<
-      geo_pose.pose.position.longitude << ")\tXYPose: (" << jackal_pose_.getX() << ", " << jackal_pose_.getY() << ")");
+  //ROS_INFO_STREAM("[jackalPositionCallback] GeoPose: (" << geo_pose.pose.position.latitude << ", " <<
+      //geo_pose.pose.position.longitude << ")\tXYPose: (" << jackal_pose_.getX() << ", " << jackal_pose_.getY() << ")");
   return;
 }
 // UAL Service calls
@@ -2585,7 +2585,7 @@ bool AgentNode::stop(bool blocking){
 }
 bool AgentNode::checkIfGoToServiceSucceeded(float x, float y, float z){
   classes::Position position(x, y, z);
-  if(classes::distance(position, position_) < goto_error_)
+  if(classes::distance2D(position, position_) < goto_error_)
     return true;
   return false;
 }
