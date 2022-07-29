@@ -22,8 +22,8 @@ If you are using this software layer or you found this approach inspiring for yo
   booktitle     = {2022 International Conference on Unmanned Aircraft Systems (ICUAS)},   
   title         = {Mission Planning and Execution in Heterogeneous Teams of Aerial Robots supporting Power Line Inspection Operations},
   year          = {2022},  
-  pages         = {}, 
-  doi           = {}
+  pages         = {1644-1649},
+  doi            = {10.1109/ICUAS54217.2022.9836234}
 }
 ```
 
