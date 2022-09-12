@@ -1,0 +1,10 @@
+<launch>
+  <arg name="bagfile" default="~/.ros/default.bag"/>
+  <arg name="image_topic" default="color/image_raw/compressed"/>
+  <arg name="ns_prefix" default="uav1"/>
+
+  <node pkg="rosbag" type="play" name="rosbag" required="true" args="$(arg bagfile)"/>
+  <node name="extract" pkg="image_view" type="extract_images" respawn="false" required="true" output="screen" cwd="ROS_HOME">
+    <remap from="image" to="/$(arg ns_prefix)/$(arg image_topic)"/>
+  </node>
+</launch>

@@ -1,0 +1,12 @@
+<launch>
+  <arg name="id" default="1"/>
+  <arg name="filename" default="output"/>
+  <node name="video_recorder_node" pkg="image_view" type="video_recorder" respawn="false" output="screen">
+    <remap from="image" to="/uav$(arg id)/color/image_raw"/>
+    <param name="image_transport" value="compressed"/>
+    <param name="fps" value="30" />
+    <param name="tolerance" value="15" />
+    <param name="codec" value="avc1" />
+    <param name="filename" value="$(arg filename).mp4" />
+  </node>
+</launch>
