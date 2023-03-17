@@ -45,6 +45,7 @@ rosdep update
 ```
 
 0.2. (Recomended) Catkin tools
+
 ```
 sudo sh \
     -c 'echo "deb http://packages.ros.org/ros/ubuntu `lsb_release -sc` main" \
@@ -55,6 +56,7 @@ sudo apt-get install -y python-catkin-tools
 ```
 
 1. Install necessary packages
+
 ```
 sudo apt install -y libeigen3-dev ros-melodic-geodesy ros-melodic-joy ros-melodic-multimaster-fkie
 pip install pynput
@@ -95,6 +97,7 @@ git clone https://github.com/BehaviorTree/Groot.git
 ```
 
 5. Ignore some packages
+
 ```
 touch ~/mission_planner_ws/src/aerialcore_planning/large_scale_inspection_planner/CATKIN_IGNORE
 touch ~/mission_planner_ws/src/grvc-utils/mission_lib/CATKIN_IGNORE
@@ -121,8 +124,6 @@ catkin build
 
 8. Install and configure UAL. Only MAVROS needed. Make sure to install its dependencies when asked
 
-https://github.com/grvcTeam/grvc-ual/wiki/How-to-build-and-install-grvc-ual
-
 ```
 cd ~/mission_planner_ws/src/grvc-ual
 ./configure.py
@@ -138,6 +139,7 @@ sudo apt remove modemmanager
 ```
 
 10.1 (Optional) Install RealSense plugins for real-life execution
+
 ```
 sudo apt install -y ros-melodic-realsense2-camera ros-melodic-realsense2-description
 ```
@@ -145,11 +147,13 @@ sudo apt install -y ros-melodic-realsense2-camera ros-melodic-realsense2-descrip
 10.2 (Optional) Download 99-realsense-libusb.rules file from [github](https://github.com/IntelRealSense/librealsense/blob/master/config/99-realsense-libusb.rules)
 
 10.3 (Optional) Give permissions to read the data from the RealSense camera
+
 ```
 sudo cp 99-realsense-libusb.rules /etc/udev/rules.d/99-realsense-libusb.rules
 ```
 
 11. Install PX4 for SITL simulations
+
 ```
 sudo apt install -y libgstreamer1.0-dev python-jinja2 python-pip
 pip install numpy toml
@@ -162,7 +166,7 @@ make
 make px4_sitl_default gazebo
 ```
 
-10. Build
+12. Build
 
 ```
 cd ~/mission_planner_ws/
