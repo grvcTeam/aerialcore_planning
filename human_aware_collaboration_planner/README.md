@@ -10,7 +10,7 @@ The controllers for each specific action inside each of the tasks are not includ
 version of those controllers can be found in this repository in order to be able to test the software layer propoerly in
 simulation. Real controllers will be inplemented in the next layer of the multi-layer software architecture.
 
-This software is currently being developed on Ubuntu 20.04 with ROS Noetic.
+This software is currently being developed on Ubuntu 18.04 with ROS Melodic.
 
 
 A more detailed description of the system can be found [here](https://www.researchgate.net/publication/360514763_Mission_Planning_and_Execution_in_Heterogeneous_Teams_of_Aerial_Robots_supporting_Power_Line_Inspection_Operations).
@@ -30,23 +30,60 @@ If you are using this software layer or you found this approach inspiring for yo
 ## Installation
 To install the repositories correctly, you have to follow the next steps:
 
-1. Create a workspace
+0.1. ROS Melodic installation
 
 ```
-cd ~
-mkdir your_ws
-cd your_ws
-mkdir src
-cd src
+sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
+sudo apt update
+sudo apt install -y ros-melodic-desktop-full
+echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc
+source ~/.bashrc
+sudo apt install -y python-rosdep python-rosinstall python-rosinstall-generator python-wstool build-essential
+sudo rosdep init
+rosdep update
 ```
 
-2. Install the aerialcore_planner repository
+0.2. (Recomended) Catkin tools
+```
+sudo sh \
+    -c 'echo "deb http://packages.ros.org/ros/ubuntu `lsb_release -sc` main" \
+        > /etc/apt/sources.list.d/ros-latest.list'
+wget http://packages.ros.org/ros.key -O - | sudo apt-key add -
+sudo apt-get update
+sudo apt-get install -y python-catkin-tools
+```
+
+1. Install necessary packages
+```
+sudo apt install -y libeigen3-dev ros-melodic-geodesy ros-melodic-joy ros-melodic-multimaster-fkie
+pip install pynput
+sudo apt install -y xz-utils
+```
+
+2. Create a ROS workspace
 
 ```
+mkdir -p ~/mission_planner_ws/src
+cd ~/mission_planner_ws/
+catkin build -DPYTHON_EXECUTABLE=/usr/bin/python
+source devel/setup.bash
+echo "source $HOME/mission_planner_ws/devel/setup.bash" >> ~/.bashrc
+```
+
+3. Clone necessary repositories
+
+```
+cd ~/mission_planner_ws/src/
+
+git clone https://github.com/ctu-mrs/aerialcore_simulation.git
 git clone https://github.com/grvcTeam/aerialcore_planning.git
+git clone https://github.com/Angel-M-Montes/path_planner.git
+git clone https://github.com/grvcTeam/grvc-ual.git
+git clone https://github.com/grvcTeam/grvc-utils.git
 ```
 
-3. Clone the necessary packages, which are: grvc-ual, grvc-utils, BehaviorTree.CPP, Groot
+4. Clone the necessary packages, which are: grvc-ual, grvc-utils, BehaviorTree.CPP, Groot
 
 ```
 git clone https://github.com/ctu-mrs/aerialcore_simulation.git
@@ -57,42 +94,41 @@ git clone https://github.com/BehaviorTree/BehaviorTree.CPP.git
 git clone https://github.com/BehaviorTree/Groot.git
 ```
 
-4. Compile BehaviorTree.CPP
-
+5. Ignore some packages
 ```
-sudo apt-get install libzmq3-dev libboost-dev
-cd ~/your_ws/src/BehaviorTree.CPP
-mkdir build; cd build
-cmake ..
-make
-sudo make install
+touch ~/mission_planner_ws/src/aerialcore_planning/large_scale_inspection_planner/CATKIN_IGNORE
+touch ~/mission_planner_ws/src/grvc-utils/mission_lib/CATKIN_IGNORE
 ```
 
-5. Groot dependencies
+6. Install BehaviorTree.CPP package and its dependencies
 
 ```
-cd ~/your_ws/
-sudo apt install qtbase5-dev libqt5svg5-dev libzmq3-dev libdw-dev
+sudo apt-get install -y libzmq3-dev libboost-dev
+sudo apt-get install -y ros-melodic-behaviortree-cpp-v3
+```
+
+7. Install Groot and its dependencies
+
+```
+cd ~/mission_planner_ws/src/
+sudo apt install -y qtbase5-dev libqt5svg5-dev libzmq3-dev libdw-dev
+git clone https://github.com/BehaviorTree/Groot.git
+touch ~/mission_planner_ws/src/Groot/CATKIN_IGNORE
+cd ..
 rosdep install --from-paths src --ignore-src
 catkin build
 ```
 
-6. Install and configure UAL. Only MAVROS needed. Install Dependencies
+8. Install and configure UAL. Only MAVROS needed. Make sure to install its dependencies when asked
 
 https://github.com/grvcTeam/grvc-ual/wiki/How-to-build-and-install-grvc-ual
 
 ```
-cd ~/your_ws/src/grvc-ual
+cd ~/mission_planner_ws/src/grvc-ual
 ./configure.py
 ```
 
-7. Install dependencies of grvc-ual
-
-```
-sudo apt-get install libeigen3-dev ros-melodic-geodesy ros-melodic-joy
-```
-
-8. Install MAVROS packages
+9. Install MAVROS packages
 
 ```
 sudo apt install -y ros-melodic-mavros ros-melodic-mavros-extras
@@ -101,14 +137,23 @@ sudo usermod -a -G dialout $USER
 sudo apt remove modemmanager
 ```
 
-9. Install PX4 for SITL simulations
-
-https://github.com/grvcTeam/grvc-ual/wiki/Setup-instructions:-PX4-SITL
-
+10.1 (Optional) Install RealSense plugins for real-life execution
 ```
-sudo apt install libgstreamer1.0-dev python-jinja2 python-pip
+sudo apt install -y ros-melodic-realsense2-camera ros-melodic-realsense2-description
+```
+
+10.2 (Optional) Download 99-realsense-libusb.rules file from [github](https://github.com/IntelRealSense/librealsense/blob/master/config/99-realsense-libusb.rules)
+
+10.3 (Optional) Give permissions to read the data from the RealSense camera
+```
+sudo cp 99-realsense-libusb.rules /etc/udev/rules.d/99-realsense-libusb.rules
+```
+
+11. Install PX4 for SITL simulations
+```
+sudo apt install -y libgstreamer1.0-dev python-jinja2 python-pip
 pip install numpy toml
-cd ~/your_ws/src/
+cd ~/mission_planner_ws/src/
 git clone https://github.com/PX4/Firmware.git
 cd Firmware
 git checkout v1.10.2
@@ -117,20 +162,12 @@ make
 make px4_sitl_default gazebo
 ```
 
-10. Build and source
+10. Build
 
 ```
-cd ~/your_ws/
+cd ~/mission_planner_ws/
 catkin build
 ```
-
-**Note**: add the source to .bashrc or .zshrc
-
-```
-echo "source ~/your_ws/devel/setup.bash" >> ~/.bashrc
-echo "source ~/your_ws/devel/setup.zsh" >> ~/.zshrc
-```
-
 
 **Note**: In case that the installation did not go well, try compile each package individually.
 
@@ -138,7 +175,7 @@ echo "source ~/your_ws/devel/setup.zsh" >> ~/.zshrc
 
 To test if the system is working correctly you can launch a simulation and order tasks or unespected events by executing Makefile recipes.
 
-**Note**: The number of UAVs in the simulation can be configured by editing the first argument of launch/simulation.launch. Giving values from 1 to 5.
+**Note**: Simulation.launch file has some parameters to facilitate the configuration of the simulations, having parameters to select the number of UAVs, the Gazebo world, debug modes and some other things. See the heading of the file to know the different world options.
 
 ```
 make launch
