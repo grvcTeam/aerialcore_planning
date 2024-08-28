@@ -5,7 +5,7 @@
     <!-- Backends: mavros, light -->
     <arg name="number_UAV" default="1"/>
     <arg name="mode" default="sitl"/>
-    <arg name="world" default="pv_farm"/>
+    <arg name="world" default="empty"/>
     <arg name="ual_backend" default="light"/>
     <arg name="planner_debugger" default="none"/>
     <arg name="agent_debugger" default="none"/>
@@ -52,8 +52,8 @@
       <arg name="robot_model" value="mbzirc"/>
       <arg name="material" value="Red"/>
       <arg name="camera" value="false"/>
-      <arg name="x" value="-5"/>
-      <arg name="y" value="-72"/>
+      <arg name="x" value="0"/>
+      <arg name="y" value="0"/>
       <arg name="z" value="0"/>
       <arg name="yaw" value="0"/>
 
@@ -90,8 +90,8 @@
       <arg name="robot_model" value="mbzirc"/>
       <arg name="material" value="Green"/>
       <arg name="camera" value="false"/>
-      <arg name="x" value="-5"/>
-      <arg name="y" value="-76"/>
+      <arg name="x" value="0"/>
+      <arg name="y" value="4"/>
       <arg name="z" value="0"/>
       <arg name="yaw" value="0"/>
 
@@ -128,8 +128,8 @@
       <arg name="robot_model" value="mbzirc"/>
       <arg name="material" value="Blue"/>
       <arg name="camera" value="false"/>
-      <arg name="x" value="-5"/>
-      <arg name="y" value="-80"/>
+      <arg name="x" value="4"/>
+      <arg name="y" value="0"/>
       <arg name="z" value="0"/>
       <arg name="yaw" value="0"/>
 
@@ -166,8 +166,8 @@
       <arg name="robot_model" value="mbzirc"/>
       <arg name="material" value="Blue"/>
       <arg name="camera" value="false"/>
-      <arg name="x" value="-10"/>
-      <arg name="y" value="20"/>
+      <arg name="x" value="4"/>
+      <arg name="y" value="4"/>
       <arg name="z" value="0"/>
       <arg name="yaw" value="0"/>
 
@@ -204,8 +204,8 @@
       <arg name="robot_model" value="mbzirc"/>
       <arg name="material" value="Blue"/>
       <arg name="camera" value="false"/>
-      <arg name="x" value="10"/>
-      <arg name="y" value="20"/>
+      <arg name="x" value="2"/>
+      <arg name="y" value="2"/>
       <arg name="z" value="0"/>
       <arg name="yaw" value="0"/>
 

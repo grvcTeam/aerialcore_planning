@@ -1,6 +1,6 @@
 <launch>
   <!-- Worlds: none, empty, power_tower, 2towers, burguillos, pv_farm -->
-  <arg name="world" default="power_tower"/>
+  <arg name="world" default="pv_farm "/>
 
   <!-- Launch Gazebo simulation -->
   <rosparam param="/use_sim_time">true</rosparam>
