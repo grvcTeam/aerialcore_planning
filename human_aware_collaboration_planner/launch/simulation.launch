@@ -5,7 +5,7 @@
     <!-- Backends: mavros, light -->
     <arg name="number_UAV" default="1"/>
     <arg name="mode" default="sitl"/>
-    <arg name="world" default="empty"/>
+    <arg name="world" default="pv_farm"/>
     <arg name="ual_backend" default="light"/>
     <arg name="planner_debugger" default="none"/>
     <arg name="agent_debugger" default="none"/>
